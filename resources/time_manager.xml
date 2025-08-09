@@ -1,0 +1,100 @@
+<Window Title="Time Manager" Width="400" Height="300">
+	<Menu DockPanel.Dock="Top" text="Menubar">
+		<MenuItem Header="File" options="{'underline':0}">
+			<MenuItem Command="New" options="{'accelerator':'Ctrl+N','underline':0}"/>
+			<Separator />
+			<MenuItem Command="Exit" options="{'accelerator':'Ctrl+E','underline':0}"/>
+		</MenuItem>
+		<MenuItem Header="Message Box">
+			<MenuItem Command="Info Box" options="{'accelerator':'Ctrl+I','underline':0}"/>
+			<MenuItem Command="Warn Box" options="{'accelerator':'Ctrl+W','underline':0}"/>
+			<MenuItem Command="Error Box" options="{'accelerator':'Ctrl+L','underline':0}"/>
+			<MenuItem Command="Choice Box" options="{'accelerator':'Ctrl+K','underline':0}"/>
+		</MenuItem>		
+		<MenuItem Header="Help">
+			<MenuItem Command="About"/>
+		</MenuItem>
+	</Menu>
+	<Notebook text="Notebook" layout="pack" pack="{'expand':1,'fill':'both'}">
+		<Tab text="iHour">
+			<Frame id="frmMain" layout="pack" pack="{'expand':1,'fill':'both'}">
+			</Frame>
+		</Tab>
+		<Tab text="Calendar">
+		</Tab>
+	</Notebook>
+	<Dialog id="dlgAddItem" text="新增项目" Height="300" Width="100">
+		<ImagePanel id="imgItem" text="item" img="gift.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':0,'column':0,'sticky':'W'}"/>
+		<Entry id="txtItem" text="你想要投入时间的事情" options="{'width':20}" layout="grid" grid="{'row':0,'column':1, 'columnspan': 2, 'sticky':'W'}"/>
+		<ImagePanel id="imgClock" text="clock" img="VaadinAlarm.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':1,'column':0,'sticky':'W'}"/>
+		<Label id="lblClock" text="定时提醒" options="{'width':20}" layout="grid" grid="{'row':1,'column':1,'sticky':'W'}"/>
+		<Label id="lblSelClock" text="选择定时提醒" clickable="true" options="{'width':20}" layout="grid" grid="{'row':1,'column':2}"/>
+		<ImagePanel id="imgSchedule" text="schedule" img="calendar.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':2,'column':0,'sticky':'W'}"/>
+		<Label id="lblSchedule" text="时间投入计划" options="{'width':20}" layout="grid" grid="{'row':2,'column':1,'sticky':'W'}"/>
+		<Label id="lblSelSchedule" text="选择时间投入计划" clickable="true" options="{'width':20}" layout="grid" grid="{'row':2,'column':2}"/>
+		<Label id="lblImg" text="选择图标" options="{'width':20}" layout="grid" grid="{'row':3,'column':0,'columnspan': 3,'sticky':'W'}"/>
+	</Dialog>
+	<Dialog id="dlgSelClock" text="选择定时提醒" Height="300" Width="100">
+		<Combobox id="cmbSelDay" text="SelDay" default="0" options="{'values':['每天','工作日'],'state':'readonly','width':20}" layout="grid" grid="{'row':0,'column':0}"/>
+		<Combobox id="cmbSelHour" text="SelHour" default="0" options="{'values':['0点','1点','2点','3点','4点','5点','6点','7点','8点','9点','10点','11点','12点','13点','14点','15点','16点','17点','18点','19点','20点','21点','22点','23点'],'state':'readonly','width':20}" layout="grid" grid="{'row':0,'column':1}"/>
+		<Combobox id="cmbSelMinute" text="SelMinute" default="0" options="{'values':['0分','5分','10分','15分','20分','25分','30分','35分','40分','45分','50分','55分'],'state':'readonly','width':20}" layout="grid" grid="{'row':0,'column':2}"/>
+		<!-- <Button id="btnSelClock" text="Confirm" options="{'width':20}" layout="grid" grid="{'row':1,'column':2}"/> -->
+	</Dialog>
+	<Dialog id="dlgSelSchedule" text="时间投入计划" Height="300" Width="100">
+		<Combobox id="cmbSelUnit" text="SelUnit" default="0" options="{'values':['计划每日','计划每周'],'state':'readonly','width':20}" layout="grid" grid="{'row':0,'column':0}"/>
+		<Combobox id="cmbSelVal" text="SelVal" default="0" options="{'values':['5m','10m','15m','30m','45m','1h','1h30m','2h','3h','4h','5h','6h','7h','14h','21h','28h'],'state':'readonly','width':20}" layout="grid" grid="{'row':0,'column':1}"/>
+		<!-- <Button id="btnSelSchedule" text="Confirm" options="{'width':20}" layout="grid" grid="{'row':1,'column':1}"/> -->
+	</Dialog>
+	<Dialog id="dlgRecord" text="记录项目时间" Height="300" Width="100">
+        <Label id="lblItem" text="" layout="grid" grid="{'row':0,'column':0,}"/>
+        <Label id="lblDay" text="" clickable="true" layout="grid" grid="{'row':0,'column':1}"/>
+		<Combobox id="cmbSelHour" default="0" options="{'values':['0h','1h','2h','3h','4h','5h','6h','7h','8h'],'state':'readonly','width':20}" layout="grid" grid="{'row':1,'column':0}"/>
+		<Combobox id="cmbSelMinute" default="0" options="{'values':['0m','5m','10m','15m','20m','25m','30m','45m','50m','55m'],'state':'readonly','width':20}" layout="grid" grid="{'row':1,'column':1}"/>
+	</Dialog>    
+    <Dialog id="dlgItemDetail" text="项目详情" Height="800" Width="100">
+        <Frame id="frmItemDetail1" layout="pack" pack="{'pady':4}">
+            <ImagePanel id="ImgItemX" text="Item" img="CircleFlagsUsBetsyRoss.png" options="{'height':60, 'width':60}" layout="grid" grid="{'row':0,'column':0,'rowspan':2}"></ImagePanel>
+            <Label id="lblItemX" text="" options="{'width':40}" layout="grid" grid="{'row':0,'column':1,'columnspan':2,'sticky':'w'}"></Label>
+            <Label id="lblStrtX" text="0" layout="grid" grid="{'row':1,'column':1,'sticky':'w'}"></Label>
+            <Label id="lblSumX" text="0" layout="grid" grid="{'row':0,'column':3}"></Label>
+            <Label id="lblUnitX" text="hours" layout="grid" grid="{'row':1,'column':3,'sticky':'e'}"></Label>
+            <Label id="lblWholeX" text="0" layout="grid" grid="{'row':2,'column':0}"></Label>
+            <Label id="lblWholeDescX" text="坚持天数" layout="grid" grid="{'row':3,'column':0}"></Label>
+            <Label id="lblAvrgX" text="0" layout="grid" grid="{'row':2,'column':1}"></Label>
+            <Label id="lblAvrgDescX" text="平均每周" layout="grid" grid="{'row':3,'column':1}"></Label>
+            <Label id="lblRecentX" text="0" layout="grid" grid="{'row':2,'column':2}"></Label>
+            <Label id="lblRecentDescX" text="最近七天" layout="grid" grid="{'row':3,'column':2}"></Label>
+            <Label id="lblRestX" text="0" layout="grid" grid="{'row':2,'column':3}"></Label>
+            <Label id="lblRestDescX" text="距离里程碑" layout="grid" grid="{'row':3,'column':3}"></Label>
+            <Button id="btnRecordX" text="记录时间" options="{'width':20}" layout="grid" grid="{'row':5,'column':0, 'columnspan':2}"/>
+        </Frame>
+        <Frame id="frmItemDetail2" layout="pack" pack="{'pady':4}">
+            <ImagePanel id="imgClockX" text="clock" img="VaadinAlarm.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':0,'column':0,'sticky':'W'}"/>
+			<Label id="lblClockX" text="定时提醒" options="{'width':20}" layout="grid" grid="{'row':0,'column':1,'sticky':'W'}"/>
+			<Label id="lblSelClockX" text="选择定时提醒" clickable="true" options="{'width':20}" layout="grid" grid="{'row':0,'column':2}"/>
+			<ImagePanel id="imgScheduleX" text="schedule" img="calendar.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':1,'column':0,'sticky':'W'}"/>
+			<Label id="lblScheduleX" text="时间投入计划" options="{'width':20}" layout="grid" grid="{'row':1,'column':1,'sticky':'W'}"/>
+			<Label id="lblSelScheduleX" text="选择时间投入计划" clickable="true" options="{'width':20}" layout="grid" grid="{'row':1,'column':2}"/>
+        </Frame>
+        <Frame id="frmAddSubItem" layout="pack" pack="{'pady':4}">
+            <ImagePanel id="imgSubItems" img="gift.png" options="{'height':20, 'width':20}" layout="grid" grid="{'row':0,'column':0}"></ImagePanel>
+            <Label id="lblTotalSubItems" text="共0个子项目" options="{'width':40}" layout="grid" grid="{'row':0,'column':1, 'sticky':'w'}"></Label>
+            <Button id="btnAddSubItem" text="+添加" options="{'width':10}" layout="grid" grid="{'row':0,'column':2, 'sticky':'e'}"/>
+        </Frame>
+        <Frame id="frmSubItmes" layout="pack" pack="{'pady':4}"/>
+		<Notebook id="ntbStatistics" layout="pack" pack="{'expand':1,'fill':'both'}">
+        	<Tab text="每日投入">
+        		<Label id="lblDaySum" text="今日共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
+			</Tab>
+			<Tab text="每周投入">
+				<Label id="lblWeekSum" text="本周共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
+			</Tab>
+			<Tab text="每月投入">
+				<Label id="lblMonthSum" text="本月共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
+			</Tab>
+			<Tab text="每年投入">
+				<Label id="lblYearSum" text="本年共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
+			</Tab>
+		</Notebook>
+    </Dialog>
+</Window>

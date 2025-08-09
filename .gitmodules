@@ -1,0 +1,3 @@
+[submodule "src/pyutilities"]
+	path = src/pyutilities
+	url = https://github.com/YoucheeXu/pyutilities.git
