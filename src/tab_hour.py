@@ -403,8 +403,6 @@ class HourTab:
         img_item = cast(ImageBtttonCtrl, self._gui.get_control("btnImageHourDetail"))
         img_item.change_image(imagepath)
 
-        return
-
         # self._update_hourdetail("name", detail["name"])
         strt_date = cast(str, self._gui.process_message("GetHourStartDate", id=iid))
         # self._update_hourdetail("StartDate", strt_date)

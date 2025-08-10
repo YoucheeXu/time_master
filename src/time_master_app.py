@@ -4,6 +4,7 @@ import os
 # import asyncio
 from threading import Thread
 import datetime
+import sqlite3
 # from typing import TypedDict
 # from functools import partial
 # from typing import Unpack
@@ -21,7 +22,7 @@ from pyutilities.sqlite import SQLite
 
 class TimeMasterApp:
     _cascade_hours: dict[int, Hour] = {}
-    _hours_record: dict[int, HourRecordTuple] = {}
+    _hours_record: dict[int, list[HourRecordTuple]] = {}
     _meds_store: dict[int, MedDict] = {}
     _meds_record: dict[int, dict[int, float]] = {}    # {dict, {timestampe, dose}}
     # _meds_usage: dict[int, MedUsageDict] = {}
@@ -37,7 +38,10 @@ class TimeMasterApp:
         self._gui: TimeMasterGui = TimeMasterGui(curpath, xmlfile)
 
         msglst = ["OpenOrNewUser",
-            "addItem", "GetHourDetail", "getChildren", "record", "ModifyHourAttr", "DelHour",
+            "AddHour", "GetHourDetail", "getChildren", "RecordHour", "ModifyHourAttr", "DelHour",
+            "GetHourStartDate", "GetHourTotalDays", "GetHoursEveryWeek",
+            "GetHoursLast7Days", "GetRestHours2Milestone",
+            "GetHoursbyDay", "GetHoursbyWeek", "GetHoursbyMonth", "GetHoursbyYear",
             "AddMed", "DelMed", "GetMedDetail", "ModifyMedAttr", "RecordMedUse"]
         self._gui.filter_message(self.process_message, 1, msglst)
 
@@ -47,7 +51,30 @@ class TimeMasterApp:
         self._hours_db: SQLite = SQLite()
         self._medicine_db: SQLite = SQLite()
 
-    def readcreate_hours(self):
+    def _new_hoursdb(self):
+        _ = self._hours_db.execute('''
+                PRAGMA foreign_keys = ON
+            ''')
+        _ = self._hours_db.execute('''
+            CREATE TABLE IF NOT EXISTS ITEMS(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                rid TEXT,
+                clock TEXT,
+                schedule TEXT,
+                sums INT,
+                father INT
+            )''')
+
+        _ = self._hours_db.execute('''
+            CREATE TABLE IF NOT EXISTS RECORDS(
+                id INT NOT NULL REFERENCES ITEMS(id) ON UPDATE CASCADE,
+                start timestamp,
+                end timestamp  
+            )''')
+        _ = self._hours_db.commit()
+
+    def _readcreate_hours(self):
         for hour in self._hours_db.each("SELECT * FROM ITEMS"):
             iid, name, ridstr, clock, schedule, sums, father = cast(HourSqlTuple, hour)
             if clock:
@@ -69,129 +96,21 @@ class TimeMasterApp:
             _ = self._gui.process_message("CreateHour", id=iid, item=hour.data["name"],
                 rid=hour.data["rid"], clock= hour.data["clock"],
                 sums=f"{hour.data["sums"]/60:.1f}", is_subitem=False)
+            self._hours_record[iid] = []
             for sid, child in hour.children.items():
                 _ = self._gui.process_message("CreateHour", id=sid, item=child["name"],
                     rid=child["rid"], clock= child["clock"],
                     sums=f"{child["sums"]/60:.1f}", is_subitem=True)
+                self._hours_record[sid] = []
 
-    def _delete_hours(self):
-        for iid in self._cascade_hours.keys():
-            _ = self._gui.process_message("DeleteFather", id=iid)
-        self._cascade_hours.clear()
+        for hourecord in self._hours_db.each("SELECT * FROM RECORDS"):
+            iid, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            day = strt_date.date()
+            delta = end_date - strt_date
+            endure = int(delta.total_seconds() / 60)
+            self._hours_record[iid].append(HourRecordTuple(day, endure))
 
-    def _new_hoursdb(self, hoursdb: str):
-        po(f"new hours: {hoursdb}")
-        self._delete_hours()
-        _ = self._hours_db.open(hoursdb)
-        _ = self._hours_db.execute('''
-                PRAGMA foreign_keys = ON
-            ''')
-        _ = self._hours_db.execute('''
-            CREATE TABLE IF NOT EXISTS ITEMS(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                rid TEXT,
-                clock TEXT,
-                schedule TEXT,
-                sums INT,
-                father INT
-            )''')
-
-        _ = self._hours_db.execute('''
-            CREATE TABLE IF NOT EXISTS RECORDS(
-                id INT NOT NULL REFERENCES ITEMS(id) ON UPDATE CASCADE,
-                start TIMESTAMP,
-                end TIMESTAMP  
-            )''')
-        _ = self._hours_db.commit()
-
-    def _open_hoursdb(self, hoursdb: str):
-        po(f"open hours: {hoursdb}")
-        self._delete_hours()
-        _ = self._hours_db.open(hoursdb)
-        self.readcreate_hours()
-
-    def _new_medsdb(self, medsdb: str):
-        po(f"new meds: {medsdb}")
-        self._delete_meds()
-        _ = self._medicine_db.open(medsdb)
-        _ = self._medicine_db.execute('''
-                PRAGMA foreign_keys = ON
-            ''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS MEDICINES(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                rid TEXT,
-                due DATE,
-                sums REAL,
-                unit TEXT
-            )''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS USAGE(
-                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
-                schedule TEXT,
-                strt DATE,
-                end DATE
-            )''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS RECORDS(
-                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
-                take TIMESTAMP,
-                dose REAL
-            )''')
-        _ = self._medicine_db.commit()
-
-    def readcreate_meds(self):
-        for med in self._medicine_db.each("SELECT * FROM MEDICINES"):
-            iid, name, ridstr, due, sums, unit = cast(MedSqlTuple, med)
-            rid = ridstr.split("_")
-            meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
-                "due": due, "sums": sums, "unit": unit}
-            self._meds_store[iid] = meddata
-
-        meddata: MedDict = {"name": "创口贴", "rid": (0,0),
-                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "片"}
-        self._meds_store[1] = meddata
-
-        meddata: MedDict = {"name": "芬必得", "rid": (0,1),
-                "due": datetime.date(2025, 8, 15), "sums":200 , "unit": "个"}
-        self._meds_store[2] = meddata
-
-        meddata: MedDict = {"name": "碘伏", "rid": (0,2),
-                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "支"}
-        self._meds_store[3] = meddata
-
-        pv(self._meds_store)
-
-        for iid, med in self._meds_store.items():
-            _ = self._gui.process_message("CreateMedStor", id=iid, item=med["name"],
-                rid=med["rid"], due= med["due"], sums=med["sums"],
-                unit=med["unit"])
-
-    def _delete_meds(self):
-        self._meds_store.clear()
-
-    def _open_medsdb(self, medsdb: str):
-        po(f"open meds: {medsdb}")
-        self._delete_meds()
-        _ = self._medicine_db.open(medsdb)
-        self.readcreate_meds()
-
-    def open_user(self, usrpath: str):
-        hoursdbpath = os.path.join(usrpath, "hours.db")
-        if not os.path.isfile(hoursdbpath):
-            self._new_hoursdb(hoursdbpath)
-        else:
-            self._open_hoursdb(hoursdbpath)
-
-        medicinedbpath = os.path.join(usrpath, "meds.db")
-        if not os.path.isfile(medicinedbpath):
-            self._new_medsdb(medicinedbpath)
-        else:
-            self._open_medsdb(medicinedbpath)
-
-        self._schedule.event_to_schedule()
+        pv(self._hours_record)
 
     def _add_hour(self, name: str, rid: tuple[int, int], clock: str,
             schedule: str, father: int, sums: int = 0) -> int:
@@ -221,33 +140,40 @@ class TimeMasterApp:
             self._schedule.event_to_schedule()
         return iid
 
-    # TODO: wait to test
+    def _delete_hours(self):
+        for iid in self._cascade_hours.keys():
+            _ = self._gui.process_message("DeleteFather", id=iid)
+        self._cascade_hours.clear()
+
     def _record_hour(self, iid: int, timecost: datetime.timedelta):
         """record duration
 
         Args:
-            id_ (int): item id
+            iid (int): item id
             timecost (datetime.timedelta): time of the item cost
 
         Returns:
             None
-
-        Raises: 
-            None
         """
         end_py = datetime.datetime.now()
-        start_py: datetime.datetime = end_py - timecost
-        start_sql = self._convert_date(start_py)
-        end_sql = self._convert_date(end_py)
+        strt_py = end_py - timecost
+        # strt_sql = self._date_to_str(start_py)
+        # end_sql = self._date_to_str(end_py)
 
         _ = self._hours_db.execute1("""
-                INSERT INTO RECORDS
-                    (id, start, end)
+                INSERT INTO 'RECORDS'
+                    ('id', 'start', 'end')
                     VALUES (?, ?, ?)""",
-                (iid, start_sql, end_sql)
+                # (iid, start_sql, end_sql)
+                (iid, strt_py, end_py)
             )
 
-        po(f"id = {iid}, start = {start_sql}, end = {end_sql}")
+        # po(f"id = {iid}, start = {strt_sql}, end = {end_sql}")
+        po(f"id = {iid}, start = {strt_py}, end = {end_py}")
+
+        endure = int(timecost.total_seconds() / 60)
+        sums = cast(int, self.get_hourattrib(iid, "sums")) + endure
+        self._modify_hourattr(iid, "sums", sums)
 
     def _modify_hourattr(self, iid: int, attrib: str, newval: str | int):
         sql = f"UPDATE ITEMS SET {attrib}='{newval}' WHERE id='{iid}'"
@@ -280,7 +206,194 @@ class TimeMasterApp:
 
     def get_hourattrib(self, iid: int, attrib: str):
         detail = self.get_hourdetail(iid)
-        return detail.get(attrib, None)
+        if attrib not in detail:
+            raise KeyError(f"no attrib: {attrib}")
+        return detail.get(attrib)
+
+    def _get_hourstartdate(self, iid: int):
+        first_date = ""
+        sql = "SELECT * FROM RECORDS ORDER BY end ASC"
+        for hourecord in self._hours_db.each(sql):
+            iid_record, _, end_date = cast(HourSqlRecord, hourecord)
+            if iid == iid_record and not first_date:
+                first_date = end_date.date()
+        return first_date
+
+    def _get_hourtotaldays(self, iid: int):
+        is_firstsave = False
+        first_date = datetime.datetime.today()
+        last_date = datetime.datetime.today()
+        sql = "SELECT * FROM RECORDS ORDER BY end ASC"
+        for hourecord in self._hours_db.each(sql):
+            iid_record, _, end_date = cast(HourSqlRecord, hourecord)
+            if iid == iid_record:
+                if not is_firstsave:
+                    first_date = end_date
+                    is_firstsave = True
+                last_date = end_date
+        if is_firstsave:
+            endure_days = (last_date - first_date).days + 1
+        else:
+            endure_days = 0
+        return endure_days
+
+    def _get_hourseveryweek(self, iid: int):
+        is_firstsave = False
+        first_date = datetime.datetime.today()
+        last_date = datetime.datetime.today()
+        hours = 0.0
+        sql = f"SELECT * FROM RECORDS WHERE id={iid} ORDER BY end ASC"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            # if iid == iid_record:
+            if not is_firstsave:
+                first_date = end_date
+                is_firstsave = True
+            last_date = end_date
+            delta = end_date - strt_date
+            hours += delta.total_seconds() / 3600.0
+        if hours > 0.08:
+            endure_days = (last_date - first_date).days
+            if endure_days != 0:
+                hours = hours / endure_days * 7
+        return hours
+
+    def _get_hourslast7days(self, iid: int):
+        hours = 0.0
+        # today = datetime.datetime.today()
+        # last7day = today + datetime.timedelta(days=-7)
+        # sql = f"SELECT * FROM RECORDS WHERE end >= datetime({last7day})"
+        sql = f"SELECT * FROM RECORDS WHERE end>=date('now', '-7 days') AND id={iid}"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            # if iid == iid_record:
+            delta = end_date - strt_date
+            hours += delta.total_seconds() / 3600.0
+        return hours
+
+    def _get_resthours2milestone(self, iid: int):
+        return "∞"
+
+    def _get_hoursbyday(self, iid: int, day: datetime.date):
+        hours = 0.0
+        # sql = f"SELECT * FROM RECORDS WHERE strftime('%F',end)=strftime('%F',{day}) AND id={iid}"
+        sql = f"SELECT * FROM RECORDS WHERE id={iid}"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            if end_date.date() == day:
+                delta = end_date - strt_date
+                hours += delta.total_seconds() / 3600.0
+        return hours
+
+    def _get_hoursbyweek(self, iid: int, week: int):
+        hours = 0.0
+        # sql = f"SELECT * FROM RECORDS WHERE strftime('%W',end)={week} AND id={iid}"
+        sql = f"SELECT * FROM RECORDS WHERE id={iid}"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            if end_date.isocalendar()[1] == week:
+                delta = end_date - strt_date
+                hours += delta.total_seconds() / 3600.0
+        return hours
+
+    def _get_hoursbymonth(self, iid: int, month: int):
+        hours = 0.0
+        # sql = f"SELECT * FROM RECORDS WHERE strftime('%m',end)={month} AND id={iid}"
+        sql = f"SELECT * FROM RECORDS WHERE id={iid}"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            if end_date.month == month:
+                delta = end_date - strt_date
+                hours += delta.total_seconds() / 3600.0
+        return hours
+
+    def _get_hoursbyyear(self, iid: int, year: int):
+        hours = 0.0
+        # sql = f"SELECT * FROM RECORDS WHERE strftime('%Y',end)={year} AND id={iid}"
+        sql = f"SELECT * FROM RECORDS WHERE id={iid}"
+        for hourecord in self._hours_db.each(sql):
+            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+            if end_date.year == year:
+                delta = end_date - strt_date
+                hours += delta.total_seconds() / 3600.0
+        return hours
+
+    def open_user(self, usrpath: str):
+        hoursdbpath = os.path.join(usrpath, "hours.db")
+        _ = self._hours_db.open(hoursdbpath, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+        self._delete_hours()
+        if not os.path.isfile(hoursdbpath):
+            self._new_hoursdb()
+        else:
+            self._readcreate_hours()
+
+        medsdbpath = os.path.join(usrpath, "meds.db")
+        _ = self._medicine_db.open(medsdbpath, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+        self._delete_meds()
+        if not os.path.isfile(medsdbpath):
+            self._new_medsdb()
+        else:
+            self._readcreate_meds()
+
+        self._schedule.event_to_schedule()
+
+    def _new_medsdb(self):
+        _ = self._medicine_db.execute('''
+                PRAGMA foreign_keys = ON
+            ''')
+        _ = self._medicine_db.execute('''
+            CREATE TABLE IF NOT EXISTS MEDICINES(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                rid TEXT,
+                due DATE,
+                sums REAL,
+                unit TEXT
+            )''')
+        _ = self._medicine_db.execute('''
+            CREATE TABLE IF NOT EXISTS USAGE(
+                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
+                schedule TEXT,
+                strt DATE,
+                end DATE
+            )''')
+        _ = self._medicine_db.execute('''
+            CREATE TABLE IF NOT EXISTS RECORDS(
+                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
+                take TIMESTAMP,
+                dose REAL
+            )''')
+        _ = self._medicine_db.commit()
+
+    def _readcreate_meds(self):
+        for med in self._medicine_db.each("SELECT * FROM MEDICINES"):
+            iid, name, ridstr, due, sums, unit = cast(MedSqlTuple, med)
+            rid = ridstr.split("_")
+            meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
+                "due": due, "sums": sums, "unit": unit}
+            self._meds_store[iid] = meddata
+
+        meddata: MedDict = {"name": "创口贴", "rid": (0,0),
+                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "片"}
+        self._meds_store[1] = meddata
+
+        meddata: MedDict = {"name": "芬必得", "rid": (0,1),
+                "due": datetime.date(2025, 8, 15), "sums":200 , "unit": "个"}
+        self._meds_store[2] = meddata
+
+        meddata: MedDict = {"name": "碘伏", "rid": (0,2),
+                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "支"}
+        self._meds_store[3] = meddata
+
+        pv(self._meds_store)
+
+        for iid, med in self._meds_store.items():
+            _ = self._gui.process_message("CreateMedStor", id=iid, item=med["name"],
+                rid=med["rid"], due= med["due"], sums=med["sums"],
+                unit=med["unit"])
+
+    def _delete_meds(self):
+        self._meds_store.clear()
 
     def _add_med(self, name: str, rid: tuple[int, int], due: datetime.date,
             sums: float, unit: str) -> int:
@@ -323,8 +436,6 @@ class TimeMasterApp:
             None
 
         """
-        self._meds_store[iid]["sums"] -= dose
-
         _ = self._hours_db.execute1("""
                 INSERT INTO RECORDS
                     (id, take, dose)
@@ -335,15 +446,24 @@ class TimeMasterApp:
         po(f"med id = {iid}, time = {time}, dose = {dose}, \
             rest={self._meds_store[iid]["sums"]}")
 
-    def _modify_medattr(self, iid: int, attrib: str, newval: str | int):
+        sums = self._meds_store[iid]["sums"] - dose
+        self._modify_medattr(iid, "sums", sums)
+
+    def _modify_medattr(self, iid: int, attrib: str, newval: str | float):
         sql = f"UPDATE MEDICINES SET {attrib}='{newval}' WHERE id='{iid}'"
         _ = self._medicine_db.execute1(sql)
         po(f"update med {iid}'s {attrib} to {newval}")
         self._meds_store[iid][attrib] = newval
 
-    def _convert_date(self, date_py: datetime.datetime) -> str:
+    """
+    def _date_to_str(self, date_py: datetime.datetime) -> str:
         date_sql = date_py.strftime('%Y-%m-%d %H:%M:%S')
         return date_sql
+
+    def _str_to_date(self, date_sql: str) -> datetime.datetime:
+        date_py = datetime.datetime.strptime(date_sql, '%Y-%m-%d %H:%M:%S')
+        return date_py
+    """
 
     def _clock_sql2app(self, sqlclock: str) ->str:
         """convert sql clock to app clock
@@ -425,7 +545,7 @@ class TimeMasterApp:
                 self.close()
                 usrpath = cast(str, kwargs["path"])
                 self.open_user(usrpath)
-            case "addItem":
+            case "AddHour":
                 name = cast(str, kwargs["name"])
                 father = cast(int, kwargs["father"])
                 grp, idx = cast(tuple[int, int], kwargs["rid"])
@@ -443,7 +563,7 @@ class TimeMasterApp:
                     return self._cascade_hours[father].children
                 else:
                     return cast(dict[str, HourDict], {})
-            case "record":
+            case "RecordHour":
                 iid = cast(int, kwargs["id"])
                 timecost = cast(datetime.timedelta, kwargs["timecost"])
                 self._record_hour(iid, timecost)
@@ -457,8 +577,9 @@ class TimeMasterApp:
                         sqlval = self._clock_app2sql(val)
                         name = cast(str, self.get_hourattrib(iid, "name"))
                         # self.set_alarm(iid, name, sqlval)
-                        self._schedule.add_event(sqlval, name)
-                        self._schedule.event_to_schedule()
+                        if val:
+                            self._schedule.add_event(sqlval, name)
+                            self._schedule.event_to_schedule()
                     case "schedule":
                         sqlval = self._schedule_app2sql(val)
                     case "rid":
@@ -470,6 +591,37 @@ class TimeMasterApp:
                         raise ValueError(f"unsupport to modify {attrib}")
                 pv(sqlval)
                 self._modify_hourattr(iid, attrib, sqlval)
+            case "GetHourStartDate":
+                iid = cast(int, kwargs["id"])
+                return self._get_hourstartdate(iid)
+            case "GetHourTotalDays":
+                iid = cast(int, kwargs["id"])
+                return self._get_hourtotaldays(iid)
+            case "GetHoursEveryWeek":
+                iid = cast(int, kwargs["id"])
+                return self._get_hourseveryweek(iid)
+            case "GetHoursLast7Days":
+                iid = cast(int, kwargs["id"])
+                return self._get_hourslast7days(iid)
+            case "GetRestHours2Milestone":
+                iid = cast(int, kwargs["id"])
+                return self._get_resthours2milestone(iid)
+            case "GetHoursbyDay":
+                iid = cast(int, kwargs["id"])
+                day = cast(datetime.date, kwargs["day"])
+                return self._get_hoursbyday(iid, day)
+            case "GetHoursbyWeek":
+                iid = cast(int, kwargs["id"])
+                week = cast(int, kwargs["week"])
+                return self._get_hoursbyweek(iid, week)
+            case "GetHoursbyMonth":
+                iid = cast(int, kwargs["id"])
+                month = cast(int, kwargs["month"])
+                return self._get_hoursbymonth(iid, month)
+            case "GetHoursbyYear":
+                iid = cast(int, kwargs["id"])
+                year = cast(int, kwargs["year"])
+                return self._get_hoursbyyear(iid, year)
             case "DelHour":
                 iid = cast(int, kwargs["id"])
                 po(f"going to delete {iid} hour")
