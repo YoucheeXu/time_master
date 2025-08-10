@@ -8,15 +8,15 @@ import tkinter as tk
 from tkinter import ttk
 from typing import override, cast
 
-from item_type import ItemDict
+from item_type import HourDict
 from pyutilities.tkwin import EntryCtrl, ComboboxCtrl, ImageBtttonCtrl, DialogCtrl
 from pyutilities.tkwin import tkWin
 from pyutilities.logit import pv
 
 
-class TimeManagerGui(tkWin):
+class TimeMasterGui(tkWin):
     _new_subid: int = 0
-    _subitem_list: list[ItemDict] = []
+    _subitem_list: list[HourDict] = []
     _id: int = 0
 
     def __init__(self, path: str, xmlfile: str):
@@ -185,7 +185,7 @@ class TimeManagerGui(tkWin):
 
     def _fetch_subitems(self, father: int): 
         # sub_item = {"name": "Gramma", "rid": 0, "sums": "0h"}
-        subitems: list[ItemDict] = []
+        subitems: list[HourDict] = []
         subitems_len = self.process_message("getSubItems", father=father, subitems=subitems)
         pv(subitems_len)
         return subitems
@@ -253,7 +253,7 @@ class TimeManagerGui(tkWin):
                 id_ = self._new_subid
                 parent = cast(tk.Frame, self.get_control("frmSubItmes"))
                 self._create_subitem(parent, id_, name, rid, '0h')
-                item: ItemDict = {"id": -1, "name": name, "rid": 0,
+                item: HourDict = {"id": -1, "name": name, "rid": 0,
                     "clock": clock, "schedule": schedule, "sums": 0, "father": father}
                 self._subitem_list.append(item)
                 lbl_totalsubitems = self.get_control("lblTotalSubItems")
@@ -408,7 +408,7 @@ if __name__ == '__main__':
     cur_path = os.path.dirname(os.path.abspath(__file__))
     if getattr(sys, 'frozen', False):
         cur_path = os.path.dirname(os.path.abspath(sys.executable))
-    win_xml = os.path.join(cur_path, 'resources', 'time_manager.xml')
-    gui = TimeManagerGui(cur_path, win_xml)
+    win_xml = os.path.join(cur_path, 'resources', 'time_master.xml')
+    gui = TimeMasterGui(cur_path, win_xml)
     # gui.create_window(win_xml)
     gui.go()

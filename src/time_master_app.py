@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 # from typing import TypedDict
 from typing import cast, Unpack, Any
 
-from item_type import Record, ItemTuple, ItemDict
-# from sqlite3_database import ItemTuple, Sqlite3DataBase
-from time_manager_gui import TimeManagerGui
+from item_type import HourRecord, HourTuple, HourDict
+# from sqlite3_database import HourTuple, Sqlite3DataBase
+from time_master_gui import TimeMasterGui
 
 from pyutilities.logit import pv, po
 from pyutilities.sqlite import SQLite
@@ -16,17 +16,17 @@ from pyutilities.sqlite import SQLite
 
 @dataclass
 class Item:
-    # TypedDict("ItemDict",{"id": 0, "name": "", "rid": 0, "clock": "", "schedule": "", "sums": 0, "father": -1})
-    data: ItemDict = field(default_factory=ItemDict)
-    subitems: list[ItemDict] = field(default_factory=list)
+    # TypedDict("HourDict",{"id": 0, "name": "", "rid": 0, "clock": "", "schedule": "", "sums": 0, "father": -1})
+    data: HourDict = field(default_factory=HourDict)
+    subitems: list[HourDict] = field(default_factory=list)
 
 
-class TimeMangerApp:
+class TimeMasterApp:
     _dbname: str = ""
     _items: dict[int, Item] = {}
     _id: int = 1
     def __init__(self, curpath: str, xmlfile, dbfile: str):
-        self._gui: TimeManagerGui = TimeManagerGui(curpath, xmlfile)
+        self._gui: TimeMasterGui = TimeMasterGui(curpath, xmlfile)
 
         # self._gui.register_eventhandler("addItem", self._additem_callback)
         self._gui.register_eventhandler("addItem", self.process_message)
@@ -41,12 +41,12 @@ class TimeMangerApp:
         self._open_user(dbfile)
 
     def read_create(self):
-        # items: list[ItemTuple] = 
+        # items: list[HourTuple] = 
         # pv(items)
         for item in self._db.each("SELECT * FROM ITEMS"):
             pv(item)
-            id_, name, rid, clock, schedule, sums, father = cast(ItemTuple, item)
-            itemdata: ItemDict = {"id": id_, "name": name, "rid": rid, "clock": clock,
+            id_, name, rid, clock, schedule, sums, father = cast(HourTuple, item)
+            itemdata: HourDict = {"id": id_, "name": name, "rid": rid, "clock": clock,
                 "schedule": schedule, "sums": sums, "father": father}
             if father == -1:
                 item = Item()
@@ -89,7 +89,7 @@ class TimeMangerApp:
             po(f"open user: {usrdb}")
             self.read_create()
 
-    # def _additem_callback(self, *args, **kwargs: Unpack[ItemDict]) -> int:
+    # def _additem_callback(self, *args, **kwargs: Unpack[HourDict]) -> int:
     def _add_item(self, name: str, rid: int, clock: str, schedule: str, father: int, sums: int = 0) -> int:
         _ = self._db.execute1("""
                 INSERT INTO ITEMS (name, rid, clock, schedule, sums, father)
@@ -102,7 +102,7 @@ class TimeMangerApp:
 
         # id_ = self._id
 
-        itemdata: ItemDict = {"id": id_, "father": father, "name": name,
+        itemdata: HourDict = {"id": id_, "father": father, "name": name,
                 "rid": rid, "clock": clock, "schedule": schedule, "sums": sums}
         if father == -1:
             item = Item(data=itemdata, subitems=[])
@@ -118,8 +118,8 @@ class TimeMangerApp:
         return id_
 
     # def _getsubitems_callback(self, father: int, *args, **kwargs) -> int:
-        # subitem_list = cast(list[ItemDict], kwargs["subitems"])
-    def _get_subitems(self, father: int, subitem_list: list[ItemDict]) -> int:
+        # subitem_list = cast(list[HourDict], kwargs["subitems"])
+    def _get_subitems(self, father: int, subitem_list: list[HourDict]) -> int:
         subitem_list.clear()
         if father in self._items:
             subitems = self._items[father].subitems
@@ -183,7 +183,7 @@ class TimeMangerApp:
                 return self._add_item(name, rid, clock, schedule, father)
             case "getSubItems":
                 father = cast(int, kwargs["father"])
-                subitem_list = cast(list[ItemDict], kwargs["subitems"])
+                subitem_list = cast(list[HourDict], kwargs["subitems"])
                 return self._get_subitems(father, subitem_list)
             case "record":
                 id_ = cast(int, kwargs["id"])

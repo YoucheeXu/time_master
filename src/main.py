@@ -4,7 +4,7 @@ import sys
 import os
 
 from pyutilities.logit import pv, po
-from time_manger_app import TimeMangerApp
+from time_master_app import TimeMasterApp
 
 
 def main():
@@ -13,9 +13,9 @@ def main():
         projpath = os.path.dirname(os.path.abspath(sys.executable))
     projpath = os.path.abspath(os.path.join(projpath, ".."))
     pv(projpath)
-    xmlfile = os.path.join(projpath, 'resources', 'time_manager.xml')
+    xmlfile = os.path.join(projpath, 'resources', 'time_master.xml')
     dbfile = os.path.join(projpath, "data", "my.db")
-    app = TimeMangerApp(projpath, xmlfile,dbfile)
+    app = TimeMasterApp(projpath, xmlfile,dbfile)
     app.run()
     app.close()
 
