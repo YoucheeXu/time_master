@@ -1,60 +1,110 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+"""
+gui >= 0.1.1
+"""
 import os
 import datetime
-from dataclasses import dataclass, field
 # from typing import TypedDict
-from typing import cast, Unpack, Any
+# from functools import partial
+# from typing import Unpack
+from typing import cast, Any
 
-from item_type import HourRecord, HourTuple, HourDict
-# from sqlite3_database import HourTuple, Sqlite3DataBase
+from item_type import HourSqlTuple, HourDict, Hour
+# from sqlite3_database import ItemTuple, Sqlite3DataBase
 from time_master_gui import TimeMasterGui
+from bidirectionaldict import BidirectionalDict
 
 from pyutilities.logit import pv, po
 from pyutilities.sqlite import SQLite
 
 
-@dataclass
-class Item:
-    # TypedDict("HourDict",{"id": 0, "name": "", "rid": 0, "clock": "", "schedule": "", "sums": 0, "father": -1})
-    data: HourDict = field(default_factory=HourDict)
-    subitems: list[HourDict] = field(default_factory=list)
-
-
 class TimeMasterApp:
     _dbname: str = ""
-    _items: dict[int, Item] = {}
-    _id: int = 1
-    def __init__(self, curpath: str, xmlfile, dbfile: str):
+    _cascade_items: dict[int, Hour] = {}
+    def __init__(self, curpath: str, xmlfile: str, dbfile: str):
+
+        self._every_dict : BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"P": "每", "E": "偶数", "O": "奇数"})
+        self._day_dict : BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"CD": "日", "WD": "工作日", "HD": "节假日"})
+        # self._clock_dict: dict[str, str] = {**self._every_dict.backward, **self._day_dict.backward}
+        self._period_dict : BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"PD": "计划每日", "PW": "计划每周", "PM": "计划每月"})
+
         self._gui: TimeMasterGui = TimeMasterGui(curpath, xmlfile)
 
+        """
         # self._gui.register_eventhandler("addItem", self._additem_callback)
-        self._gui.register_eventhandler("addItem", self.process_message)
-        # self._gui.register_eventhandler("getSubItems", self._getsubitems_callback)
-        self._gui.register_eventhandler("getSubItems", self.process_message)
+        # self._gui.register_eventhandler("addItem", self.process_message)
+        add_item = partial(self.process_message, "addItem")
+        self._gui.register_eventhandler("addItem", add_item)
+        # self._gui.register_eventhandler("getChildren", self._getsubitems_callback)
+        # self._gui.register_eventhandler("getChildren", self.process_message)
+        get_children = partial(self.process_message, "getChildren")
+        self._gui.register_eventhandler("getChildren", get_children)
         # self._gui.register_eventhandler("record", self._record_callback)
-        self._gui.register_eventhandler("record", self.process_message)
+        # self._gui.register_eventhandler("record", self.process_message)
+        record = partial(self.process_message, "record")
+        self._gui.register_eventhandler("record", record)
         # self._gui.register_eventhandler("modify", self._modify_callback)
-        self._gui.register_eventhandler("modify", self.process_message)
+        # self._gui.register_eventhandler("modify", self.process_message)
+        modify = partial(self.process_message, "modify")
+        self._gui.register_eventhandler("modify", modify)
+
+        # self._gui.register_eventhandler("getItemDetail", self.process_message)
+        get_itemdetail = partial(self.process_message, "getItemDetail")
+        self._gui.register_eventhandler("getItemDetail", get_itemdetail)
+        """
+
+        msglst = ["addItem", "getChildren", "record", "modify", "delete", "getItemDetail"]
+        self._gui.filter_message(self.process_message, 1, msglst)
 
         self._db: SQLite = SQLite()
         self._open_user(dbfile)
 
     def read_create(self):
-        # items: list[HourTuple] = 
-        # pv(items)
         for item in self._db.each("SELECT * FROM ITEMS"):
-            pv(item)
-            id_, name, rid, clock, schedule, sums, father = cast(HourTuple, item)
-            itemdata: HourDict = {"id": id_, "name": name, "rid": rid, "clock": clock,
-                "schedule": schedule, "sums": sums, "father": father}
+            # pv(Hour)
+            iid, name, ridstr, clock, schedule, sums, father = cast(HourSqlTuple, item)
+            # rid = ridstr.split("_")
+            # TODO: for test
+            rid = ["0", ridstr]
+            itemdata: HourDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
+                "clock": clock, "schedule": schedule, "sums": sums, "father": father}
             if father == -1:
-                item = Item()
-                item.data = itemdata
-                self._items[id_] = item
+                hour = Hour()
+                hour.data = itemdata
+                self._cascade_items[iid] = hour
+                # is_subitem = False
             else:
-                self._items[father].subitems.append(itemdata)
-            self._gui.create_item(id_, name, rid, clock, f"{sums / 60}h")
+                self._cascade_items[father].children[iid] = itemdata
+                # is_subitem = True
+        pv(self._cascade_items)
+        i = 0
+        for iid, item in self._cascade_items.items():
+            """
+            parent = self._gui.get_control("frmHour")
+            xml = self._gui.create_xml("Frame", {"text":f"frmGroup{iid}", "id":f"frmGroup{iid}"})
+                 # "options":"{'borderwidth':1,'relief':'ridge'}"})
+            _, group = self._gui.create_control(parent, xml, 2)
+            """
+            # self._gui.create_item(group, iid, item.data["name"], item.data["rid"],
+            self._gui.create_item(iid, item.data["name"], item.data["rid"],
+                self._clock_sql2app(item.data["clock"]), f"{item.data["sums"]/60}h", False)
+            for sid, child in item.children.items():
+                # self._gui.create_item(group, sid, child["name"], child["rid"],
+                self._gui.create_item(sid, child["name"], child["rid"],
+                    self._clock_sql2app(child["clock"]), f"{child["sums"]/60}h", True)
+            """
+            if i == 0:
+                pady1 = 10
+            else:
+                pady1 = 5
+            self._gui.assemble_control(group, {"layout": "pack",
+                "pack":f"{{'side':'top','pady':({pady1},5),'fill':'x'}}"}, f"{'  '*(2-1)}")
+            i += 1
+            """
 
     def _new_user(self, usr: str):
         _ = self._db.open(usr)
@@ -65,7 +115,7 @@ class TimeMasterApp:
             CREATE TABLE IF NOT EXISTS ITEMS(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                rid INT,
+                rid TEXT,
                 clock TEXT,
                 schedule TEXT,
                 sums INT,
@@ -90,54 +140,41 @@ class TimeMasterApp:
             self.read_create()
 
     # def _additem_callback(self, *args, **kwargs: Unpack[HourDict]) -> int:
-    def _add_item(self, name: str, rid: int, clock: str, schedule: str, father: int, sums: int = 0) -> int:
-        _ = self._db.execute1("""
-                INSERT INTO ITEMS (name, rid, clock, schedule, sums, father)
-                    VALUES (?, ?, ?, ?, ?, ?)""",
-                (name, rid, clock, schedule, sums, father)
-            )
-        id_ = self._db.get(
-                "SELECT last_insert_rowid()"
-            )
+    def _add_item(self, name: str, rid: tuple[int, int], clock: str,
+            schedule: str, father: int, sums: int = 0) -> int:
+        # ridstr = f"{rid[0]}_{rid[1]}"
+        # _ = self._db.execute1("""
+                # INSERT INTO ITEMS (name, rid, clock, schedule, sums, father)
+                    # VALUES (?, ?, ?, ?, ?, ?)""",
+                # (name, ridstr, clock, schedule, sums, father)
+            # )
+        # iid = cast(int, self._db.get(
+                # "SELECT last_insert_rowid()"
+            # ))
+        iid = 10
 
-        # id_ = self._id
-
-        itemdata: HourDict = {"id": id_, "father": father, "name": name,
-                "rid": rid, "clock": clock, "schedule": schedule, "sums": sums}
+        itemdata: HourDict = {"father": father, "name": name,
+                "rid": rid, "clock": clock,
+                "schedule": schedule, "sums": sums}
         if father == -1:
-            item = Item(data=itemdata, subitems=[])
+            hour = Hour(data=itemdata, children={})
             # self._items[id_].data = itemdata
-            self._items[id_] = item
+            self._cascade_items[iid] = hour
         else:
-            self._items[father].subitems.append(itemdata)
+            self._cascade_items[father].children[iid] = itemdata
 
         # print("_additem_callback", args, kwargs)
-        # self._id += 1
         # pv(self._items)
         print(f"create_item: {name}")
-        return id_
+        return iid
 
-    # def _getsubitems_callback(self, father: int, *args, **kwargs) -> int:
-        # subitem_list = cast(list[HourDict], kwargs["subitems"])
-    def _get_subitems(self, father: int, subitem_list: list[HourDict]) -> int:
-        subitem_list.clear()
-        if father in self._items:
-            subitems = self._items[father].subitems
-            subitem_list += subitems
-        pv(subitem_list)
-        return len(subitem_list)
-
-    # TODO: update sums
-    # def _record_callback(self, id_: int, **kwargs):
-        # print(f"app._record: {args}, {kwargs}")
-        # pv(kwargs)
-        # id_ = cast(int, args[0])
-    def _record(self, id_: int, timecost: datetime.timedelta):
+    # TODO: wait to test
+    def _record(self, iid: int, timecost: datetime.timedelta):
         """record duration
 
         Args:
-            id_ (int): item id
-            timecost (datetime.timedelta): time of the item cost
+            id_ (int): Hour id
+            timecost (datetime.timedelta): time of the Hour cost
 
         Returns:
             None
@@ -150,56 +187,216 @@ class TimeMasterApp:
         start_sql = self._convert_date(start_py)
         end_sql = self._convert_date(end_py)
 
-        _ = self._db.execute1("""
-                INSERT INTO RECORD
-                    (id, start, end)
-                    VALUES (?, ?, ?)""",
-                (id_, start_sql, end_sql)
-            )
+        # _ = self._db.execute1("""
+                # INSERT INTO RECORD
+                    # (id, start, end)
+                    # VALUES (?, ?, ?)""",
+                # (iid, start_sql, end_sql)
+            # )
 
-        po(f"id = {id_}, start = {start_sql}, end = {end_sql}")
+        po(f"id = {iid}, start = {start_sql}, end = {end_sql}")
 
     # def _modify_callback(self, id_: int, **kwargs):
         # print(f"app._modify: {args}, {kwargs}")
         # pv(kwargs)
-    def _modify(self, id_: int, attrib: str, newval):
-        _ = self._db.execute1(
-            f"UPDATE ITEMS SET {attrib}={newval} WHERE id='{id_}'"
-        )
-        po(f"update {id_}'s {attrib} to {newval}")
+
+    def _modify(self, iid: int, attrib: str, newval: str | int):
+        # sql = f"UPDATE ITEMS SET {attrib}='{newval}' WHERE id='{iid}'"
+        # _ = self._db.execute1(sql)
+        po(f"update {iid}'s {attrib} to {newval}")
+        for fid, fitem in self._cascade_items.items():
+            if fid == iid:
+                fitem.data[attrib] = newval
+                return
+            for sid, sitem, in fitem.children.items():
+                if sid == iid:
+                    sitem[attrib] = newval
+                    return
+
+    # TODO: do we need to delete corresponding records?
+    def _delete(self, iid: int):
+        sql = f"DELETE FROM ITEMS WHERE id='{iid}'"
+        pv(sql)
+        _ = self._db.execute1(sql)        
 
     def _convert_date(self, date_py: datetime.datetime) -> str:
         date_sql = date_py.strftime('%Y-%m-%d %H:%M:%S')
         return date_sql
 
-    def process_message(self, id_ctrl: str, **kwargs: Any):
-        match id_ctrl:
+    def _clock_sql2app(self, sqlclock: str) ->str:
+        """convert sql clock to app clock
+            i1: P: Per(Every), E: Even, O: Odd
+            i2: CD: Calendar day, WD: Work day, HD: Holiday day
+        Args:
+            sqlclock (): i1_i2_10:00
+
+        Returns:
+            str: 每日 22:00
+
+        """
+        sqlclock_list = sqlclock.split("_")
+        if len(sqlclock_list) != 3:
+            return sqlclock
+        i1 = self._every_dict.key_to_value(sqlclock_list[0])
+        i2 = self._day_dict.key_to_value(sqlclock_list[1])
+        appclock = f"{i1}{i2} {sqlclock_list[2]}"
+        return appclock
+
+    def _clock_app2sql(self, appclock: str) ->str:
+        """
+            i1_i2_10:00
+
+            i1: P: Per(Every), E: Even, O: Odd
+            i2: CD: Calendar day, WD: Work day, HD: Holiday day
+        """
+        if len(appclock) < 8:
+            return appclock
+
+        if appclock[0] in self._every_dict.backward:
+            # 每日 21:00
+            i1 = self._every_dict.value_to_key(appclock[0])
+            i2 = self._day_dict.value_to_key(appclock[1: -6])
+            i3 = appclock[-5: ]
+        elif appclock[0: 2] in self._every_dict.backward:
+            # 偶数工作日 21:00
+            i1 = self._every_dict.value_to_key(appclock[0: 2])
+            i2 = self._day_dict.value_to_key(appclock[2: -6])
+            i3 = appclock[-5: ]
+        else:
+            # 工作日 21:00
+            i1 = "P"
+            # pv(appclock[0: 3])
+            i2 = self._day_dict.value_to_key(appclock[0: 3])
+            i3 = appclock[-5: ]
+
+        sqlclock = f"{i1}_{i2}_{i3}"
+        return sqlclock
+
+    def _schedule_sql2app(self, sqlschedule: str) -> str:
+        """
+            i1_30m
+
+            i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        """
+        sqlschedule_list = sqlschedule.split("_")
+        if len(sqlschedule_list) < 2:
+            return sqlschedule
+        i1 = self._period_dict.key_to_value(sqlschedule_list[0])
+        appschedule = f"{i1}{sqlschedule_list[1]}"
+        return appschedule
+
+    def _schedule_app2sql(self, appschedule: str) -> str:
+        """
+            i1_30m
+
+            i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        """
+        if len(appschedule) <= 3:
+            return appschedule
+        # pv(appschedule[0: 4])
+        i1 = self._period_dict.value_to_key(appschedule[0: 4])
+        sqlschedule = f"{i1}_{appschedule[4: ]}"
+        return sqlschedule
+
+    def get_itemdetail(self, iid: int) -> HourDict:
+        if iid in self._cascade_items:
+            return self._cascade_items[iid].data
+        else:
+            for _, father in self._cascade_items.items():
+                children = father.children
+                if iid in children:
+                    return children[iid]
+
+    # def get_itemdetail(self, id_: int, detail: HourDict) -> HourDict:
+        # if id_ in self._items:
+            # detail = self._items[id_].data
+            # return
+        # else:
+            # for _, father in self._items.items():
+                # children = father.children
+                # if id_ in children:
+                    # detail = children[id_]
+                    # return
+
+    def process_message(self, idmsg: str, **kwargs: Any):
+        match idmsg:
             case "addItem":
                 name = cast(str, kwargs["name"])
                 father = cast(int, kwargs["father"])
-                rid = cast(int, kwargs["rid"])
-                clock = cast(str, kwargs["clock"])
-                schedule = cast(str, kwargs["schedule"])
-                return self._add_item(name, rid, clock, schedule, father)
-            case "getSubItems":
+                grp, idx = cast(tuple[int, int], kwargs["rid"])
+                # rid = f"{grp}_{idx}"
+                clock = self._clock_app2sql(cast(str, kwargs["clock"]))
+                schedule = self._schedule_app2sql(cast(str, kwargs["schedule"]))
+                # print(f"new Hour: {name}, {schedule}")
+                return self._add_item(name, (grp, idx), clock, schedule, father)
+            case "getItemDetail":
+                iid = cast(int, kwargs["id"])
+                return self.get_itemdetail(iid)
+            case "getChildren":
                 father = cast(int, kwargs["father"])
-                subitem_list = cast(list[HourDict], kwargs["subitems"])
-                return self._get_subitems(father, subitem_list)
+                if father in self._cascade_items:
+                    return self._cascade_items[father].children
+                else:
+                    return {}
             case "record":
-                id_ = cast(int, kwargs["id"])
+                iid = cast(int, kwargs["id"])
                 timecost = cast(datetime.timedelta, kwargs["timecost"])
-                return self._record(id_, timecost)
+                self._record(iid, timecost)
             case "modify":
-                id_ = cast(int, kwargs["id"])
+                iid = cast(int, kwargs["id"])
                 attrib = cast(str, kwargs["attrib"])
-                newval = kwargs["val"]
-                return self._modify(id_, attrib, newval)
+                appval = cast(str, kwargs["val"])
+                pv(appval)
+                match attrib:
+                    case "clock":
+                        sqlval = self._clock_app2sql(appval)
+                    case "schedule":
+                        sqlval = self._schedule_app2sql(appval)
+                    case "rid":
+                        grp, idx = appval
+                        sqlval = f"{grp}_{idx}"
+                    case "sums":
+                        sqlval = appval
+                    case _:
+                        raise ValueError(f"unsupport to modify {attrib}")
+                pv(sqlval)
+                self._modify(iid, attrib, sqlval)
+            case "delete":
+                iid = cast(int, kwargs["id"])
+                po(f"going to delete {iid}")
+                if iid in self._cascade_items:
+                    del self._cascade_items[iid]
+                else:
+                    for _, father in self._cascade_items.items():
+                        children = father.children
+                        if iid in children:
+                            del children[iid]
+                            break
+                pv(self._cascade_items)
+                # self._delete(iid)
             case _:
-                raise ValueError(f"unkown msg of {id_ctrl}: {kwargs}")
+                raise ValueError(f"unkown msg of {idmsg}: {kwargs}")
+        return True
 
     def run(self):
+        """
+        appclock = self._clock_sql2app("P_WD_12:00")
+        pv(appclock)
+        sqlclock = self._clock_app2sql(appclock)
+        pv(sqlclock)
+
+        appclock = self._clock_sql2app("E_WD_12:00")
+        pv(appclock)
+        sqlclock = self._clock_app2sql(appclock)
+        pv(sqlclock)
+
+        appschedule = self._schedule_sql2app("PW_2h")
+        pv(appschedule)
+        sqlschedule = self._schedule_app2sql(appschedule)
+        pv(sqlschedule)
+        """
+
         self._gui.go()
 
     def close(self):
         _ = self._db.close()
-
