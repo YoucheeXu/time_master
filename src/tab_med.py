@@ -42,13 +42,10 @@ class MedTab:
         }
 
         self._seldue_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgSelMedDue"))
-        self._seldue_dlg.register_eventhandler("beforego", self._selduedlg_beforego)
-        self._seldue_dlg.register_eventhandler("confirm", self._selduedlg_confirm)
+        self._seldue_dlg.filter_message(self._selduedlg_processmessage)
 
         self._recordmed_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgRecordMed"))
-        self._recordmed_dlg.register_eventhandler("beforego", self._recordmeddlg_beforego)
-        self._recordmed_dlg.register_eventhandler("lblDay", self._recordmeddlg_selday)
-        self._recordmed_dlg.register_eventhandler("confirm", self._recordmeddlg_confirm)
+        self._recordmed_dlg.filter_message(self._recordmeddlg_processmessage)
 
         self._meddetail_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgMedDetail"))
         self._meddetail_dlg.filter_message(self._meddetaildlg_processmessage)
@@ -84,20 +81,21 @@ class MedTab:
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
-    def get_medstorattr(self, uid: int, attrib: str) -> str:
+    def get_medstorattr(self, iid: int, attrib: str) -> str:
         val: str = ""
         match attrib:
             case "name":
-                ctrl_Med1 = cast(LabelCtrl, self._gui.get_control(f"lblNameMedStor{uid}"))
-                val = cast(str, ctrl_Med1['text'])
+                ctrl_Med1 = cast(LabelCtrl, self._gui.get_control(f"lblNameMedStor{iid}"))
+                # val = cast(str, ctrl_Med1['text'])
+                val = ctrl_Med1.get_text()
             # case "image":
                 # ctrl_Med2 = cast(ImageBtttonCtrl, self._gui.get_control(f"btnImageMedStor{id_}")
                 # raise NotImplementedError("")
             case "due":
-                ctrl_Med3 = cast(ImageBtttonCtrl, self._gui.get_control(f"btnDueMedStor{uid}"))
+                ctrl_Med3 = cast(ImageBtttonCtrl, self._gui.get_control(f"btnDueMedStor{iid}"))
                 val = cast(str, ctrl_Med3['text'])
             case "sums":
-                ctrl_Med4 = cast(LabelCtrl, self._gui.get_control(f"lblSumMedStor{uid}"))
+                ctrl_Med4 = cast(LabelCtrl, self._gui.get_control(f"lblSumMedStor{iid}"))
                 val = cast(str, ctrl_Med4['text'])
             case _:
                 val = ""
@@ -162,26 +160,51 @@ class MedTab:
 
     def _selduedlg_beforego(self, **kwargs: Any):
         po(f"_selduedlg_beforego: {kwargs}")
-        name = cast(int, kwargs["name"])
+        name = cast(str, kwargs["name"])
         lbl_name = cast(LabelCtrl, self._seldue_dlg.get_control("lblNameSelMedDue"))
-        lbl_name["text"] = name
+        # lbl_name["text"] = name
+        lbl_name.set_text(name)
+        lbl_seldue = cast(LabelCtrl, self._seldue_dlg.get_control("lblSelDaySelMedDue"))
         lbl_seldue = cast(LabelCtrl, self._seldue_dlg.get_control("lblSelDaySelMedDue"))
         today = datetime.date.today()
         lbl_seldue["text"] = today
 
+    def _selduedlg_selday(self, **kwargs: Any):
+        x, y = cast(tuple[int, int], kwargs["mousepos"])
+        # self._selclock_dlg
+        calendar = CalendarCtrl((x, y+20))
+        date = calendar.get_datestr()
+        pv(date)
+        lbl_seldue = cast(LabelCtrl, self._gui.get_control("lblSelDaySelMedDue"))
+        lbl_seldue["text"] = date
+
     def _selduedlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
         po(f"_selduedlg_confirm: {kwargs}")
         lbl_seldue = cast(LabelCtrl, self._seldue_dlg.get_control("lblSelDaySelMedDue"))
-        due = lbl_seldue["text"]
+        due = cast(str, lbl_seldue["text"])
         self._seldue_dlg.owner.process_message("changeDue", due=due, **kwargs)
         return True, ""
+
+    def _selduedlg_processmessage(self, idmsg: str, **kwargs: Any):
+        if self._seldue_dlg.alive:
+            match idmsg:
+                case "beforego":
+                    self._selduedlg_beforego(**kwargs)
+                case "lblSelDaySelMedDue":
+                    self._selduedlg_selday(**kwargs)
+                case "confirm":
+                    return self._selduedlg_confirm(**kwargs)
+                case _:
+                    return None
+            return True
+        return None 
 
     def show_recordmeddlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: Any):
         self._recordmed_dlg.do_show(owner, x+20, y+20, **kwargs)
 
     def _recordmeddlg_beforego(self, **kwargs: Any):
-        po(f"_recorddlg_beforego: {kwargs}")
+        po(f"_recordmeddlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
         detail = cast(MedDict, self._gui.process_message("GetMedDetail", id=iid))
 
@@ -201,10 +224,10 @@ class MedTab:
         hour = now.hour
         cmb_hour = cast(ComboboxCtrl, self._gui.get_control("cmbSelHourRecordMed"))
         pv(hour)
-        cmb_hour.select(hour)
+        _ = cmb_hour.select(hour)
         minute = now.minute
         cmb_minute = cast(ComboboxCtrl, self._gui.get_control("cmbSelMinuteRecordMed"))
-        cmb_minute.select(minute // 5)
+        _ = cmb_minute.select(minute // 5)
         pv(minute)
 
     def _recordmeddlg_selday(self, **kwargs: Any):
@@ -213,7 +236,7 @@ class MedTab:
         calendar = CalendarCtrl((x, y+20))
         date = calendar.get_datestr()
         pv(date)
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDay"))
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblSelDayRecordMed"))
         lbl_day["text"] = date
 
     # TODO: wait to test
@@ -225,7 +248,7 @@ class MedTab:
         day = cast(str, lbl_day["text"])
 
         ent_dose = cast(EntryCtrl, self._gui.get_control("txtDoseRecordMed"))
-        dose = int(ent_dose.get_val())
+        dose = float(ent_dose.get_val())
 
         # lbl_unit = cast(LabelCtrl, self._gui.get_control("lblUnitRecordMed"))
         # unit = lbl_unit["text"]
@@ -244,6 +267,20 @@ class MedTab:
         self.update_medstor(iid, "sums", str(sums))
         _ = self._gui.process_message("RecordMedUse", id=iid, time=time, dose=dose)
         return True, ""
+
+    def _recordmeddlg_processmessage(self, idmsg: str, **kwargs: Any):
+        if self._recordmed_dlg.alive:
+            match idmsg:
+                case "beforego":
+                    self._recordmeddlg_beforego(**kwargs)
+                case "lblSelDayRecordMed":
+                    self._recordmeddlg_selday(**kwargs)
+                case "confirm":
+                    return self._recordmeddlg_confirm(**kwargs)
+                case _:
+                    return None
+            return True
+        return None 
 
     def show_meddetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: Any):
