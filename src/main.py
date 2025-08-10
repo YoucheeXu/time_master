@@ -8,14 +8,13 @@ from time_master_app import TimeMasterApp
 
 
 def main():
-    projpath = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.dirname(os.path.abspath(__file__))
     if getattr(sys, 'frozen', False):
-        projpath = os.path.dirname(os.path.abspath(sys.executable))
-    projpath = os.path.abspath(os.path.join(projpath, ".."))
-    pv(projpath)
-    xmlfile = os.path.join(projpath, 'resources', 'time_master.xml')
-    dbfile = os.path.join(projpath, "data", "my.db")
-    app = TimeMasterApp(projpath, xmlfile,dbfile)
+        file_path = os.path.dirname(os.path.abspath(sys.executable))
+    proj_path = os.path.abspath(os.path.join(file_path, ".."))
+    xml_file = os.path.join(proj_path, 'resources', 'time_master.xml')
+    usr_path = os.path.join(proj_path, "data", "Youchee")
+    app = TimeMasterApp(proj_path, xml_file, usr_path)
     app.run()
     app.close()
 
