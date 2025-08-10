@@ -1,14 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-"""
-v0.1.1
-  1. merge dlgAddItem to dlgEditItem
-"""
 import sys
 import os
 import datetime
 # from functools import partial
 import tkinter as tk
+import tkinter.filedialog as tkFileDialog
 # from tkinter import ttk
 from typing import override, cast
 from typing import Any
@@ -18,14 +15,14 @@ from item_type import HourTuple, HourDict
 from pyutilities.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pyutilities.tkwin import PicsListviewCtrl, DialogCtrl
 from pyutilities.tkwin import tkWin
-from pyutilities.logit import po, pv
+from pyutilities.calendarctrl import CalendarCtrl
+from pyutilities.logit import po, pv, pe
 
 
 class TimeMasterGui(tkWin):
     _old_subid: int = 0
-    # _subitem_list: list[HourDict] = []
+    # _subitem_list: list[ItemDict] = []
     _children: dict[int, HourTuple] = {}
-    # _id: int = 0
 
     def __init__(self, path: str, xmlfile: str):
         super().__init__(path, xmlfile)
@@ -33,18 +30,18 @@ class TimeMasterGui(tkWin):
             0: {0: "items\\CircleFlagsUsBetsyRoss.png", 1: "items\\FlatUiNews.png", 
                 2: "items\\gift.png", 3: "items\\VaadinAlarm.png"},
             1: {0: "items\\Course\\cpp.png", 1: "items\\Course\\MPC.png",
-                2: "items\\Course\\车辆工程.png", 3: "items\\Course\\伺服电机.png",
-                4: "items\\Course\\钢笔书法.png", 5: "items\\Course\\股票.png",
+                2: "items\\Course\\Vehicle Engineering.png", 3: "items\\Course\\PMSM.png",
+                4: "items\\Course\\Handwrite.png", 5: "items\\Course\\股票.png",
                 6: "items\\Course\\管理.png", 7: "items\\Course\\绘画.png",
-                8: "items\\Course\\机器视觉.png", 9: "items\\Course\\毛笔书法.png",
+                8: "items\\Course\\机器视觉.png", 9: "items\\Course\\Calligraphy.png",
                 10: "items\\Course\\语文.png", 11: "items\\Course\\自动化.png"},
             2: {0: "items\\Exercise\\锻炼.png", 1: "items\\Exercise\\俯卧撑.png",
                 2: "items\\Exercise\\跑步.png", 3: "items\\Exercise\\平板支撑.png",
                 4: "items\\Exercise\\足球.png"},
-            3: {0: "items\\Language\\德语.png", 1: "items\\Language\\韩语.png",
-                2: "items\\Language\\日语.png", 3: "items\\Language\\英语.png",
-                4: "items\\Language\\口语.png", 5: "items\\Language\\听力.png",
-                6: "items\\Language\\阅读.png", 7: "items\\Language\\写作.png"},
+            3: {0: "items\\Language\\German.png", 1: "items\\Language\\Korean.png",
+                2: "items\\Language\\Japanese.png", 3: "items\\Language\\English.png",
+                4: "items\\Language\\Oral.png", 5: "items\\Language\\Listen.png",
+                6: "items\\Language\\Read.png", 7: "items\\Language\\Write.png"},
             4: {0: "items\\Test\\CET-4.png", 1: "items\\Test\\CET-6.png",
                 2: "items\\Test\\CFA.png", 3: "items\\Test\\CPA.png",
                 4: "items\\Test\\GRE.png", 5: "items\\Test\\IELTS.png",
@@ -57,24 +54,18 @@ class TimeMasterGui(tkWin):
         self._selschedule_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgSelSchedule"))
         self._selschedule_dlg.register_eventhandler("confirm", self._selscheduledlg_confirm)
 
-        """
-        self._additem_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgAddItem"))
-        # additem_callback = partial(self._show_additemdlg, father=-1)
-        # self.register_eventhandler("btnAddItem", additem_callback)
-        self._additem_dlg.filter_message(self._additemdlg_processmessage)
-        """
+        self._recordhour_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgRecord"))
+        self._recordhour_dlg.register_eventhandler("beforego", self._recorddlg_beforego)
+        self._recordhour_dlg.register_eventhandler("lblDay", self._recorddlg_selday)
+        self._recordhour_dlg.register_eventhandler("confirm", self._recorddlg_confirm)
 
-        self._record_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgRecord"))
-        self._record_dlg.register_eventhandler("beforego", self._recorddlg_beforego)
-        self._record_dlg.register_eventhandler("confirm", self._recorddlg_confirm)
+        self._hourdetail_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgItemDetail"))
+        self._hourdetail_dlg.filter_message(self._hourdetaildlg_processmessage)
 
-        self._itemdetail_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgItemDetail"))
-        self._itemdetail_dlg.filter_message(self._itemdetaildlg_processmessage)
+        self._editihour_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgEditItem"))
+        self._editihour_dlg.filter_message(self._edithourdlg_processmessage)
 
-        self._edititem_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgEditItem"))
-        self._edititem_dlg.filter_message(self._edititemdlg_processmessage)
-
-    def update_item(self, uid: int, attrib: str, val: str):
+    def update_hour(self, uid: int, attrib: str, val: str):
         match attrib:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self.get_control(f"lblItem{uid}"))
@@ -99,16 +90,16 @@ class TimeMasterGui(tkWin):
 
         # _ = self.process_message("modify", id_, attrib=attrib, val=val)
 
-    def get_item(self, uid: int, attrib: str) -> str:
+    def get_hour(self, uid: int, attrib: str) -> str:
         val: str = ""
         match attrib:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self.get_control(f"lblItem{uid}"))
                 val = cast(str, ctrl_item1['text'])
-            # case "img":
+            # case "image":
                 # ctrl_item2 = cast(ImageBtttonCtrl, self.get_control(f"btnItem{id_}")
                 # raise NotImplementedError("")
-            case "clcok":
+            case "clock":
                 ctrl_item3 = cast(ImageBtttonCtrl, self.get_control(f"btnClock{uid}"))
                 val = cast(str, ctrl_item3['text'])
             case "sums":
@@ -118,8 +109,23 @@ class TimeMasterGui(tkWin):
                 val = ""
         return val
 
+    def delete_father(self, father: int):
+        children = cast(dict[int, HourDict], self.process_message("getChildren", father=father))
+        for sid in children.keys():
+            self.delete_hour(father, sid)
+        self.delete_hour(-1, father)
+
+    def delete_hour(self, father: int, iid: int):
+        self.delete_control(f"frmItem{iid}")
+        self.delete_control(f"btnItem{iid}")
+        self.delete_control(f"lblItem{iid}")
+        self.delete_control(f"btnClock{iid}")
+        self.delete_control(f"lblSum{iid}")
+        if father == -1:
+            self.delete_control(f"frmGroup{iid}")
+
     # def create_item(self, parent: object, iid: int, item: str, rid: int,
-    def create_item(self, iid: int, item: str, rid: tuple[int, int],
+    def create_hour(self, iid: int, item: str, rid: tuple[int, int],
             clock: str, sums: str, is_subitem: bool = False):
         imagepath = self._get_imagepath(rid[0], rid[1])
         id_ctrl = item.replace(" ", "").replace(".", "_").replace("\n", "_")
@@ -210,7 +216,7 @@ class TimeMasterGui(tkWin):
                 val = ""
         return val
 
-    def _create_child(self, parent: tk.Misc, uid: int, sub_item: str,
+    def _create_child(self, parent: object, uid: int, sub_item: str,
             rid: tuple[int, int], sums: str):
         imagepath = self._get_imagepath(rid[0], rid[1])
 
@@ -242,7 +248,7 @@ class TimeMasterGui(tkWin):
         self.assemble_control(frm_child, {"layout": "grid",
             "grid": f"{{'row':{uid},'column':0,'pady':4}}"}, f"{'  '*(level-1)}")
 
-    def _delete_children(self, sid: int):
+    def _delete_child(self, sid: int):
         self.delete_control(f"frmSub{sid}")
         self.delete_control(f"pnlChild{sid}")
         self.delete_control(f"lblChild{sid}")
@@ -251,83 +257,8 @@ class TimeMasterGui(tkWin):
     def _get_imagepath(self, group: int, index: int):
         return self._images_dict[group].get(index, "CircleFlagsUsBetsyRoss.png")
 
-    # TODO: wait to test
-    # def _additemdlg_confirmhandler(self, confirm: bool, **kwargs) -> tuple[bool, str]:
-    def _additemdlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
-        po(f"_additemdlg_confirm: {kwargs}")
-        # father = -1
-        # if self._additem_dlg.owner.title == "项目详情":
-            # father = self._id
-        father = cast(int, kwargs["father"])
-        iid = cast(int, kwargs["id"])
-
-        ctrl = cast(EntryCtrl, self._additem_dlg.get_control("txtItem"))
-        name = ctrl.get_val()
-        # pv(name)
-        if len(name) == 0:
-            return False, "Name should not be empty"
-        lbl_selclock = cast(LabelCtrl, self._additem_dlg.get_control("lblSelClockAddItem"))
-        clock  = cast(str, lbl_selclock['text'])
-        if clock == "选择定时提醒":
-            clock_val = ""
-        else:
-            clock_val = clock
-        lbl_selschedule = cast(LabelCtrl, self._additem_dlg.get_control("lblSelScheduleAddItem"))
-        schedule = cast(str, lbl_selschedule['text'])
-        if schedule == "选择时间投入计划":
-            schedule_val = ""
-        else:
-            schedule_val = schedule
-        #TODO: rid
-        rid = 0, 0
-        # father: int = kwargs['father']
-        if father == -1:
-            idx: int = self.process_message("addItem",
-                name=name, rid=0, clock=clock_val, schedule=schedule_val, father=father)
-            self.create_item(idx, name, rid, clock, '0h')
-        else:
-            # iid = self._old_subid
-            idx = len(self._children)
-            parent = cast(tk.Frame, self.get_control("frmSubItmes"))
-            self._create_child(parent, idx, name, rid, '0h')
-            # item: HourDict = {"name": name, "rid": 0,
-                # "clock": clock, "schedule": schedule, "sums": 0, "father": father}
-            # self._children[idx] = item
-            self._children[idx] = HourTuple(iid=0, name=name, rid=rid,
-                clock=clock_val, schedule=schedule_val, sums=0, father=father)
-            lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
-            lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
-            # self._old_subid += 1
-        return True, ""
-
-    def _additemdlg_processmessage(self, idmsg: str, **kwargs: Any):
-        if self._additem_dlg.alive:
-            match idmsg:
-                case "changeClock":
-                    clock = cast(str, kwargs["clock"])
-                    lbl_selclock: LabelCtrl = cast(LabelCtrl, self.get_control("lblSelClockAddItem"))
-                    lbl_selclock['text'] = clock
-                case "changeSchedule":
-                    schedule = cast(str, kwargs["schedule"])
-                    lbl_selschedule: LabelCtrl = cast(LabelCtrl, self.get_control("lblSelScheduleAddItem"))
-                    lbl_selschedule['text'] = schedule
-                case "lblSelClockAddItem":
-                    x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._selclock_dlg.do_show(self._additem_dlg, x+20, y+20, **kwargs)
-                case "lblSelScheduleAddItem":
-                    x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._selschedule_dlg.do_show(self._additem_dlg, x+20, y+20, **kwargs)
-                case "confirm":
-                    return self._additemdlg_confirm(**kwargs)
-                case _:
-                    return None
-            return True
-        return None
-
-    # def _selclockdlg_confirmhandler(self, confirm: bool, **kwargs) -> tuple[bool, str]:
     def _selclockdlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
         po(f"_selclockdlg_confirm: {kwargs}")
-        # id_ = cast(int, kwargs["id"])
         cmb_selday = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelDay"))
         sel_day = cmb_selday.get_val()
         pv(sel_day)
@@ -342,10 +273,8 @@ class TimeMasterGui(tkWin):
         self._selclock_dlg.owner.process_message("changeClock", clock=clock, **kwargs)
         return True, ""
 
-    # def _selscheduledlg_confirmhandler(self, confirm: bool, **kwargs) -> tuple[bool, str]:
     def _selscheduledlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
         po(f"_selscheduledlg_confirm: {kwargs}")
-        # id_ = cast(int, kwargs["id"])
         cmb_selunit = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelUnit"))
         sel_unit = cmb_selunit.get_val()
         pv(sel_unit)
@@ -353,9 +282,6 @@ class TimeMasterGui(tkWin):
         sel_val = cmb_selval.get_val()
         pv(sel_val)
         schedule = f"计划{sel_unit}{sel_val}"
-        # lbl_selschedule: LabelCtrl = cast(LabelCtrl, self._additem_dlg.get_control("lblSelSchedule"))
-        # lbl_selschedule['text'] = schedule
-        # self.process_message("changeSchedule", id = id_, schedule=schedule)
         self._selschedule_dlg.owner.process_message("changeSchedule", schedule=schedule, **kwargs)
         return True, ""
 
@@ -369,13 +295,19 @@ class TimeMasterGui(tkWin):
         lbl_day = cast(LabelCtrl, self.get_control("lblDay"))
         lbl_day["text"] = today
 
+    def _recorddlg_selday(self, **kwargs: Any):
+        x, y = cast(tuple[int, int], kwargs["mousepos"])
+        # self._selclock_dlg
+        calendar = CalendarCtrl((x, y+20))
+        date = calendar.get_datestr()
+        pv(date)
+        lbl_day = cast(LabelCtrl, self.get_control("lblDay"))
+        lbl_day["text"] = date
+
     # TODO: wait to test
-    # def _recorddlg_confirmhandler(self, confirm: bool, **kwargs) -> tuple[bool, str]:
-    # def _recorddlg_confirm(self, **kwargs: Mapping[str, Any]) -> tuple[bool, str]:
     def _recorddlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
         po(f"_recorddlg_confirm: {kwargs}")
         iid = cast(int, kwargs["id"])
-        # iid = self._id
         cmb_selhour = cast(ComboboxCtrl, self.get_control("cmbSelHour"))
         hour = int(cmb_selhour.get_val()[:-1])
         cmb_selminute = cast(ComboboxCtrl, self.get_control("cmbSelMinute"))
@@ -383,23 +315,25 @@ class TimeMasterGui(tkWin):
         delta = datetime.timedelta(hours=hour, minutes=minute)
         pv(delta)
         _ = self.process_message("record", id=iid, timecost=delta)
-        sums = datetime.timedelta(hours=int(self.get_item(iid, "sums")[:-1]))
+        # sums_str = self.get_item(iid, "sums")
+        detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
+        # sums = datetime.timedelta(hours=float(sums_str[:-1]))
+        sums = datetime.timedelta(minutes=detail["sums"])
         sums += delta
         pv(sums)
         sums_hours = sums.days * 24.0 + sums.seconds / 3600.0
-        self.update_item(iid, "sums", f"{sums_hours}h")
+        self.update_hour(iid, "sums", f"{sums_hours}h")
+        _ = self.process_message("modify", id=iid, attrib="sums", val=int(sums_hours*60))
         return True, ""
 
-    def _itemdetaildlg_beforego(self, **kwargs: Any):
-        po(f"_itemdetaildlg_beforego: {kwargs}")
-        # iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
+    def _hourdetaildlg_beforego(self, **kwargs: Any):
+        po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        # data = HourDict()
+        # data = ItemDict()
         # data = {}
-        # self.process_message("getItemDetail", id=id_, detail=data)
+        # self.process_message("getItemDetail", id=iid, detail=data)
         detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
-        # pv(iid)
-        # pv(detail)
+        # po(f"{iid}: {detail}")
 
         lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
         id_father = detail["father"]
@@ -410,6 +344,11 @@ class TimeMasterGui(tkWin):
             lbl_father['text'] = name_father
         else:
             lbl_father.hide()
+
+        rid = detail["rid"]
+        imagepath = self._get_imagepath(rid[0], rid[1])
+        img_item = cast(ImageBtttonCtrl, self.get_control(f"imgItemDetail"))
+        img_item.change_image(imagepath)
 
         lbl_item = cast(LabelCtrl, self.get_control("lblItemItemDetail"))
         lbl_item['text'] = detail["name"]
@@ -439,8 +378,8 @@ class TimeMasterGui(tkWin):
         lbl_totalsubitems["text"] = f"共{idx}个子项目"
         # ...
 
-    def _itemdetaildlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
-        po(f"_itemdetaildlg_confirm: {kwargs}")
+    def _hourdetaildlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+        po(f"_hourdetaildlg_confirm: {kwargs}")
         for idx, child in self._children.items():
             if idx > self._old_subid:
                 name =      child.name
@@ -448,90 +387,80 @@ class TimeMasterGui(tkWin):
                 rid =       child.rid
                 clock =     child.clock
                 schedule =  child.schedule
-                # father = cast(int, kwargs["father"])
-                # iid = cast(int, self.process_message("addItem", father=self._id, name=name,
-                    # rid=rid, clock=clock, schedule=schedule, sums=sums))
-                iid = 10
-                # father = self.get_control(f"frmGroup{self._id}")
-                # self.create_item(father, iid, name, rid, clock, f"{sums / 60}h", self._id != -1)
-                self.create_item(iid, name, rid, clock, f"{sums / 60}h", self._id != -1)
-            self._delete_children(idx)
+                father = cast(int, kwargs["id"])
+                iid = cast(int, self.process_message("addItem", father=father, name=name,
+                    rid=rid, clock=clock, schedule=schedule, sums=sums))
+                self.create_hour(iid, name, rid, clock, f"{sums / 60:.1f}h", True)
+            self._delete_child(idx)
         self._children.clear()
         return True, ""
 
-    def _itemdetaildlg_cancel(self, **kwargs: Any) -> tuple[bool, str]:
-        po(f"_itemdetaildlg_cancel: {kwargs}")
+    def _hourdetaildlg_cancel(self, **kwargs: Any) -> tuple[bool, str]:
+        po(f"_hourdetaildlg_cancel: {kwargs}")
         for idx, _ in self._children.items():
-            self._delete_children(idx)
+            self._delete_child(idx)
         self._children.clear()
         return True, ""
 
-    def _itemdetaildlg_processmessage(self, idmsg: str, **kwargs: Any):
-        if self._itemdetail_dlg.alive:
+    def _hourdetaildlg_processmessage(self, idmsg: str, **kwargs: Any):
+        if self._hourdetail_dlg.alive:
             iid = cast(int, kwargs["id"])
             match idmsg:
                 case "beforego":
-                    self._itemdetaildlg_beforego(**kwargs)
+                    self._hourdetaildlg_beforego(**kwargs)
                 case "changeItemImage":
-                    # iid = cast(int, kwargs["id"])
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
                     imagebutton = cast(ImageBtttonCtrl, self.get_control("imgItemDetail"))
                     imagepath = self._get_imagepath(grp, idx)
                     # pv(imagepath)
                     imagebutton.change_image(imagepath)
-                    _ = self._itemdetail_dlg.owner.process_message("changeItemImage",
+                    _ = self._hourdetail_dlg.owner.process_message("changeItemImage",
                         id=iid, group=grp, index=idx)
                 case "changeClock":
                     clock = cast(str, kwargs["clock"])
                     lbl_selclock = cast(LabelCtrl,
                         self.get_control("lblSelClockItemDetail"))
                     lbl_selclock['text'] = clock
-                    # self.update_item(self._id, "clock", clock)
-                    self.update_item(iid, "clock", clock)
-                    self._itemdetail_dlg.owner.process_message("changeClock", id=iid, clock=clock)
+                    self.update_hour(iid, "clock", clock)
+                    self._hourdetail_dlg.owner.process_message("changeClock", id=iid, clock=clock)
                 case "changeSchedule":
                     schedule = cast(str, kwargs["schedule"])
                     lbl_selschedule = cast(LabelCtrl,
                         self.get_control("lblSelScheduleItemDetail"))
                     lbl_selschedule['text'] = schedule
-                    self._itemdetail_dlg.owner.process_message("changeSchedule",
+                    self._hourdetail_dlg.owner.process_message("changeSchedule",
                         id=iid, schedule=schedule)
                 case "imgItemDetail":
-                    # pv(kwargs)
-                    # iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
                     detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._edititem_dlg.do_show(self._itemdetail_dlg, x+20, y+20,
+                    self._editihour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
                         father=father, id=iid)
                 case "btnAddChild":
-                    # pv(kwargs)
-                    # iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._edititem_dlg.do_show(self._itemdetail_dlg, x+20, y+20,
+                    self._editihour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
                         father=iid, id=0)
                 case "btnRecordItemDetail":
-                    # iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
                     detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._record_dlg.do_show(self._itemdetail_dlg, x+20, y+20,
+                    self._recordhour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
                         father=father, id=iid)
                 case "deleteItem":
-                    # iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
-                    self._itemdetail_dlg.destroy()
-                    self._itemdetail_dlg.owner.process_message("deleteItem", id=iid)
+                    self._hourdetail_dlg.destroy()
+                    self._hourdetail_dlg.owner.process_message("deleteItem", id=iid)
                 case "confirm":
-                    return self._itemdetaildlg_confirm(**kwargs)
+                    return self._hourdetaildlg_confirm(**kwargs)
                 case "cancel":
-                    return self._itemdetaildlg_cancel(**kwargs)
+                    return self._hourdetaildlg_cancel(**kwargs)
                 case _:
                     return None
             return True
         return None
 
-    def _edititemdlg_beforego(self, **kwargs: Any):
+    def _edithourdlg_beforego(self, **kwargs: Any):
+        po(f"_edithourdlg_beforego: {kwargs}")
         father = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
 
@@ -543,16 +472,15 @@ class TimeMasterGui(tkWin):
             lbl_father['text'] = name_father
 
         if iid == 0:
-            self._edititem_dlg.set_title("新建项目")
+            self._editihour_dlg.set_title("新建项目")
             btn_delitem = cast(ButtonCtrl, self.get_control("btnDelItemEditItem"))
             btn_delitem.hide()
+            grp, idx = 0, 0
         else:
-            self._edititem_dlg.set_title("编辑项目")
+            self._editihour_dlg.set_title("编辑项目")
             detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
             pv(detail)
 
-            # lbl_name = cast(LabelCtrl, self.get_control("lblNameEditItem"))
-            # lbl_name['text'] = detail["name"]
             ent_name = cast(EntryCtrl, self.get_control("txtItemEditItem"))
             ent_name.set_val(detail["name"])
             ent_name.disable()
@@ -560,6 +488,7 @@ class TimeMasterGui(tkWin):
             lbl_selclock['text'] = detail["clock"] if detail["clock"] else "选择定时提醒"
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditItem"))
             lbl_selschedule['text'] = detail["schedule"] if detail["schedule"] else "选择时间投入计划"
+            grp, idx = detail["rid"]
 
         list_itemimage = cast(PicsListviewCtrl, self.get_control("lstItemImageEditItem"))
         # list_itemimage.display_images(list(self._images_dict.values()))
@@ -569,30 +498,30 @@ class TimeMasterGui(tkWin):
         list_itemimage.add_imagegroup("语言", list(self._images_dict[3].values()))
         list_itemimage.add_imagegroup("考试", list(self._images_dict[4].values()))
 
+        list_itemimage.select(grp, idx)
+
     # TODO: only change those which are modified
-    def _edititemdlg_confirm(self, **kwargs: Any):
-        po(f"_edititemdlg_confirm: {kwargs}")
+    def _edithourdlg_confirm(self, **kwargs: Any):
+        po(f"_edithourdlg_confirm: {kwargs}")
         father = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
         if iid != 0:    # edit item
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditItem"))
-            clock = lbl_selclock['text']
+            clock = cast(str, lbl_selclock['text'])
             pv(clock)
-            _ = self._edititem_dlg.owner.process_message("changeClock", id=iid, clock=clock)
+            _ = self._editihour_dlg.owner.process_message("changeClock", id=iid, clock=clock)
 
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditItem"))
-            schedule = lbl_selschedule['text']
+            schedule = cast(str, lbl_selschedule['text'])
             pv(schedule)
-            _ = self._edititem_dlg.owner.process_message("changeSchedule", id=iid, schedule=schedule)
+            _ = self._editihour_dlg.owner.process_message("changeSchedule", id=iid, schedule=schedule)
 
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstItemImageEditItem"))
             grp, idx = lst_itemimage.get_selected()
-            _ = self._edititem_dlg.owner.process_message("changeItemImage",
+            _ = self._editihour_dlg.owner.process_message("changeItemImage",
                 id=iid, group=grp, index=idx)
         else:   # New item
-            # if self._additem_dlg.owner.title == "项目详情":
-                # father = self._id
             ent_name = cast(EntryCtrl, self.get_control("txtItemEditItem"))
             name = ent_name.get_val()
             # pv(name)
@@ -609,16 +538,12 @@ class TimeMasterGui(tkWin):
             rid = lst_itemimage.get_selected()
             if father == -1:
                 iid = cast(int, self.process_message("addItem",
-                    name=name, rid=0, clock=clock_val, schedule=schedule_val, father=father))
-                self.create_item(iid, name, rid, clock, '0.0h')
+                    name=name, rid=rid, clock=clock_val, schedule=schedule_val, father=father))
+                self.create_hour(iid, name, rid, clock, '0.0h')
             else:
-                # iid = self._old_subid
                 idx = len(self._children)
                 parent = cast(tk.Frame, self.get_control("frmSubItmes"))
                 self._create_child(parent, idx, name, rid, '0.0h')
-                # item: HourDict = {"name": name, "rid": 0,
-                    # "clock": clock, "schedule": schedule, "sums": 0, "father": father}
-                # self._children[idx] = item
                 self._children[idx] = HourTuple(iid=0, name=name, rid=rid,
                     clock=clock_val, schedule=schedule_val, sums=0, father=father)
                 lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
@@ -626,12 +551,12 @@ class TimeMasterGui(tkWin):
                 # self._old_subid += 1
         return True, ""
 
-    def _edititemdlg_processmessage(self, idmsg: str, **kwargs: Any):
-        if self._edititem_dlg.alive:
+    def _edithourdlg_processmessage(self, idmsg: str, **kwargs: Any):
+        if self._editihour_dlg.alive:
             iid = cast(int, kwargs["id"])
             match idmsg:
                 case "beforego":
-                    self._edititemdlg_beforego(**kwargs)
+                    self._edithourdlg_beforego(**kwargs)
                 case "changeClock":
                     clock = cast(str, kwargs["clock"])
                     lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditItem"))
@@ -643,73 +568,79 @@ class TimeMasterGui(tkWin):
                 case "lblSelClockEditItem":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._selclock_dlg.do_show(self._edititem_dlg, x+20, y+20, **kwargs)
+                    self._selclock_dlg.do_show(self._editihour_dlg, x+20, y+20, **kwargs)
                 case "lblSelScheduleEditItem":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._selschedule_dlg.do_show(self._edititem_dlg, x+20, y+20, **kwargs)
+                    self._selschedule_dlg.do_show(self._editihour_dlg, x+20, y+20, **kwargs)
                 case "btnDelItemEditItem":
                     pv(kwargs)
-                    iid = cast(int, self._itemdetail_dlg.owner.process_message("getId"))
-                    self._edititem_dlg.destroy()
-                    _ = self._edititem_dlg.owner.process_message("deleteItem", id=iid)
+                    iid = cast(int, self._hourdetail_dlg.owner.process_message("getId"))
+                    self._editihour_dlg.destroy()
+                    _ = self._editihour_dlg.owner.process_message("deleteItem", id=iid)
                 case "confirm":
-                    return self._edititemdlg_confirm(**kwargs)
+                    return self._edithourdlg_confirm(**kwargs)
                 case _:
                     return None
             return True
         return None
 
     @override
-    # def process_message(self, id_ctrl: str, *args, **kwargs):
     def process_message(self, idmsg: str, **kwargs: Any):
         if idmsg.startswith("btnItem"):
             iid = int(idmsg[7:])
-            # self._id = iid
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._itemdetail_dlg.do_show(self, x+20, y+20, id=iid)
+            self._hourdetail_dlg.do_show(self, x+20, y+20, id=iid)
         elif idmsg.startswith("lblSum"):
             iid = int(idmsg[6:])
-            # self._id = iid
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._record_dlg.do_show(self, x+20, y+20, id=iid)
+            self._recordhour_dlg.do_show(self, x+20, y+20, id=iid)
         elif idmsg.startswith("btnClock"):
             iid = int(idmsg[8:])
-            # self._id = iid
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self._selclock_dlg.do_show(self, x+20, y+20, id=iid)
         else:
             match idmsg:
                 case "NewItem":
-                    # self._id = -1
                     x, y = self.pos
-                    self._edititem_dlg.do_show(self, x+20, y+20, father=-1, id=0)
-                # case "getId":
-                    # return self._id
+                    self._editihour_dlg.do_show(self, x+20, y+20, father=-1, id=0)
+                case "NewUser":
+                    userdb = tkFileDialog.asksaveasfilename(
+                        defaultextension=".db",
+                        title="Create user's db",
+                        initialdir=os.path.join(self._cur_path, "data"),
+                        filetypes=[("Database", "*.db")]
+                    )
+                    if userdb:
+                        pv(userdb)
+                        _ = self.process_message("newUser", db=userdb)
+                case "OpenUser":
+                    userdb = tkFileDialog.askopenfilename(
+                        title="Select user's db",
+                        initialdir=os.path.join(self._cur_path, "data")
+                    )
+                    if userdb:
+                        pv(userdb)
+                        _ = self.process_message("openUser", db=userdb)
                 case "changeItemImage":
                     iid = cast(int, kwargs["id"])
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
                     imagepath = self._get_imagepath(grp, idx)
                     _ = self.process_message("modify", id=iid, attrib="rid", val=(grp, idx))
-                    # self.update_item(self._id, "image", imagepath)
-                    self.update_item(iid, "image", imagepath)
+                    self.update_hour(iid, "image", imagepath)
                 case "changeClock":
                     iid = cast(int, kwargs["id"])
                     clock = cast(str, kwargs["clock"])
                     clock = "" if clock=="选择定时提醒" else clock
-                    # _ = self.process_message("modify", id=self._id, attrib="clock", val=clock)
                     _ = self.process_message("modify", id=iid, attrib="clock", val=clock)
-                    # self.update_item(self._id, "clock", clock)
-                    self.update_item(iid, "clock", clock)
+                    self.update_hour(iid, "clock", clock)
                 case "changeSchedule":
                     iid = cast(int, kwargs["id"])
                     schedule = cast(str, kwargs["schedule"])
                     schedule = "" if schedule=="选择时间投入计划" else schedule
-                    # _ = self.process_message("modify", id=self._id, attrib="schedule", val=schedule)
                     _ = self.process_message("modify", id=iid, attrib="schedule", val=schedule)
                 case "deleteItem":
-                    # iid = self._id
                     iid = cast(int, kwargs["id"])
                     detail = cast(HourDict, self.process_message("getItemDetail", id=iid))
                     id_father = detail["father"]

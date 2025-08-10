@@ -23,17 +23,6 @@
 		<Tab id="tabCalendar" text="Calendar">
 		</Tab>
 	</Notebook>
-	<Dialog id="dlgAddItem" text="新增项目" Height="300" Width="100">
-		<ImagePanel id="imgItem" text="item" img="gift.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':0,'column':0,'sticky':'W'}"/>
-		<Entry id="txtItem" text="你想要投入时间的事情" options="{'width':20}" layout="grid" grid="{'row':0,'column':1, 'columnspan': 2, 'sticky':'W'}"/>
-		<ImagePanel id="imgClock" text="clock" img="VaadinAlarm.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':1,'column':0,'sticky':'W'}"/>
-		<Label id="lblClock" text="定时提醒" options="{'width':20}" layout="grid" grid="{'row':1,'column':1,'sticky':'W'}"/>
-		<Label id="lblSelClockAddItem" text="选择定时提醒" clickable="true" options="{'width':20}" layout="grid" grid="{'row':1,'column':2}"/>
-		<ImagePanel id="imgSchedule" text="schedule" img="calendar.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':2,'column':0,'sticky':'W'}"/>
-		<Label id="lblSchedule" text="时间投入计划" options="{'width':20}" layout="grid" grid="{'row':2,'column':1,'sticky':'W'}"/>
-		<Label id="lblSelScheduleAddItem" text="选择时间投入计划" clickable="true" options="{'width':20}" layout="grid" grid="{'row':2,'column':2}"/>
-		<Label id="lblImg" text="选择图标" options="{'width':20}" layout="grid" grid="{'row':3,'column':0,'columnspan': 3,'sticky':'W'}"/>
-	</Dialog>
 	<Dialog id="dlgSelClock" text="选择定时提醒" Width="400" Height="120">
 		<Combobox id="cmbSelDay" text="SelDay" default="0" options="{'values':['每日','工作日','节假日'],'state':'readonly','width':16}" layout="pack" pack="{'side':'left'}"/>
 		<Combobox id="cmbSelHour" text="SelHour" default="0" options="{'values':['0点','1点','2点','3点','4点','5点','6点','7点','8点','9点','10点','11点','12点','13点','14点','15点','16点','17点','18点','19点','20点','21点','22点','23点'],'state':'readonly','width':17}" layout="pack" pack="{'side':'left'}"/>

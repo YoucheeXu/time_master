@@ -1,8 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-"""
-gui >= 0.1.1
-"""
 import os
 import datetime
 # from typing import TypedDict
@@ -89,12 +86,12 @@ class TimeMasterApp:
                  # "options":"{'borderwidth':1,'relief':'ridge'}"})
             _, group = self._gui.create_control(parent, xml, 2)
             """
-            # self._gui.create_item(group, iid, item.data["name"], item.data["rid"],
-            self._gui.create_item(iid, item.data["name"], item.data["rid"],
+            # self._gui.create_hour(group, iid, item.data["name"], item.data["rid"],
+            self._gui.create_hour(iid, item.data["name"], item.data["rid"],
                 self._clock_sql2app(item.data["clock"]), f"{item.data["sums"]/60}h", False)
             for sid, child in item.children.items():
-                # self._gui.create_item(group, sid, child["name"], child["rid"],
-                self._gui.create_item(sid, child["name"], child["rid"],
+                # self._gui.create_hour(group, sid, child["name"], child["rid"],
+                self._gui.create_hour(sid, child["name"], child["rid"],
                     self._clock_sql2app(child["clock"]), f"{child["sums"]/60}h", True)
             """
             if i == 0:
@@ -165,7 +162,7 @@ class TimeMasterApp:
 
         # print("_additem_callback", args, kwargs)
         # pv(self._items)
-        print(f"create_item: {name}")
+        print(f"create_hour: {name}")
         return iid
 
     # TODO: wait to test
