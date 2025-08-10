@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+"""
+v0.3.1
+  1. rename attribute "image" of ImagePanel to "image"
+"""
 from __future__ import annotations
 import datetime
 from typing import cast, Any
@@ -10,6 +14,7 @@ from pyutilities.winbasic import Dialog
 from pyutilities.tkwin import tkWin
 from pyutilities.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pyutilities.tkwin import PicsListviewCtrl, DialogCtrl
+from pyutilities.matplot import MatPlotCtrl, LineData
 from pyutilities.calendarctrl import CalendarCtrl
 
 from item_type import HourTuple, HourDict
@@ -49,21 +54,20 @@ class HourTab:
         self._selschedule_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgSelSchedule"))
         self._selschedule_dlg.register_eventhandler("confirm", self._selscheduledlg_confirm)
 
-        self._recordhour_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgRecord"))
-        self._recordhour_dlg.register_eventhandler("beforego", self._recorddlg_beforego)
-        self._recordhour_dlg.register_eventhandler("lblDay", self._recorddlg_selday)
-        self._recordhour_dlg.register_eventhandler("confirm", self._recorddlg_confirm)
+        self._recordhour_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgRecordHour"))
+        self._recordhour_dlg.filter_message(self._recordhourdlg_processmessage)
 
-        self._hourdetail_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgItemDetail"))
+        self._hourdetail_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgHourDetail"))
         self._hourdetail_dlg.filter_message(self._hourdetaildlg_processmessage)
 
-        self._edithour_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgEditItem"))
+        self._edithour_dlg: DialogCtrl = cast(DialogCtrl, self._gui.get_control("dlgEditHour"))
         self._edithour_dlg.filter_message(self._edithourdlg_processmessage)
 
-        msglst = ["btnNewHour", "changeClock", "changeSchedule", "changeItemImage", "deleteItem"]
+        msglst = ["btnNewHour", "changeClock", "ChangeSum",
+            "changeSchedule", "changeItemImage", "deleteItem"]
         self._gui.filter_message(self._process_message, 1, msglst)
 
-    def update_hour(self, uid: int, attrib: str, val: str):
+    def update_hour(self, uid: int, attrib: str, val: str | float):
         match attrib:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self._gui.get_control(f"lblItem{uid}"))
@@ -82,7 +86,7 @@ class HourTab:
                 _ = ctrl_item3.configure(text=val)
             case "sums":
                 ctrl_item4 = cast(LabelCtrl, self._gui.get_control(f"lblSumHour{uid}"))
-                _ = ctrl_item4.configure(text=f"{val}\nhours")
+                _ = ctrl_item4.configure(text=f"{val:.1f}\nhours")
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
@@ -150,7 +154,7 @@ class HourTab:
         radio = 0.8 if is_subitem else 1
 
         btnitem_xml = self._gui.create_xml("ImageButton", {"id": f"btnItem{iid}",
-            "img": imagepath,
+            "image": imagepath,
                 "options": f"{{'height': {int(60 * radio)}, 'width': {int(60 * radio)}}}"}, frmitem_xml)
         _, btn_item = self._gui.create_control(frm_item, btnitem_xml, level)
         self._gui.assemble_control(btn_item, {"layout":"grid",
@@ -165,7 +169,7 @@ class HourTab:
             f"{'  '*level}")
 
         btnclock_xml = self._gui.create_xml("ImageButton", {"id": f"btnClock{iid}",
-            "text": clock, "img": "VaadinAlarm.png",
+            "text": clock, "image": "VaadinAlarm.png",
              "options": "{'height':20, 'width':20}"}, frmitem_xml)
         _, btn_clock = self._gui.create_control(frm_item, btnclock_xml, level)
         self._gui.assemble_control(btn_clock, {"layout":"grid",
@@ -200,7 +204,7 @@ class HourTab:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self._gui.get_control(f"lblChild{uid}"))
                 val = cast(str, ctrl_item1['text'])
-            # case "img":
+            # case "image":
                 # ctrl_item2: = cast(ImageBtttonCtrl, self._gui.get_control(f"btnItem{id_}")
                 # raise NotImplementedError("")
             # case "clcok":
@@ -224,7 +228,7 @@ class HourTab:
         level = 3
 
         pnlitem_xml = self._gui.create_xml("ImagePanel", {"id": f"pnlChild{uid}",
-            "img": imagepath, 
+            "image": imagepath, 
             "options": "{'height':20, 'width':20}"}, frm_child_xml)
         _, pnl_item = self._gui.create_control(frm_child, pnlitem_xml, level)
         self._gui.assemble_control(pnl_item, {"layout":"pack",
@@ -288,19 +292,18 @@ class HourTab:
     def show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: Any):
         self._recordhour_dlg.do_show(owner, x+20, y+20, **kwargs)
 
-    def _recorddlg_beforego(self, **kwargs: Any):
-        po(f"_recorddlg_beforego: {kwargs}")
+    def _recordhourdlg_beforego(self, **kwargs: Any):
+        po(f"_recordhourdlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
         detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
         lbl_item = cast(LabelCtrl, self._gui.get_control("lblItem"))
-        lbl_item["text"] = detail["name"]
+        lbl_item.set_text(detail["name"])
         today = datetime.date.today()
         lbl_day = cast(LabelCtrl, self._gui.get_control("lblDay"))
-        lbl_day["text"] = today
+        lbl_day.set_text(str(today))
 
-    def _recorddlg_selday(self, **kwargs: Any):
+    def _recordhourdlg_selday(self, **kwargs: Any):
         x, y = cast(tuple[int, int], kwargs["mousepos"])
-        # self._selclock_dlg
         calendar = CalendarCtrl((x, y+20))
         date = calendar.get_datestr()
         pv(date)
@@ -308,8 +311,8 @@ class HourTab:
         lbl_day["text"] = date
 
     # TODO: wait to test
-    def _recorddlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
-        po(f"_recorddlg_confirm: {kwargs}")
+    def _recordhourdlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+        po(f"_recordhourdlg_confirm: {kwargs}")
         iid = cast(int, kwargs["id"])
         cmb_selhour = cast(ComboboxCtrl, self._gui.get_control("cmbSelHour"))
         hour = int(cmb_selhour.get_val()[:-1])
@@ -317,21 +320,65 @@ class HourTab:
         minute = int(cmb_selminute.get_val()[:-1])
         delta = datetime.timedelta(hours=hour, minutes=minute)
         pv(delta)
-        _ = self._gui.process_message("record", id=iid, timecost=delta)
+        _ = self._gui.process_message("RecordHour", id=iid, timecost=delta)
         # sums_str = self.get_item(iid, "sums")
         detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
-        # sums = datetime.timedelta(hours=float(sums_str[:-1]))
-        sums = datetime.timedelta(minutes=detail["sums"])
-        sums += delta
-        pv(sums)
-        sums_hours = sums.days * 24.0 + sums.seconds / 3600.0
-        self.update_hour(iid, "sums", f"{sums_hours}")
-        _ = self._gui.process_message("modify", id=iid, attrib="sums", val=int(sums_hours*60))
+        sums_hours = float(detail["sums"]) / 60
+        pv(sums_hours)
+        self._recordhour_dlg.owner.process_message("ChangeSum", id=iid, sum=sums_hours)
         return True, ""
+
+    def _recordhourdlg_processmessage(self, idmsg: str, **kwargs: Any):
+        if self._recordhour_dlg.alive:
+            match idmsg:
+                case "beforego":
+                    self._recordhourdlg_beforego(**kwargs)
+                case "lblDay":
+                    self._recordhourdlg_selday(**kwargs)
+                case "confirm":
+                    return self._recordhourdlg_confirm(**kwargs)
+                case _:
+                    return None
+            return True
+        return None
+
+    def _update_hourdetail(self, attrib: str, val: str | float):
+        match attrib:
+            case "name":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblInfoHourDetail"))
+                text_list = lbl_item.get_text().split("\n")
+                text_list[0] = str(val)
+                lbl_item.set_text(f"{text_list[0]}\n{text_list[1]}")
+            case "StartDate":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblInfoHourDetail"))
+                text_list = lbl_item.get_text().split("\n")
+                if val:
+                    text_list[1] = str(val)
+                else:
+                    text_list[1] = "从未开始"
+                lbl_item.set_text(f"{text_list[0]}\n{text_list[1]}")
+            case "sum":
+                lbl_sum = cast(LabelCtrl, self._gui.get_control("lblSumHourDetail"))
+                lbl_sum.set_text(f"{val}\nhours")
+            case "TotalDays":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblWholeHourDetail"))
+                lbl_item.set_text(f"{val}\n坚持天数")
+            case "HoursEveryWeek":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblAvrgHourDetail"))
+                lbl_item.set_text(f"{val}h\n平均每周")
+            case "HoursLast7Days":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblRecentHourDetail"))
+                lbl_item.set_text(f"{val}h\n最近七天")
+            case "RestHours2Milestone":
+                lbl_item = cast(LabelCtrl, self._gui.get_control("lblRestHourDetail"))
+                lbl_item.set_text(f"{val}\n距离里程碑")
+            case _:
+                raise KeyError(f"Unkonw arrtrib: {attrib}")
 
     def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: Any):
         self._hourdetail_dlg.do_show(owner, x+20, y+20, **kwargs)
 
+    # TODO: Statistics
     def _hourdetaildlg_beforego(self, **kwargs: Any):
         po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
@@ -353,13 +400,26 @@ class HourTab:
 
         rid = detail["rid"]
         imagepath = self._get_imagepath(rid[0], rid[1])
-        img_item = cast(ImageBtttonCtrl, self._gui.get_control(f"imgItemDetail"))
+        img_item = cast(ImageBtttonCtrl, self._gui.get_control("btnImageHourDetail"))
         img_item.change_image(imagepath)
 
-        lbl_item = cast(LabelCtrl, self._gui.get_control("lblItemItemDetail"))
-        lbl_item['text'] = detail["name"]
-        lbl_sum = cast(LabelCtrl, self._gui.get_control("lblSumItemDetail"))
-        lbl_sum['text'] = f"{detail['sums'] / 60}"
+        return
+
+        # self._update_hourdetail("name", detail["name"])
+        strt_date = cast(str, self._gui.process_message("GetHourStartDate", id=iid))
+        # self._update_hourdetail("StartDate", strt_date)
+        lbl_item = cast(LabelCtrl, self._gui.get_control("lblInfoHourDetail"))
+        lbl_item.set_text(f"{detail["name"]}\n从{strt_date}开始")
+        self._update_hourdetail("sum", f"{detail["sums"]/ 60:.1f}")
+        total_days = cast(float, self._gui.process_message("GetHourTotalDays", id=iid))
+        self._update_hourdetail("TotalDays", total_days)
+        hours_everyweek = cast(float, self._gui.process_message("GetHoursEveryWeek", id=iid))
+        self._update_hourdetail("HoursEveryWeek", hours_everyweek)
+        hours_last7days = cast(float, self._gui.process_message("GetHoursLast7Days", id=iid))
+        self._update_hourdetail("HoursLast7Days", hours_last7days)
+        resthours_2milestone = cast(float, self._gui.process_message("GetRestHours2Milestone",
+            id=iid))
+        self._update_hourdetail("RestHours2Milestone", resthours_2milestone)
 
         lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockItemDetail"))
         # clock = data["clock"]
@@ -376,13 +436,63 @@ class HourTab:
                 clock=child["clock"], schedule=child["schedule"], sums=child["sums"],
                 father=child["father"])
             self._create_child(parent, idx, child["name"],
-                child["rid"], f"{child["sums"] / 60}h")
+                child["rid"], f"{child["sums"] / 60}")
             idx += 1
         pv(self._children)
         self._old_subid = len(self._children) - 1
         lbl_totalsubitems = cast(LabelCtrl, self._gui.get_control("lblTotalChildren"))
         lbl_totalsubitems["text"] = f"共{idx}个子项目"
-        # ...
+
+        week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+
+        plt_everyday = cast(MatPlotCtrl, self._gui.get_control("pltEveryDayHour"))
+        xdata: list[int] = []
+        father_ydata: list[float] = []
+        children_ydata: dict[int, list[float]] = {}
+        limit_ydata: list[float] = []
+        labels: list[str] = []
+        today = datetime.datetime.today().date()
+        monday = today + datetime.timedelta(days=-today.weekday())
+        for i in range(7):
+            day = monday + datetime.timedelta(days=i)
+            weekday = day.weekday()
+            labels.append(f"{week_day[weekday]}\n{day.day}")
+            xdata.append(i)
+            hours = cast(float, self._gui.process_message("GetHoursbyDay", id=iid, day=day))
+            father_ydata.append(hours)
+            limit_ydata.append(1.0)
+            po(f"hours of {day} is {hours}")
+            for sid in children.keys():
+                hours = cast(float, self._gui.process_message("GetHoursbyDay", id=sid, day=day))
+                if children_ydata.get(sid) is None:
+                    children_ydata[sid] = [hours]
+                else:
+                    children_ydata[sid].append(hours)
+        plt_everyday.xdata = xdata
+        father_yline = LineData(father_ydata,
+            {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
+            # {"width":0.4,"facecolor":"green"}, "bar")
+        _ = plt_everyday.add_line(father_yline)
+        bottom = father_ydata
+        for sid, child_ydata in children_ydata.items():
+            child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom}, "bar")
+            bottom = child_ydata
+            _ = plt_everyday.add_line(child_yline)
+        limit_yline = LineData(limit_ydata, {"linestyle":"dotted","color":"red"})
+        _ = plt_everyday.add_line(limit_yline)
+        plt_everyday.draw()
+
+        thismonth = today.month
+        for i in range(6):
+            month = thismonth - i
+            hours = cast(float, self._gui.process_message("GetHoursbyMonth", id=iid, month=month))
+            po(f"hours of {month} is {hours}")
+
+        thisyear = today.year
+        for i in range(6):
+            year = thisyear - i
+            hours = cast(float, self._gui.process_message("GetHoursbyYear", id=iid, year=year))
+            po(f"hours of {year} is {hours}")
 
     def _hourdetaildlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
         po(f"_hourdetaildlg_confirm: {kwargs}")
@@ -394,9 +504,9 @@ class HourTab:
                 clock =     child.clock
                 schedule =  child.schedule
                 father = cast(int, kwargs["id"])
-                iid = cast(int, self._gui.process_message("addItem", father=father, name=name,
+                iid = cast(int, self._gui.process_message("AddHour", father=father, name=name,
                     rid=rid, clock=clock, schedule=schedule, sums=sums))
-                self.create_hour(iid, name, rid, clock, f"{sums / 60:.1f}", True)
+                self.create_hour(iid, name, rid, clock, f"{sums/60:.1f}", True)
             self._delete_child(idx)
         self._children.clear()
         return True, ""
@@ -417,7 +527,7 @@ class HourTab:
                 case "changeItemImage":
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
-                    imagebutton = cast(ImageBtttonCtrl, self._gui.get_control("imgItemDetail"))
+                    imagebutton = cast(ImageBtttonCtrl, self._gui.get_control("btnImageHourDetail"))
                     imagepath = self._get_imagepath(grp, idx)
                     # pv(imagepath)
                     imagebutton.change_image(imagepath)
@@ -437,7 +547,12 @@ class HourTab:
                     lbl_selschedule['text'] = schedule
                     self._hourdetail_dlg.owner.process_message("changeSchedule",
                         id=iid, schedule=schedule)
-                case "imgItemDetail":
+                case "ChangeSum":
+                    sums_hours= cast(float, kwargs["sum"])
+                    lbl_sum = cast(LabelCtrl, self._gui.get_control("lblSumHourDetail"))
+                    lbl_sum.set_text(f"{sums_hours:.1f}\nhours")
+                    self.update_hour(iid, "sums", sums_hours)
+                case "btnImageHourDetail":
                     detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -447,7 +562,7 @@ class HourTab:
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._edithour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
                         father=iid, id=0)
-                case "btnRecordItemDetail":
+                case "btnRecordHourDetail":
                     detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -471,7 +586,7 @@ class HourTab:
         iid = cast(int, kwargs["id"])
 
         if father != -1:
-            lbl_father = cast(LabelCtrl, self._gui.get_control("lblSelFatherEditItem"))
+            lbl_father = cast(LabelCtrl, self._gui.get_control("lblSelFatherEditHour"))
             detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=father))
             name_father = detail_father["name"]
             pv(name_father)
@@ -479,24 +594,24 @@ class HourTab:
 
         if iid == 0:
             self._edithour_dlg.set_title("新建项目")
-            btn_delitem = cast(ButtonCtrl, self._gui.get_control("btnDelItemEditItem"))
-            btn_delitem.hide()
+            btn_delhour = cast(ButtonCtrl, self._gui.get_control("btnDelItemEditHour"))
+            btn_delhour.hide()
             grp, idx = 0, 0
         else:
             self._edithour_dlg.set_title("编辑项目")
             detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
             pv(detail)
 
-            ent_name = cast(EntryCtrl, self._gui.get_control("txtItemEditItem"))
+            ent_name = cast(EntryCtrl, self._gui.get_control("txtItemEditHour"))
             ent_name.set_val(detail["name"])
             ent_name.disable()
-            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditItem"))
+            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditHour"))
             lbl_selclock['text'] = detail["clock"] if detail["clock"] else "选择定时提醒"
-            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditItem"))
+            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditHour"))
             lbl_selschedule['text'] = detail["schedule"] if detail["schedule"] else "选择时间投入计划"
             grp, idx = detail["rid"]
 
-        list_itemimage = cast(PicsListviewCtrl, self._gui.get_control("lstItemImageEditItem"))
+        list_itemimage = cast(PicsListviewCtrl, self._gui.get_control("lstImageEditHour"))
         # list_itemimage.display_images(list(self._images_dict.values()))
         list_itemimage.add_imagegroup("一般", list(self._images_dict[0].values()))
         list_itemimage.add_imagegroup("课程", list(self._images_dict[1].values()))
@@ -512,38 +627,38 @@ class HourTab:
         father = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
         if iid != 0:    # edit item
-            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditItem"))
+            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditHour"))
             clock = cast(str, lbl_selclock['text'])
             pv(clock)
             _ = self._edithour_dlg.owner.process_message("changeClock", id=iid, clock=clock)
 
-            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditItem"))
+            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditHour"))
             schedule = cast(str, lbl_selschedule['text'])
             pv(schedule)
             _ = self._edithour_dlg.owner.process_message("changeSchedule", id=iid, schedule=schedule)
 
             lst_itemimage = cast(PicsListviewCtrl,
-                self._gui.get_control("lstItemImageEditItem"))
+                self._gui.get_control("lstImageEditHour"))
             grp, idx = lst_itemimage.get_selected()
             _ = self._edithour_dlg.owner.process_message("changeItemImage",
                 id=iid, group=grp, index=idx)
         else:   # New item
-            ent_name = cast(EntryCtrl, self._gui.get_control("txtItemEditItem"))
+            ent_name = cast(EntryCtrl, self._gui.get_control("txtItemEditHour"))
             name = ent_name.get_val()
             # pv(name)
             if len(name) == 0:
                 return False, "Name should not be empty"
-            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditItem"))
+            lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditHour"))
             clock  = cast(str, lbl_selclock['text'])
             clock_val = "" if clock == "选择定时提醒" else clock
-            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditItem"))
+            lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditHour"))
             schedule = cast(str, lbl_selschedule['text'])
             schedule_val = "" if schedule == "选择时间投入计划" else schedule
             lst_itemimage = cast(PicsListviewCtrl,
-                self._gui.get_control("lstItemImageEditItem"))
+                self._gui.get_control("lstImageEditHour"))
             rid = lst_itemimage.get_selected()
             if father == -1:
-                iid = cast(int, self._gui.process_message("addItem",
+                iid = cast(int, self._gui.process_message("AddHour",
                     name=name, rid=rid, clock=clock_val, schedule=schedule_val, father=father))
                 self.create_hour(iid, name, rid, clock, '0.0')
             else:
@@ -565,21 +680,21 @@ class HourTab:
                     self._edithourdlg_beforego(**kwargs)
                 case "changeClock":
                     clock = cast(str, kwargs["clock"])
-                    lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditItem"))
+                    lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockEditHour"))
                     lbl_selclock['text'] = clock
                 case "changeSchedule":
                     schedule = cast(str, kwargs["schedule"])
-                    lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditItem"))
+                    lbl_selschedule = cast(LabelCtrl, self._gui.get_control("lblSelScheduleEditHour"))
                     lbl_selschedule['text'] = schedule
-                case "lblSelClockEditItem":
+                case "lblSelClockEditHour":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._selclock_dlg.do_show(self._edithour_dlg, x+20, y+20, **kwargs)
-                case "lblSelScheduleEditItem":
+                case "lblSelScheduleEditHour":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._selschedule_dlg.do_show(self._edithour_dlg, x+20, y+20, **kwargs)
-                case "btnDelItemEditItem":
+                case "btnDelItemEditHour":
                     pv(kwargs)
                     iid = cast(int, self._hourdetail_dlg.owner.process_message("getId"))
                     self._edithour_dlg.destroy()
@@ -607,13 +722,19 @@ class HourTab:
                 iid = cast(int, kwargs["id"])
                 clock = cast(str, kwargs["clock"])
                 clock = "" if clock=="选择定时提醒" else clock
-                _ = self._gui.process_message("ModifyHourAttr", id=iid, attrib="clock", val=clock)
+                _ = self._gui.process_message("ModifyHourAttr", id=iid,
+                    attrib="clock", val=clock)
                 self.update_hour(iid, "clock", clock)
             case "changeSchedule":
                 iid = cast(int, kwargs["id"])
                 schedule = cast(str, kwargs["schedule"])
                 schedule = "" if schedule=="选择时间投入计划" else schedule
-                _ = self._gui.process_message("ModifyHourAttr", id=iid, attrib="schedule", val=schedule)
+                _ = self._gui.process_message("ModifyHourAttr", id=iid,
+                    attrib="schedule", val=schedule)
+            case "ChangeSum":
+                iid = cast(int, kwargs["id"])
+                sums_hours= cast(float, kwargs["sum"])
+                self.update_hour(iid, "sums", sums_hours)
             case "deleteItem":
                 iid = cast(int, kwargs["id"])
                 detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
