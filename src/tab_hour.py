@@ -1,9 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-"""
-v0.3.1
-  1. rename attribute "image" of ImagePanel to "image"
-"""
 from __future__ import annotations
 import datetime
 from typing import cast, Any
@@ -259,10 +255,10 @@ class HourTab:
     def _get_imagepath(self, group: int, index: int):
         return self._images_dict[group].get(index, "CircleFlagsUsBetsyRoss.png")
 
-    def show_selclockdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: Any):
+    def show_selclockdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: object):
         self._selclock_dlg.do_show(owner, x+20, y+20, **kwargs)
 
-    def _selclockdlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+    def _selclockdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_selclockdlg_confirm: {kwargs}")
         cmb_selday = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelDay"))
         sel_day = cmb_selday.get_val()
@@ -278,7 +274,7 @@ class HourTab:
         self._selclock_dlg.owner.process_message("changeClock", clock=clock, **kwargs)
         return True, ""
 
-    def _selscheduledlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+    def _selscheduledlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_selscheduledlg_confirm: {kwargs}")
         cmb_selunit = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelUnit"))
         sel_unit = cmb_selunit.get_val()
@@ -290,10 +286,11 @@ class HourTab:
         self._selschedule_dlg.owner.process_message("changeSchedule", schedule=schedule, **kwargs)
         return True, ""
 
-    def show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: Any):
+    def show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+            **kwargs: object):
         self._recordhour_dlg.do_show(owner, x+20, y+20, **kwargs)
 
-    def _recordhourdlg_beforego(self, **kwargs: Any):
+    def _recordhourdlg_beforego(self, **kwargs: object):
         po(f"_recordhourdlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
         # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
@@ -304,7 +301,7 @@ class HourTab:
         lbl_day = cast(LabelCtrl, self._gui.get_control("lblDay"))
         lbl_day.set_text(str(today))
 
-    def _recordhourdlg_selday(self, **kwargs: Any):
+    def _recordhourdlg_selday(self, **kwargs: object):
         x, y = cast(tuple[int, int], kwargs["mousepos"])
         calendar = CalendarCtrl((x, y+20))
         date = calendar.get_datestr()
@@ -313,7 +310,7 @@ class HourTab:
         lbl_day["text"] = date
 
     # TODO: wait to test
-    def _recordhourdlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+    def _recordhourdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_recordhourdlg_confirm: {kwargs}")
         iid = cast(int, kwargs["id"])
         cmb_selhour = cast(ComboboxCtrl, self._gui.get_control("cmbSelHour"))
@@ -331,7 +328,7 @@ class HourTab:
         self._recordhour_dlg.owner.process_message("ChangeSum", id=iid, sum=sums_hours)
         return True, ""
 
-    def _recordhourdlg_processmessage(self, idmsg: str, **kwargs: Any):
+    def _recordhourdlg_processmessage(self, idmsg: str, **kwargs: object):
         if self._recordhour_dlg.alive:
             match idmsg:
                 case "beforego":
@@ -378,11 +375,12 @@ class HourTab:
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
-    def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: Any):
+    def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+            **kwargs: object):
         self._hourdetail_dlg.do_show(owner, x+20, y+20, **kwargs)
 
     # TODO: Statistics
-    def _hourdetaildlg_beforego(self, **kwargs: Any):
+    def _hourdetaildlg_beforego(self, **kwargs: object):
         po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
         # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
@@ -417,9 +415,9 @@ class HourTab:
         self._update_hourdetail("HoursEveryWeek", hours_everyweek)
         hours_last7days = cast(float, self._gui.process_message("GetHoursLast7Days", id=iid))
         self._update_hourdetail("HoursLast7Days", hours_last7days)
-        resthours_2milestone = cast(float, self._gui.process_message("GetRestHours2Milestone",
+        hours_2milestone = cast(float, self._gui.process_message("GetHours2Milestone",
             id=iid))
-        self._update_hourdetail("RestHours2Milestone", resthours_2milestone)
+        self._update_hourdetail("RestHours2Milestone", hours_2milestone)
 
         lbl_selclock = cast(LabelCtrl, self._gui.get_control("lblSelClockItemDetail"))
         # clock = data["clock"]
@@ -494,7 +492,7 @@ class HourTab:
             hours = cast(float, self._gui.process_message("GetHoursbyYear", id=iid, year=year))
             po(f"hours of {year} is {hours}")
 
-    def _hourdetaildlg_confirm(self, **kwargs: Any) -> tuple[bool, str]:
+    def _hourdetaildlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_hourdetaildlg_confirm: {kwargs}")
         for idx, child in self._children.items():
             if idx > self._old_subid:
@@ -511,14 +509,14 @@ class HourTab:
         self._children.clear()
         return True, ""
 
-    def _hourdetaildlg_cancel(self, **kwargs: Any) -> tuple[bool, str]:
+    def _hourdetaildlg_cancel(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_hourdetaildlg_cancel: {kwargs}")
         for idx, _ in self._children.items():
             self._delete_child(idx)
         self._children.clear()
         return True, ""
 
-    def _hourdetaildlg_processmessage(self, idmsg: str, **kwargs: Any):
+    def _hourdetaildlg_processmessage(self, idmsg: str, **kwargs: object):
         if self._hourdetail_dlg.alive:
             iid = cast(int, kwargs["id"])
             match idmsg:
@@ -582,7 +580,7 @@ class HourTab:
             return True
         return None
 
-    def _edithourdlg_beforego(self, **kwargs: Any):
+    def _edithourdlg_beforego(self, **kwargs: object):
         po(f"_edithourdlg_beforego: {kwargs}")
         fid = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
@@ -626,7 +624,7 @@ class HourTab:
         list_itemimage.select(grp, idx)
 
     # TODO: only change those which are modified
-    def _edithourdlg_confirm(self, **kwargs: Any):
+    def _edithourdlg_confirm(self, **kwargs: object):
         po(f"_edithourdlg_confirm: {kwargs}")
         father = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
@@ -676,7 +674,7 @@ class HourTab:
                 # self._old_subid += 1
         return True, ""
 
-    def _edithourdlg_processmessage(self, idmsg: str, **kwargs: Any):
+    def _edithourdlg_processmessage(self, idmsg: str, **kwargs: object):
         if self._edithour_dlg.alive:
             iid = cast(int, kwargs["id"])
             match idmsg:
@@ -716,7 +714,7 @@ class HourTab:
         _ = self._gui.process_message("GetHourDetail", id=iid, detail=detail)
         return detail
 
-    def _process_message(self, idmsg: str, **kwargs: Any):
+    def _process_message(self, idmsg: str, **kwargs: object):
         match idmsg:
             case "btnNewHour":
                 x, y = cast(tuple[int, int], kwargs["mousepos"])

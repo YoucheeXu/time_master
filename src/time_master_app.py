@@ -41,7 +41,7 @@ class TimeMasterApp:
         msglst = ["OpenOrNewUser",
             "AddHour", "GetHourDetail", "getChildren", "RecordHour", "ModifyHourAttr", "DelHour",
             "GetHourStartDate", "GetHourTotalDays", "GetHoursEveryWeek",
-            "GetHoursLast7Days", "GetRestHours2Milestone",
+            "GetHoursLast7Days", "GetHours2Milestone",
             "GetHoursbyDay", "GetHoursbyWeek", "GetHoursbyMonth", "GetHoursbyYear",
             "AddMed", "DelMed", "GetMedDetail", "ModifyMedAttr", "RecordMedUse"]
         self._gui.filter_message(self.process_message, 1, msglst)
@@ -125,9 +125,13 @@ class TimeMasterApp:
                     VALUES (?, ?, ?, ?, ?, ?)""",
                 (name, ridstr, clock, schedule, sums, father)
             )
-        iid = cast(int, self._hours_db.get(
+        data = self._hours_db.get(
                 "SELECT last_insert_rowid()"
-            ))
+            )
+        if data is not None:
+            iid = cast(int, data[0])
+        else:
+            raise RuntimeError("no last_insert_rowid")
 
         itemdata: HourDict = {"father": father, "name": name,
                 "rid": rid, "clock": clock,
@@ -241,8 +245,9 @@ class TimeMasterApp:
     def _get_hourstartdate(self, iid: int):
         first_date = ""
         sql = "SELECT * FROM RECORDS ORDER BY end ASC"
-        for hourecord in self._hours_db.each(sql):
-            iid_record, _, end_date = cast(HourSqlRecord, hourecord)
+        for iid_record, _, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # iid_record, _, end_date = cast(HourSqlRecord, hourecord)
             if iid == iid_record and not first_date:
                 first_date = end_date.date()
         return first_date
@@ -252,8 +257,10 @@ class TimeMasterApp:
         first_date = datetime.datetime.today()
         last_date = datetime.datetime.today()
         sql = "SELECT * FROM RECORDS ORDER BY end ASC"
-        for hourecord in self._hours_db.each(sql):
-            iid_record, _, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for iid_record, _, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # iid_record, _, end_date = cast(HourSqlRecord, hourecord)
             if iid == iid_record:
                 if not is_firstsave:
                     first_date = end_date
@@ -271,8 +278,10 @@ class TimeMasterApp:
         last_date = datetime.datetime.today()
         hours = 0.0
         sql = f"SELECT * FROM RECORDS WHERE id={iid} ORDER BY end ASC"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             # if iid == iid_record:
             if not is_firstsave:
                 first_date = end_date
@@ -292,8 +301,10 @@ class TimeMasterApp:
         # last7day = today + datetime.timedelta(days=-7)
         # sql = f"SELECT * FROM RECORDS WHERE end >= datetime({last7day})"
         sql = f"SELECT * FROM RECORDS WHERE end>=date('now', '-7 days') AND id={iid}"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             # if iid == iid_record:
             delta = end_date - strt_date
             hours += delta.total_seconds() / 3600.0
@@ -306,8 +317,10 @@ class TimeMasterApp:
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%F',end)=strftime('%F',{day}) AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for  _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             if end_date.date() == day:
                 delta = end_date - strt_date
                 hours += delta.total_seconds() / 3600.0
@@ -317,8 +330,10 @@ class TimeMasterApp:
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%W',end)={week} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             if end_date.isocalendar()[1] == week:
                 delta = end_date - strt_date
                 hours += delta.total_seconds() / 3600.0
@@ -328,8 +343,10 @@ class TimeMasterApp:
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%m',end)={month} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             if end_date.month == month:
                 delta = end_date - strt_date
                 hours += delta.total_seconds() / 3600.0
@@ -339,8 +356,10 @@ class TimeMasterApp:
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%Y',end)={year} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
-        for hourecord in self._hours_db.each(sql):
-            _, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        # for hourecord in self._hours_db.each(sql):
+        for _, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each(sql)):
+            # _, strt_date, end_date = cast(HourSqlRecord, hourecord)
             if end_date.year == year:
                 delta = end_date - strt_date
                 hours += delta.total_seconds() / 3600.0
@@ -394,22 +413,24 @@ class TimeMasterApp:
         _ = self._medicine_db.commit()
 
     def _readcreate_meds(self):
-        for med in self._medicine_db.each("SELECT * FROM MEDICINES"):
-            iid, name, ridstr, due, sums, unit = cast(MedSqlTuple, med)
+        # for med in self._medicine_db.each("SELECT * FROM MEDICINES"):
+        for iid, name, ridstr, due, sums, unit in cast(Generator[MedSqlTuple, None, None],
+                self._medicine_db.each("SELECT * FROM MEDICINES")):
+            # iid, name, ridstr, due, sums, unit = cast(MedSqlTuple, med)
             rid = ridstr.split("_")
             meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
                 "due": due, "sums": sums, "unit": unit}
             self._meds_store[iid] = meddata
 
-        meddata: MedDict = {"name": "创口贴", "rid": (0,0),
+        meddata = {"name": "创口贴", "rid": (0,0),
                 "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "片"}
         self._meds_store[1] = meddata
 
-        meddata: MedDict = {"name": "芬必得", "rid": (0,1),
+        meddata = {"name": "芬必得", "rid": (0,1),
                 "due": datetime.date(2025, 8, 15), "sums":200 , "unit": "个"}
         self._meds_store[2] = meddata
 
-        meddata: MedDict = {"name": "碘伏", "rid": (0,2),
+        meddata = {"name": "碘伏", "rid": (0,2),
                 "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "支"}
         self._meds_store[3] = meddata
 
@@ -431,9 +452,14 @@ class TimeMasterApp:
                     VALUES (?, ?, ?, ?, ?)""",
                 (name, ridstr, due, sums, unit)
             )
-        iid = cast(int, self._medicine_db.get(
+
+        data = self._hours_db.get(
                 "SELECT last_insert_rowid()"
-            ))
+            )
+        if data is not None:
+            iid = cast(int, data[0])
+        else:
+            raise RuntimeError("no last_insert_rowid")
 
         meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
                 "due": due, "sums": sums, "unit": unit}
@@ -634,7 +660,7 @@ class TimeMasterApp:
             case "GetHoursLast7Days":
                 iid = cast(int, kwargs["id"])
                 return self._get_hourslast7days(iid)
-            case "GetRestHours2Milestone":
+            case "GetHours2Milestone":
                 iid = cast(int, kwargs["id"])
                 return self._get_hours2milestone(iid)
             case "GetHoursbyDay":
