@@ -133,9 +133,10 @@ class HourTab:
 
         master = self._gui.get_control("frmHourMain")
         if is_subitem:
-            detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
-            idfather = detail["father"]
-            parent = self._gui.get_control(f"frmGroup{idfather}")
+            # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+            detail = self._get_hourdetail(iid)
+            fid = detail["father"]
+            parent = self._gui.get_control(f"frmGroup{fid}")
             item_padx1 = 15
             item_padx2 = 5
         else:
@@ -295,7 +296,8 @@ class HourTab:
     def _recordhourdlg_beforego(self, **kwargs: Any):
         po(f"_recordhourdlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        detail = self._get_hourdetail(iid)
         lbl_item = cast(LabelCtrl, self._gui.get_control("lblItem"))
         lbl_item.set_text(detail["name"])
         today = datetime.date.today()
@@ -322,7 +324,8 @@ class HourTab:
         pv(delta)
         _ = self._gui.process_message("RecordHour", id=iid, timecost=delta)
         # sums_str = self.get_item(iid, "sums")
-        detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        detail = self._get_hourdetail(iid)
         sums_hours = float(detail["sums"]) / 60
         pv(sums_hours)
         self._recordhour_dlg.owner.process_message("ChangeSum", id=iid, sum=sums_hours)
@@ -382,16 +385,15 @@ class HourTab:
     def _hourdetaildlg_beforego(self, **kwargs: Any):
         po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        # data = ItemDict()
-        # data = {}
-        # self._gui.process_message("GetHourDetail", id=iid, detail=data)
-        detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+        detail = self._get_hourdetail(iid)
         # po(f"{iid}: {detail}")
 
         lbl_father = cast(LabelCtrl, self._gui.get_control("lblFatherItemDetail"))
-        id_father = detail["father"]
-        if id_father != -1:
-            detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=id_father))
+        fid = detail["father"]
+        if fid != -1:
+            # detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=id_father))
+            detail_father = self._get_hourdetail(fid)
             name_father = detail_father["name"]
             pv(name_father)
             lbl_father['text'] = name_father
@@ -551,7 +553,8 @@ class HourTab:
                     lbl_sum.set_text(f"{sums_hours:.1f}\nhours")
                     self.update_hour(iid, "sums", sums_hours)
                 case "btnImageHourDetail":
-                    detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                    # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                    detail = self._get_hourdetail(iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._edithour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
@@ -561,7 +564,8 @@ class HourTab:
                     self._edithour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
                         father=iid, id=0)
                 case "btnRecordHourDetail":
-                    detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                    # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                    detail = self._get_hourdetail(iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._recordhour_dlg.do_show(self._hourdetail_dlg, x+20, y+20,
@@ -580,12 +584,13 @@ class HourTab:
 
     def _edithourdlg_beforego(self, **kwargs: Any):
         po(f"_edithourdlg_beforego: {kwargs}")
-        father = cast(int, kwargs["father"])
+        fid = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
 
-        if father != -1:
+        if fid != -1:
             lbl_father = cast(LabelCtrl, self._gui.get_control("lblSelFatherEditHour"))
-            detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=father))
+            # detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=fid))
+            detail_father = self._get_hourdetail(fid)
             name_father = detail_father["name"]
             pv(name_father)
             lbl_father['text'] = name_father
@@ -597,7 +602,8 @@ class HourTab:
             grp, idx = 0, 0
         else:
             self._edithour_dlg.set_title("编辑项目")
-            detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+            # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+            detail = self._get_hourdetail(iid)
             pv(detail)
 
             ent_name = cast(EntryCtrl, self._gui.get_control("txtItemEditHour"))
@@ -704,6 +710,12 @@ class HourTab:
             return True
         return None
 
+    def _get_hourdetail(self, iid: int):
+        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
+            "sums": 0, "father": -1}
+        _ = self._gui.process_message("GetHourDetail", id=iid, detail=detail)
+        return detail
+
     def _process_message(self, idmsg: str, **kwargs: Any):
         match idmsg:
             case "btnNewHour":
@@ -735,7 +747,8 @@ class HourTab:
                 self.update_hour(iid, "sums", sums_hours)
             case "deleteItem":
                 iid = cast(int, kwargs["id"])
-                detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+                detail = self._get_hourdetail(iid)
                 id_father = detail["father"]
                 if id_father == -1:
                     self._gui.delete_control(f"frmGroup{iid}")

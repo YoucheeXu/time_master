@@ -8,7 +8,8 @@ import sqlite3
 # from typing import TypedDict
 # from functools import partial
 # from typing import Unpack
-from typing import cast, Any
+from typing import cast
+from collections.abc import Generator
 
 from item_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
 from item_type import MedSqlTuple, MedDict, MedSqlRecord, MedSqlUsage
@@ -75,20 +76,23 @@ class TimeMasterApp:
         _ = self._hours_db.commit()
 
     def _readcreate_hours(self):
-        for hour in self._hours_db.each("SELECT * FROM ITEMS"):
-            iid, name, ridstr, clock, schedule, sums, father = cast(HourSqlTuple, hour)
+        # for hour in self._hours_db.each("SELECT * FROM ITEMS"):
+        for iid, name, ridstr, clock, schedule, sums, fid in \
+                cast(Generator[HourSqlTuple, None, None],
+                self._hours_db.each("SELECT * FROM ITEMS")):
+            # iid, name, ridstr, clock, schedule, sums, fid = cast(HourSqlTuple, hour)
             if clock:
                 self._schedule.add_event(clock, name)
             rid = ridstr.split("_")
             itemdata: HourDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
                 "clock": self._clock_sql2app(clock), "schedule": self._schedule_sql2app(schedule),
-                "sums": sums, "father": father}
-            if father == -1:
+                "sums": sums, "father": fid}
+            if fid == -1:
                 hour = Hour()
                 hour.data = itemdata
                 self._cascade_hours[iid] = hour
             else:
-                self._cascade_hours[father].children[iid] = itemdata
+                self._cascade_hours[fid].children[iid] = itemdata
 
         pv(self._cascade_hours)
 
@@ -103,8 +107,9 @@ class TimeMasterApp:
                     sums=f"{child["sums"]/60:.1f}", is_subitem=True)
                 self._hours_record[sid] = []
 
-        for hourecord in self._hours_db.each("SELECT * FROM RECORDS"):
-            iid, strt_date, end_date = cast(HourSqlRecord, hourecord)
+        for iid, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+                self._hours_db.each("SELECT * FROM RECORDS")):
+            # iid, strt_date, end_date = cast(HourSqlRecord, hourecord)
             day = strt_date.date()
             delta = end_date - strt_date
             endure = int(delta.total_seconds() / 60)
@@ -194,18 +199,41 @@ class TimeMasterApp:
         pv(sql)
         _ = self._hours_db.execute1(sql)        
 
-    def get_hourdetail(self, iid: int) -> HourDict:
+    # def get_hourdetail(self, iid: int) -> HourDict:
+    def get_hourdetail(self, iid: int, detail: HourDict):
         if iid in self._cascade_hours:
-            return self._cascade_hours[iid].data
+            # return self._cascade_hours[iid].data
+            data = self._cascade_hours[iid].data
+            detail["name"] = data["name"]
+            detail["rid"] = data["rid"]
+            detail["clock"] = data["clock"]
+            detail["schedule"] = data["schedule"]
+            detail["sums"] = data["sums"]
+            detail["father"] = data["father"]
+            # detail = self._cascade_hours[iid].data.copy()
+            return
         else:
             for _, father in self._cascade_hours.items():
                 children = father.children
                 if iid in children:
-                    return children[iid]
+                    # return children[iid]
+                    data = children[iid]
+                    detail["name"] = data["name"]
+                    detail["rid"] = data["rid"]
+                    detail["clock"] = data["clock"]
+                    detail["schedule"] = data["schedule"]
+                    detail["sums"] = data["sums"]
+                    detail["father"] = data["father"]
+                    # detail = {**children[iid]}
+                    # detail = children[iid].copy()
+                    return     
         raise KeyError(f"no item: {iid}")
 
     def get_hourattrib(self, iid: int, attrib: str):
-        detail = self.get_hourdetail(iid)
+        # detail = self.get_hourdetail(iid)
+        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
+                        "sums": 0, "father": -1}
+        self.get_hourdetail(iid, detail)
         if attrib not in detail:
             raise KeyError(f"no attrib: {attrib}")
         return detail.get(attrib)
@@ -271,7 +299,7 @@ class TimeMasterApp:
             hours += delta.total_seconds() / 3600.0
         return hours
 
-    def _get_resthours2milestone(self, iid: int):
+    def _get_hours2milestone(self, iid: int):
         return "∞"
 
     def _get_hoursbyday(self, iid: int, day: datetime.date):
@@ -539,7 +567,7 @@ class TimeMasterApp:
         sqlschedule = f"{i1}_{appschedule[4: ]}"
         return sqlschedule
 
-    def process_message(self, idmsg: str, **kwargs: Any):
+    def process_message(self, idmsg: str, **kwargs: object):
         match idmsg:
             case "OpenOrNewUser":
                 self.close()
@@ -556,7 +584,10 @@ class TimeMasterApp:
                 return self._add_hour(name, (grp, idx), sqlclock, schedule, father)
             case "GetHourDetail":
                 iid = cast(int, kwargs["id"])
-                return self.get_hourdetail(iid)
+                detail = cast(HourDict, kwargs["detail"])
+                # return self.get_hourdetail(iid, detail)
+                self.get_hourdetail(iid, detail)
+                return True
             case "getChildren":
                 father = cast(int, kwargs["father"])
                 if father in self._cascade_hours:
@@ -605,7 +636,7 @@ class TimeMasterApp:
                 return self._get_hourslast7days(iid)
             case "GetRestHours2Milestone":
                 iid = cast(int, kwargs["id"])
-                return self._get_resthours2milestone(iid)
+                return self._get_hours2milestone(iid)
             case "GetHoursbyDay":
                 iid = cast(int, kwargs["id"])
                 day = cast(datetime.date, kwargs["day"])
