@@ -83,7 +83,7 @@ class Schedule:
         return nextday
 
     def _compare_time(self, clock1: datetime.datetime, clock2: datetime.datetime) -> int:
-        """compare time to Now.
+        """ compare time to Now.
 
         Args:
             clock1 (): time to compare.
@@ -101,9 +101,10 @@ class Schedule:
         # print(f"Clock2: {clock2.hour:0=2d}:{clock2.minute:0=2d}:{clock2.second:0=2d}")
 
         err_minute = clock2_minute - clock1_minute
+
         if err_minute < 0:
             return 1
-        elif err_minute == 0 and clock2.second <= self._tolerance_sec:
+        elif err_minute == 0 and clock2.second >= self._tolerance_sec:
             return 0
         else:
             return -1
@@ -118,42 +119,37 @@ class Schedule:
         self._agenda_list = sorted(self._agenda_list, key = lambda agenda: agenda.clock)
 
     def _next_agenda(self):
+        self.judge_day()
         now = datetime.datetime.now()
         for agenda in self._agenda_list:
             clock = agenda.clock
             if self._compare_time(clock, now) >= 0:
-                po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
-                     f" to do {agenda.hint}"))
+                # po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
+                     # f" to do {agenda.hint}"))
                 return agenda
-        return None
+        return self._agenda_list[0]
 
-    def _wait_to_nextagenda(self, agenda: Agenda | None = None):
-        while agenda is None:
-            time.sleep(self._tolerance_sec)
-            self.judge_day()
-            agenda = self._next_agenda()
-        return agenda
+    # def _wait_to_nextagenda(self):
+        # while (agenda := self._next_agenda()) is None:
+            # self.judge_day()
+            # time.sleep(self._tolerance_sec)
+            # now = datetime.datetime.now()
+            # po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d} wait to next clock")
+        # return agenda
 
     def clear_schedule(self):
         self._agenda_list.clear()
 
     def exec_schedule(self):
-        now = datetime.datetime.now()
-        # print(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
-        # self._actionsys.exec_action(ActTyp.SPEECH_TEXT,
-            # f'北京时间{now.hour}点{now.minute}分{now.second}秒')
-
         while True:
+            agenda = self._next_agenda()
+            clock = agenda.clock
+            po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
+                f" to do {agenda.hint}"))
+
+            time.sleep(self._tolerance_sec)
             now = datetime.datetime.now()
             po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
-
-            # agenda = self._next_agenda()
-            # while agenda is None:
-                # today = self.sleep_to_nextday(today)
-                # self.judge_day()
-                # agenda = self._next_agenda()
-            agenda = self._wait_to_nextagenda()
-            clock = agenda.clock
 
             if self._compare_time(clock, now) == 0:
                 self._actionsys.exec_action(ActTyp.PLAY_MP3, self._alarm_mp3)
@@ -161,13 +157,7 @@ class Schedule:
                     f'北京时间{now.hour}点{now.minute}分{now.second}秒')
                 self._actionsys.exec_action(ActTyp.SPEECH_TEXT, agenda.hint)
                 self._actionsys.exec_action(agenda.action)
-                # agenda = self._next_agenda()
-                # while agenda is None:
-                    # today = self.sleep_to_nextday(today)
-                    # self.judge_day()
-                    # agenda = self._next_agenda()
-                # clock = agenda.clock
-                # po(f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}")
+
             # time.sleep(self._tolerance_sec)
 
 
@@ -178,7 +168,8 @@ def main(alarm_mp3: str):
     today = datetime.datetime.today()
     # tomorrow = schedule.sleep_to_nextday(today)
     # print(f"tomorrow = {tomorrow}")
-
+    schedule.add_event("P_CD_11:46", "Cooking")
+    schedule.event_to_schedule()
     # schedule.add_schedule("11:00", "Cooking", ActTyp.LOCK_SCREEN)
     # schedule.add_schedule("12:00", "Lunch", ActTyp.LOCK_SCREEN)
     # schedule.add_schedule("12:30", "Nap", ActTyp.LOCK_SCREEN)
@@ -190,9 +181,10 @@ def main(alarm_mp3: str):
     # schedule.add_schedule("22:00", "Exercise", ActTyp.LOCK_SCREEN)
     # schedule.add_schedule("23:00", "Sleep", ActTyp.LOCK_SCREEN)
     # schedule.sort_schedule()
-    # schedule.exec_schedule()
-    tomorrow = schedule.sleep_to_nextday(today)
-    pv(tomorrow)
+    schedule.exec_schedule()
+
+    # tomorrow = schedule.sleep_to_nextday(today)
+    # pv(tomorrow)
 
 
 if __name__ == "__main__":
