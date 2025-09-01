@@ -1,11 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-'''
-    Chime in time
-v0.2.0
-  1. auto update
-  2. fix error in compare day of event_to_schedule
-'''
 import os
 import sys
 
@@ -31,7 +25,8 @@ class Schedule:
     def __init__(self, alarm_mp3: str):
         self._alarm_mp3: str = alarm_mp3
         self._tolerance_sec: int = 30
-        self._today: str = "OWD"
+        self._today_typ: str = "OWD"
+        self._today: datetime.datetime = datetime.datetime.today()
         self._event_dict: dict[str, str] = {}
         self._agenda_list: list[Agenda] = []
 
@@ -44,7 +39,7 @@ class Schedule:
             rest leter:
                 CD: Calendar day; WD: Work day; HD: Holiday day
         """
-        self._today = "OWD"
+        self._today_typ = "OWD"
 
     def add_event(self, clkstr: str, event: str):
         self._event_dict[clkstr] = event
@@ -56,8 +51,9 @@ class Schedule:
         self._event_dict.clear()
 
     def event_to_schedule(self):
-        interval_today = self._today[0]
-        day_today = self._today[1: ]
+        pv(self._event_dict)
+        interval_today = self._today_typ[0]
+        day_today = self._today_typ[1: ]
         self.clear_schedule()
         for clk, event in self._event_dict.items():
             clklst = clk.split("_")
@@ -119,8 +115,15 @@ class Schedule:
         self._agenda_list = sorted(self._agenda_list, key = lambda agenda: agenda.clock)
 
     def _next_agenda(self):
-        self.judge_day()
         now = datetime.datetime.now()
+        if self._today.date() != now.date():     # next day
+            self.judge_day()
+            self.event_to_schedule()
+            _ = self._today.replace(
+                year=now.year,
+                month=now.month,
+                day=now.day
+            )
         for agenda in self._agenda_list:
             clock = agenda.clock
             if self._compare_time(clock, now) >= 0:
@@ -128,14 +131,6 @@ class Schedule:
                      # f" to do {agenda.hint}"))
                 return agenda
         return self._agenda_list[0]
-
-    # def _wait_to_nextagenda(self):
-        # while (agenda := self._next_agenda()) is None:
-            # self.judge_day()
-            # time.sleep(self._tolerance_sec)
-            # now = datetime.datetime.now()
-            # po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d} wait to next clock")
-        # return agenda
 
     def clear_schedule(self):
         self._agenda_list.clear()
