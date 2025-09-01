@@ -100,8 +100,11 @@ class Schedule:
 
         if err_minute < 0:
             return 1
-        elif err_minute == 0 and clock2.second >= self._tolerance_sec:
-            return 0
+        elif err_minute == 0:
+            if clock2.second >= self._tolerance_sec:
+                return 0
+            else:
+                return 1
         else:
             return -1
 
@@ -126,34 +129,39 @@ class Schedule:
             )
         for agenda in self._agenda_list:
             clock = agenda.clock
-            if self._compare_time(clock, now) >= 0:
+            if self._compare_time(clock, now) > 0:
                 # po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
                      # f" to do {agenda.hint}"))
                 return agenda
-        return self._agenda_list[0]
+        return None
 
     def clear_schedule(self):
         self._agenda_list.clear()
 
     def exec_schedule(self):
+        clock = datetime.datetime.now()
         while True:
-            agenda = self._next_agenda()
-            clock = agenda.clock
-            po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
-                f" to do {agenda.hint}"))
+            while (agenda := self._next_agenda()) is None:
+                now = datetime.datetime.now()
+                po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
+                time.sleep(self._tolerance_sec)
+            if clock != agenda.clock:
+                clock = agenda.clock
+                po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
+                    f" to do {agenda.hint}"))
 
             time.sleep(self._tolerance_sec)
             now = datetime.datetime.now()
-            po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
 
             if self._compare_time(clock, now) == 0:
+                po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d} Time to do {agenda.hint}")
                 self._actionsys.exec_action(ActTyp.PLAY_MP3, self._alarm_mp3)
                 self._actionsys.exec_action(ActTyp.SPEECH_TEXT,
                     f'北京时间{now.hour}点{now.minute}分{now.second}秒')
                 self._actionsys.exec_action(ActTyp.SPEECH_TEXT, agenda.hint)
                 self._actionsys.exec_action(agenda.action)
-
-            # time.sleep(self._tolerance_sec)
+            else:
+                po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
 
 
 def main(alarm_mp3: str):
@@ -163,7 +171,8 @@ def main(alarm_mp3: str):
     today = datetime.datetime.today()
     # tomorrow = schedule.sleep_to_nextday(today)
     # print(f"tomorrow = {tomorrow}")
-    schedule.add_event("P_CD_11:46", "Cooking")
+    schedule.add_event("P_CD_14:34", "Cooking")
+    schedule.add_event("P_CD_14:36", "Japanese")
     schedule.event_to_schedule()
     # schedule.add_schedule("11:00", "Cooking", ActTyp.LOCK_SCREEN)
     # schedule.add_schedule("12:00", "Lunch", ActTyp.LOCK_SCREEN)
