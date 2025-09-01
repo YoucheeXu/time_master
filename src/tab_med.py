@@ -111,11 +111,11 @@ class MedTab:
             due: str, sums: str, unit: str):
         imagepath = self._get_imagepath(rid[0], rid[1])
 
-        master = self._gui.get_control("frmMedStorMain")
+        frmain = self._gui.get_control("frmMedStorMain")
 
         level = 3
         frmed_xml = self._gui.create_xml("Frame", {"id": f"frmMedStor{iid}"})
-        _, frm_med = self._gui.create_control(master, frmed_xml, 2)
+        _, frm_med = self._gui.create_control(frmain, frmed_xml, 2)
 
         level = 3
 
