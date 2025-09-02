@@ -4,23 +4,20 @@ import sys
 import os
 # from functools import partial
 import tkinter.filedialog as tkFileDialog
-# from tkinter import ttk
 from typing import override, cast
 from typing import Any
 # from collections.abc import Mapping
 
 from pyutilities.logit import po, pv, pe
-from pyutilities.tkwin import tkWin, LabelCtrl
+from pyutilities.tkwin import tkWin
 
 from tab_hour import HourTab
-from tab_med import MedTab
 
 
 class TimeMasterGui(tkWin):
     def __init__(self, path: str, xmlfile: str):
         super().__init__(path, xmlfile)
         self._tabhour: HourTab = HourTab(self)
-        self._tabmed: MedTab = MedTab(self)
 
     @override
     def process_message(self, idmsg: str, **kwargs: Any):
@@ -36,19 +33,6 @@ class TimeMasterGui(tkWin):
             iid = int(idmsg[8:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self._tabhour.show_selclockdlg(self, x+20, y+20, id=iid)
-        elif idmsg.startswith("btnImageMedStor"):
-            iid = int(idmsg[15:])
-            x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._tabmed.show_meddetaildlg(self, x+20, y+20, id=iid)
-        elif idmsg.startswith("btnDueMedStor"):
-            iid = int(idmsg[13:])
-            name = self._tabmed.get_medstorattr(iid, "name")
-            x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._tabmed.show_selduedlg(self, x+20, y+20, id=iid,name=name)
-        elif idmsg.startswith("lblSumMedStor"):
-            iid = int(idmsg[13:])
-            x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._tabmed.show_recordmeddlg(self, x+20, y+20, id=iid)
         else:
             match idmsg:
                 case "NewUser":
@@ -79,15 +63,6 @@ class TimeMasterGui(tkWin):
                 case "DeleteFather":
                     iid = cast(int, kwargs["id"])
                     self._tabhour.delete_father(iid)
-                case "CreateMedStor":
-                    iid = cast(int, kwargs["id"])
-                    item = cast(str, kwargs["item"])
-                    rid = cast(tuple[int, int], kwargs["rid"])
-                    due = cast(str, kwargs["due"])
-                    sums = cast(str, kwargs["sums"])
-                    unit = cast(str, kwargs["unit"])
-                    self._tabmed.create_medstor(iid, item, rid,
-                        due, sums, unit)
                 case _:
                     return super().process_message(idmsg, **kwargs)
         return True

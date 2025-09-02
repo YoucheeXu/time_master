@@ -12,7 +12,6 @@ from typing import cast
 from collections.abc import Generator
 
 from item_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
-from item_type import MedSqlTuple, MedDict, MedSqlRecord, MedSqlUsage
 from time_master_gui import TimeMasterGui
 from bidirectionaldict import BidirectionalDict
 from schedule import Schedule
@@ -24,8 +23,6 @@ from pyutilities.sqlite import SQLite
 class TimeMasterApp:
     _cascade_hours: dict[int, Hour] = {}
     _hours_record: dict[int, list[HourRecordTuple]] = {}
-    _meds_store: dict[int, MedDict] = {}
-    _meds_record: dict[int, dict[int, float]] = {}    # {dict, {timestampe, dose}}
     # _meds_usage: dict[int, MedUsageDict] = {}
     def __init__(self, curpath: str, xmlfile: str):
 
@@ -42,15 +39,14 @@ class TimeMasterApp:
             "AddHour", "GetHourDetail", "getChildren", "RecordHour", "ModifyHourAttr", "DelHour",
             "GetHourStartDate", "GetHourTotalDays", "GetHoursEveryWeek",
             "GetHoursLast7Days", "GetHours2Milestone",
-            "GetHoursbyDay", "GetHoursbyWeek", "GetHoursbyMonth", "GetHoursbyYear",
-            "AddMed", "DelMed", "GetMedDetail", "ModifyMedAttr", "RecordMedUse"]
+            "GetHoursbyDay", "GetHoursbyWeek", "GetHoursbyMonth", "GetHoursbyYear"
+        ]
         self._gui.filter_message(self.process_message, 1, msglst)
 
         bell_path = os.path.join(curpath, "resources", "bell.mp3")
         self._schedule: Schedule = Schedule(bell_path)
 
         self._hours_db: SQLite = SQLite()
-        self._medicine_db: SQLite = SQLite()
 
     def _new_hoursdb(self):
         _ = self._hours_db.execute('''
@@ -374,150 +370,7 @@ class TimeMasterApp:
         else:
             self._readcreate_hours()
 
-        medsdbpath = os.path.join(usrpath, "meds.db")
-        _ = self._medicine_db.open(medsdbpath, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-        self._delete_meds()
-        if not os.path.isfile(medsdbpath):
-            self._new_medsdb()
-        else:
-            self._readcreate_meds()
-
         self._schedule.event_to_schedule()
-
-    def _new_medsdb(self):
-        _ = self._medicine_db.execute('''
-                PRAGMA foreign_keys = ON
-            ''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS MEDICINES(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                rid TEXT,
-                due DATE,
-                sums REAL,
-                unit TEXT
-            )''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS USAGE(
-                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
-                schedule TEXT,
-                strt DATE,
-                end DATE
-            )''')
-        _ = self._medicine_db.execute('''
-            CREATE TABLE IF NOT EXISTS RECORDS(
-                id INT NOT NULL REFERENCES MEDICINES(id) ON UPDATE CASCADE,
-                take TIMESTAMP,
-                dose REAL
-            )''')
-        _ = self._medicine_db.commit()
-
-    def _readcreate_meds(self):
-        # for med in self._medicine_db.each("SELECT * FROM MEDICINES"):
-        for iid, name, ridstr, due, sums, unit in cast(Generator[MedSqlTuple, None, None],
-                self._medicine_db.each("SELECT * FROM MEDICINES")):
-            # iid, name, ridstr, due, sums, unit = cast(MedSqlTuple, med)
-            rid = ridstr.split("_")
-            meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
-                "due": due, "sums": sums, "unit": unit}
-            self._meds_store[iid] = meddata
-
-        meddata = {"name": "创口贴", "rid": (0,0),
-                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "片"}
-        self._meds_store[1] = meddata
-
-        meddata = {"name": "芬必得", "rid": (0,1),
-                "due": datetime.date(2025, 8, 15), "sums":200 , "unit": "个"}
-        self._meds_store[2] = meddata
-
-        meddata = {"name": "碘伏", "rid": (0,2),
-                "due": datetime.date(2025, 8, 15), "sums": 200, "unit": "支"}
-        self._meds_store[3] = meddata
-
-        pv(self._meds_store)
-
-        for iid, med in self._meds_store.items():
-            _ = self._gui.process_message("CreateMedStor", id=iid, item=med["name"],
-                rid=med["rid"], due= med["due"], sums=med["sums"],
-                unit=med["unit"])
-
-    def _delete_meds(self):
-        self._meds_store.clear()
-
-    def _add_med(self, name: str, rid: tuple[int, int], due: datetime.date,
-            sums: float, unit: str) -> int:
-        ridstr = f"{rid[0]}_{rid[1]}"
-        _ = self._medicine_db.execute1("""
-                INSERT INTO MEDICINES (name, rid, due, sums, unit)
-                    VALUES (?, ?, ?, ?, ?)""",
-                (name, ridstr, due, sums, unit)
-            )
-
-        data = self._hours_db.get(
-                "SELECT last_insert_rowid()"
-            )
-        if data is not None:
-            iid = cast(int, data[0])
-        else:
-            raise RuntimeError("no last_insert_rowid")
-
-        meddata: MedDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
-                "due": due, "sums": sums, "unit": unit}
-
-        self._meds_store[iid] = meddata
-        print(f"create_item: {name}")
-        if due:
-            self._schedule.add_event(due, name)
-            self._schedule.event_to_schedule()
-        return iid
-
-    # TODO: do we need to delete corresponding records?
-    def _del_med(self, iid: int):
-        sql = f"DELETE FROM MEDICINES WHERE id='{iid}'"
-        pv(sql)
-        _ = self._medicine_db.execute1(sql) 
-
-    # TODO: wait to test
-    def _record_meduse(self, iid: int, time: datetime.datetime, dose: float):
-        """record med usage
-
-        Args:
-            iid (): item id
-            time (): time of taking medicine
-            dose (): amount of taking medicine
-
-        Returns:
-            None
-
-        """
-        _ = self._hours_db.execute1("""
-                INSERT INTO RECORDS
-                    (id, take, dose)
-                    VALUES (?, ?, ?)""",
-                (iid, time, dose)
-            )
-
-        po(f"med id = {iid}, time = {time}, dose = {dose}, \
-            rest={self._meds_store[iid]["sums"]}")
-
-        sums = self._meds_store[iid]["sums"] - dose
-        self._modify_medattr(iid, "sums", sums)
-
-    def _modify_medattr(self, iid: int, attrib: str, newval: str | float):
-        sql = f"UPDATE MEDICINES SET {attrib}='{newval}' WHERE id='{iid}'"
-        _ = self._medicine_db.execute1(sql)
-        po(f"update med {iid}'s {attrib} to {newval}")
-        self._meds_store[iid][attrib] = newval
-
-    """
-    def _date_to_str(self, date_py: datetime.datetime) -> str:
-        date_sql = date_py.strftime('%Y-%m-%d %H:%M:%S')
-        return date_sql
-
-    def _str_to_date(self, date_sql: str) -> datetime.datetime:
-        date_py = datetime.datetime.strptime(date_sql, '%Y-%m-%d %H:%M:%S')
-        return date_py
-    """
 
     def _clock_sql2app(self, sqlclock: str) ->str:
         """convert sql clock to app clock
@@ -609,10 +462,10 @@ class TimeMasterApp:
                 # print(f"new item: {name}, {schedule}")
                 return self._add_hour(name, (grp, idx), sqlclock, schedule, father)
             case "GetHourDetail":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 detail = cast(HourDict, kwargs["detail"])
                 # return self.get_hourdetail(iid, detail)
-                self.get_hourdetail(iid, detail)
+                self.get_hourdetail(hid, detail)
                 return True
             case "getChildren":
                 father = cast(int, kwargs["father"])
@@ -621,18 +474,18 @@ class TimeMasterApp:
                 else:
                     return cast(dict[str, HourDict], {})
             case "RecordHour":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 timecost = cast(datetime.timedelta, kwargs["timecost"])
-                self._record_hour(iid, timecost)
+                self._record_hour(hid, timecost)
             case "ModifyHourAttr":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 attrib = cast(str, kwargs["attrib"])
                 val = cast(str, kwargs["val"])
                 pv(val)
                 match attrib:
                     case "clock":
                         sqlval = self._clock_app2sql(val)
-                        name = cast(str, self.get_hourattrib(iid, "name"))
+                        name = cast(str, self.get_hourattrib(hid, "name"))
                         # self.set_alarm(iid, name, sqlval)
                         if val:
                             self._schedule.add_event(sqlval, name)
@@ -647,87 +500,51 @@ class TimeMasterApp:
                     case _:
                         raise ValueError(f"unsupport to modify {attrib}")
                 pv(sqlval)
-                self._modify_hourattr(iid, attrib, sqlval)
+                self._modify_hourattr(hid, attrib, sqlval)
             case "GetHourStartDate":
-                iid = cast(int, kwargs["id"])
-                return self._get_hourstartdate(iid)
+                hid = cast(int, kwargs["id"])
+                return self._get_hourstartdate(hid)
             case "GetHourTotalDays":
-                iid = cast(int, kwargs["id"])
-                return self._get_hourtotaldays(iid)
+                hid = cast(int, kwargs["id"])
+                return self._get_hourtotaldays(hid)
             case "GetHoursEveryWeek":
-                iid = cast(int, kwargs["id"])
-                return self._get_hourseveryweek(iid)
+                hid = cast(int, kwargs["id"])
+                return self._get_hourseveryweek(hid)
             case "GetHoursLast7Days":
-                iid = cast(int, kwargs["id"])
-                return self._get_hourslast7days(iid)
+                hid = cast(int, kwargs["id"])
+                return self._get_hourslast7days(hid)
             case "GetHours2Milestone":
-                iid = cast(int, kwargs["id"])
-                return self._get_hours2milestone(iid)
+                hid = cast(int, kwargs["id"])
+                return self._get_hours2milestone(hid)
             case "GetHoursbyDay":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 day = cast(datetime.date, kwargs["day"])
-                return self._get_hoursbyday(iid, day)
+                return self._get_hoursbyday(hid, day)
             case "GetHoursbyWeek":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 week = cast(int, kwargs["week"])
-                return self._get_hoursbyweek(iid, week)
+                return self._get_hoursbyweek(hid, week)
             case "GetHoursbyMonth":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 month = cast(int, kwargs["month"])
-                return self._get_hoursbymonth(iid, month)
+                return self._get_hoursbymonth(hid, month)
             case "GetHoursbyYear":
-                iid = cast(int, kwargs["id"])
+                hid = cast(int, kwargs["id"])
                 year = cast(int, kwargs["year"])
-                return self._get_hoursbyyear(iid, year)
+                return self._get_hoursbyyear(hid, year)
             case "DelHour":
-                iid = cast(int, kwargs["id"])
-                po(f"going to delete {iid} hour")
-                if iid in self._cascade_hours:
-                    del self._cascade_hours[iid]
+                hid = cast(int, kwargs["id"])
+                po(f"going to delete hour {hid}")
+                if hid in self._cascade_hours:
+                    del self._cascade_hours[hid]
                 else:
                     for _, father in self._cascade_hours.items():
                         children = father.children
-                        if iid in children:
-                            del children[iid]
+                        if hid in children:
+                            del children[hid]
                             break
                 pv(self._cascade_hours)
-                self._del_hour(iid)
-            case "AddMed":
-                name = cast(str, kwargs["name"])
-                grp, idx = cast(tuple[int, int], kwargs["rid"])
-                due = cast(datetime.date, kwargs["due"])
-                sums = cast(float, kwargs["sums"])
-                unit = cast(str, kwargs["unit"])
-                return self._add_med(name, (grp, idx), due, sums, unit)
-            case "DelMed":
-                iid = cast(int, kwargs["id"])
-                po(f"going to delete {iid} med")
-                del self._meds_store[iid]
-                pv(self._meds_store)
-                self._del_med(iid)
-            case "GetMedDetail":
-                iid = cast(int, kwargs["id"])
-                return self._meds_store[iid]
-            case "RecordMedUse":
-                iid = cast(int, kwargs["id"])
-                time = cast(datetime.datetime, kwargs["time"])
-                dose = cast(int, kwargs["dose"])
-                self._record_meduse(iid, time, dose)
-            case "ModifyMedAttr":
-                iid = cast(int, kwargs["id"])
-                attrib = cast(str, kwargs["attrib"])
-                val = cast(str, kwargs["val"])
-                pv(val)
-                match attrib:
-                    case "rid":
-                        grp, idx = val
-                        sqlval = f"{grp}_{idx}"
-                    case "sums" | "due":
-                        sqlval = val
-                    case _:
-                        raise ValueError(f"unsupport to modify {attrib}")
-                pv(sqlval)
-                self._modify_medattr(iid, attrib, sqlval)
+                self._del_hour(hid)
             case _:
                 raise ValueError(f"unkown msg of {idmsg}: {kwargs}")
         return True
@@ -747,4 +564,3 @@ class TimeMasterApp:
 
     def close(self):
         _ = self._hours_db.close()
-        _ = self._medicine_db.close()

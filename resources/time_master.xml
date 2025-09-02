@@ -26,20 +26,6 @@
 		</Tab>
 		<Tab id="tabCalendar" text="Calendar">
 		</Tab>
-		<Tab id="tabMedicine" text="Medicine">
-            <LabelFrame id="frmMedStorage" text="库存" Width="400" Height="275" layout="pack" pack="{'side':'top','padx':5,'expand':True,'fill':'both'}">
-                <Frame id="frmMedStorHead" layout="pack" pack="{'padx':5,'fill':'x'}">
-                    <Label id="lblMedDue" text="无最近到期药物" layout="pack" pack="{'side':'left'}"/>
-                    <Button id="btnAddMed" text="+" layout="pack" pack="{'side':'right'}"/>
-                </Frame>
-                <Frame id="frmMedStorMain" Width="400" Height="265" layout="pack" pack="{'fill':'x'}"/>
-            </LabelFrame>
-            <LabelFrame id="frmMedUsage" text="用药" Width="400" Height="275" layout="pack" pack="{'side':'top','padx':5,'expand':True,'fill':'both'}">
-                <Frame id="frmMedUseHead" layout="pack" pack="{'side':'top'}"/>
-                <Frame id="frmMedUseMain" layout="pack" pack="{'side':'top'}"/>
-            </LabelFrame>
-			<!-- </ScrollableFrame> -->
-		</Tab>
 	</Notebook>
 	<Dialog id="dlgSelClock" text="选择定时提醒" Width="400" Height="120">
 		<Combobox id="cmbSelDay" default="0" options="{'values':['每日','工作日','节假日'],'state':'readonly','width':16}" layout="pack" pack="{'side':'left'}"/>
@@ -117,42 +103,4 @@
 		<PicsListview id="lstImageEditHour" num_column="7" pic_size="40" layout="pack" pack="{'pady':4}"/>
 		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
     </Dialog>
-    <Dialog id="dlgMedDetail" text="药物详情" Width="400" Height="550">
-        <Frame id="frmMedDetail1" layout="pack" pack="{'pady':4}">
-            <ImageButton id="btnImageMedDetail" image="CircleFlagsUsBetsyRoss.png" options="{'height':60,'width':60}" layout="pack" pack="{'side':'left','padx':(10,5)}"/>
-            <Label id="lblNameMedDetail" text="" options="{'width':40}" layout="pack" pack="{'side':'left'}"/>
-            <Label id="lblSumMedDetail" text="0" options="{'justify':'center'}" layout="pack" pack="{'side':'right','padx':(0,10)}"/>
-        </Frame>
-        <Frame id="frmMedDetail2" layout="pack" pack="{'pady':4}">
-            <ImagePanel id="imgDueMedDetail" image="VaadinAlarm.png" options="{'width':20,'height':20}" layout="pack" pack="{'side':'left','padx':(10,5)}"/>
-			<Label id="lblDueMedDetail" text="过期时间" options="{'width':20}" layout="pack" pack="{'side':'left'}"/>
-			<Label id="lblSelDueMedDetail" text="选择到期时间" layout="pack" pack="{'side':'right','padx':(0,10)}"/>
-        </Frame>
-    </Dialog>
-    <Dialog id="dlgEditMed" text="编辑药物" Width="400" Height="600">
-    	<Frame id="frmEditMed" layout="pack" pack="{'pady':4}">
-	    	<ImagePanel id="imgNameEditMed" image="gift.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':0,'column':0,'sticky':'W'}"/>
-            <Entry id="txtMedEditMed" text="添加药物" options="{'width':20}" layout="grid" grid="{'row':0,'column':1, 'sticky':'W'}"/>
-	    	<ImagePanel id="imgDueEditMed" image="VaadinAlarm.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':2,'column':0,'sticky':'W'}"/>
-			<Label id="lblDueEditMed" text="过期时间" options="{'width':20}" layout="grid" grid="{'row':2,'column':1,'sticky':'W'}"/>
-			<Label id="lblSelDueEditMed" text="选择过期时间" clickable="true" options="{'width':20}" layout="grid" grid="{'row':2,'column':2}"/>
-		</Frame>
-		<Label id="lblMedImage" text="选择图标" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
-		<PicsListview id="lstMedImageEditMed" num_column="7" pic_size="40" layout="pack" pack="{'pady':4}"/>
-		<Button id="btnDelMedEditMed" text="删除药物" options="{'width':40}" layout="pack" pack="{'padx':4,'pady':2,'expand':1,'fill':'both'}"/>
-    </Dialog>
-	<Dialog id="dlgRecordMed" text="记录药物使用" Width="400" Height="160">
-        <Label id="lblNameRecordMed" text="" options="{'justify':'center','anchor':'center'}" layout="grid" grid="{'row':0,'column':0,'padx':(30,10),'pady':2,'sticky':'nswe'}"/>
-        <Label id="lblSelDayRecordMed" text="" options="{'justify':'center','anchor':'center'}" clickable="true" layout="grid" grid="{'row':0,'column':1,'padx':(10,30),'pady':2,'sticky':'nswe'}"/>
-        <Frame id="frmUseageRecordMed" layout="grid" grid="{'row':1,'column':0,'columnspan':2}"> 
-            <Entry id="txtDoseRecordMed" text="使用量" options="{'width':20}" layout="pack" pack="{'side':'left','padx':(0,5)}"/>
-            <Label id="lblUnitRecordMed" text="" layout="pack" pack="{'side':'right','padx':(5,0)}"/>
-        </Frame>
-		<Combobox id="cmbSelHourRecordMed" default="0" options="{'values':['0点','1点','2点','3点','4点','5点','6点','7点','8点','9点','10点','11点','12点','13点','14点','15点','16点','17点','18点','19点','20点','21点','22点','23点'],'state':'readonly','width':20,'justify':'center'}" layout="grid" grid="{'row':2,'column':0,'padx':(30,10),'pady':2,'sticky':'nswe'}"/>
-		<Combobox id="cmbSelMinuteRecordMed" default="0" options="{'values':['0分','5分','10分','15分','20分','25分','30分','35分','40分','45分','50分','55分'],'state':'readonly','width':20,'justify':'center'}" layout="grid" grid="{'row':2,'column':1,'padx':(10,30),'pady':2,'sticky':'nswe'}"/>
-	</Dialog>
-	<Dialog id="dlgSelMedDue" text="选择过期时间" Width="400" Height="120">
-    	<Label id="lblNameSelMedDue" text="" options="{'justify':'center','anchor':'e'}" layout="pack" pack="{'side':'left','fill':'both','expand':True,'padx':(0,0),'pady':5}"/>
-        <Label id="lblSelDaySelMedDue" text="" clickable="true" options="{'justify':'center','anchor':'w'}" layout="pack" pack="{'side':'right','fill':'both','expand':True,'padx':(20,0),'pady':5}"/>
-	</Dialog>
 </Window>
