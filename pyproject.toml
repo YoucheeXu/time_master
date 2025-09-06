@@ -1,10 +1,11 @@
 [project]
-name = "Time Master"
+name = "time_master"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "chinesecalendar>=1.10.0",
     "matplotlib>=3.10.1",
     "opencv-python>=4.11.0.86",
 ]

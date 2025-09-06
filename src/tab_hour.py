@@ -293,12 +293,11 @@ class HourTab:
     def _recordhourdlg_beforego(self, **kwargs: object):
         po(f"_recordhourdlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
         detail = self._get_hourdetail(iid)
         lbl_item = cast(LabelCtrl, self._gui.get_control("lblItem"))
         lbl_item.set_text(detail["name"])
         today = datetime.date.today()
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDay"))
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
         lbl_day.set_text(str(today))
 
     def _recordhourdlg_selday(self, **kwargs: object):
@@ -306,22 +305,35 @@ class HourTab:
         calendar = CalendarCtrl((x, y+20))
         date = calendar.get_datestr()
         pv(date)
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDay"))
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
         lbl_day["text"] = date
 
     # TODO: wait to test
     def _recordhourdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_recordhourdlg_confirm: {kwargs}")
         iid = cast(int, kwargs["id"])
-        cmb_selhour = cast(ComboboxCtrl, self._gui.get_control("cmbSelHour"))
-        hour = int(cmb_selhour.get_val()[:-1])
-        cmb_selminute = cast(ComboboxCtrl, self._gui.get_control("cmbSelMinute"))
-        minute = int(cmb_selminute.get_val()[:-1])
-        delta = datetime.timedelta(hours=hour, minutes=minute)
-        pv(delta)
-        _ = self._gui.process_message("RecordHour", id=iid, timecost=delta)
-        # sums_str = self.get_item(iid, "sums")
-        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
+
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
+        day = lbl_day.get_text()
+
+        cmb_strthour = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbStrtHourRecordHour"))
+        strt_hour = cmb_strthour.get_val()
+        # pv(strt_hour)
+        cmb_strtminute = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbStrtMinuteRecordHour"))
+        strt_min = cmb_strtminute.get_val()
+        # pv(strt_minute)
+        strt = datetime.datetime.strptime(f"{day} {int(strt_hour[:-1]):02}:{int(strt_min[:-1]):02}",
+            "%Y-%m-%d %H:%M")
+        po(f"Start time: {strt}")
+
+        cmb_lasthour = cast(ComboboxCtrl, self._gui.get_control("cmbLastHourRecordHour"))
+        last_hour = int(cmb_lasthour.get_val()[:-1])
+        cmb_lastminute = cast(ComboboxCtrl, self._gui.get_control("cmbLastMinuteRecordHour"))
+        last_minute = int(cmb_lastminute.get_val()[:-1])
+        delta = datetime.timedelta(hours=last_hour, minutes=last_minute)
+        end = strt + delta
+        po(f"end time: {end}")
+        _ = self._gui.process_message("RecordHour", id=iid, strt=strt, end=end)
         detail = self._get_hourdetail(iid)
         sums_hours = float(detail["sums"]) / 60
         pv(sums_hours)

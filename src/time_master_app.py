@@ -150,32 +150,26 @@ class TimeMasterApp:
             _ = self._gui.process_message("DeleteFather", id=iid)
         self._cascade_hours.clear()
 
-    def _record_hour(self, iid: int, timecost: datetime.timedelta):
+    def _record_hour(self, iid: int, strt: datetime.datetime, end: datetime.datetime):
         """record duration
 
         Args:
             iid (int): item id
-            timecost (datetime.timedelta): time of the item cost
+            strt (): time of start
+            end (): time of end
 
         Returns:
             None
         """
-        end_py = datetime.datetime.now()
-        strt_py = end_py - timecost
-        # strt_sql = self._date_to_str(start_py)
-        # end_sql = self._date_to_str(end_py)
-
         _ = self._hours_db.execute1("""
                 INSERT INTO 'RECORDS'
                     ('id', 'start', 'end')
                     VALUES (?, ?, ?)""",
-                # (iid, start_sql, end_sql)
-                (iid, strt_py, end_py)
+                (iid, strt, end)
             )
+        po(f"id = {iid}, start = {strt}, end = {end}")
 
-        # po(f"id = {iid}, start = {strt_sql}, end = {end_sql}")
-        po(f"id = {iid}, start = {strt_py}, end = {end_py}")
-
+        timecost = end - strt
         endure = int(timecost.total_seconds() / 60)
         sums = cast(int, self.get_hourattrib(iid, "sums")) + endure
         self._modify_hourattr(iid, "sums", sums)
@@ -475,8 +469,9 @@ class TimeMasterApp:
                     return cast(dict[str, HourDict], {})
             case "RecordHour":
                 hid = cast(int, kwargs["id"])
-                timecost = cast(datetime.timedelta, kwargs["timecost"])
-                self._record_hour(hid, timecost)
+                strt = cast(datetime.datetime, kwargs["strt"])
+                end = cast(datetime.datetime, kwargs["end"])
+                self._record_hour(hid, strt, end)
             case "ModifyHourAttr":
                 hid = cast(int, kwargs["id"])
                 attrib = cast(str, kwargs["attrib"])
