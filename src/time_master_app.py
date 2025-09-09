@@ -243,24 +243,16 @@ class TimeMasterApp:
         return first_date
 
     def _get_hourtotaldays(self, iid: int):
-        is_firstsave = False
-        first_date = datetime.datetime.today()
-        last_date = datetime.datetime.today()
+        total_days = 0
+        last_date = datetime.datetime.strptime("1900-01-01", "%Y-%m-%d")
         sql = "SELECT * FROM RECORDS ORDER BY end ASC"
-        # for hourecord in self._hours_db.each(sql):
         for iid_record, _, end_date in cast(Generator[HourSqlRecord, None, None],
                 self._hours_db.each(sql)):
-            # iid_record, _, end_date = cast(HourSqlRecord, hourecord)
             if iid == iid_record:
-                if not is_firstsave:
-                    first_date = end_date
-                    is_firstsave = True
-                last_date = end_date
-        if is_firstsave:
-            endure_days = (last_date - first_date).days + 1
-        else:
-            endure_days = 0
-        return endure_days
+                if end_date.date() != last_date.date():
+                    total_days += 1
+                    last_date = end_date
+        return total_days
 
     def _get_hourseveryweek(self, iid: int):
         is_firstsave = False
