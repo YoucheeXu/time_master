@@ -11,7 +11,8 @@ from pyutilities.tkwin import tkWin
 from pyutilities.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pyutilities.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
 from pyutilities.matplot import MatPlotCtrl, LineData
-from pyutilities.calendarctrl import CalendarCtrl
+# from pyutilities.calendarctrl import CalendarCtrl
+from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
 from item_type import HourTuple, HourDict
 
@@ -294,43 +295,62 @@ class HourTab:
         po(f"_recordhourdlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
         detail = self._get_hourdetail(iid)
-        lbl_item = cast(LabelCtrl, self._gui.get_control("lblItem"))
+
+        lbl_item = cast(LabelCtrl, self._gui.get_control("lblItemRecordHour"))
         lbl_item.set_text(detail["name"])
+
         today = datetime.date.today()
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblSelDayRecordHour"))
         lbl_day.set_text(str(today))
+
+        now = datetime.datetime.now()
+        lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
+        lbl_strtime.set_text(f"{now.hour}:{now.minute:02d}")
 
     def _recordhourdlg_selday(self, **kwargs: object):
         x, y = cast(tuple[int, int], kwargs["mousepos"])
-        calendar = CalendarCtrl((x, y+20))
-        date = calendar.get_datestr()
+        scrollpicker = DateScrollPickerCtrl((x, y+20), "选择日期")
+        date = scrollpicker.get_datestr()
         pv(date)
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
-        lbl_day["text"] = date
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblSelDayRecordHour"))
+        lbl_day.set_text(date)
 
-    # TODO: wait to test
+    def _recordhourdlg_selstrtime(self, **kwargs: object):
+        x, y = cast(tuple[int, int], kwargs["mousepos"])
+        scrollpicker = TimeScrollPickerCtrl((x, y+20), "开始时间")
+        strt_time = scrollpicker.get_datestr()
+        pv(strt_time)
+        lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
+        lbl_strtime.set_text(strt_time)
+
+    def _recordhourdlg_sellastime(self, **kwargs: object):
+        x, y = cast(tuple[int, int], kwargs["mousepos"])
+        scrollpicker = TimeScrollPickerCtrl((x, y+20), "持续时间", "0:10")
+        last_time = scrollpicker.get_datestr()
+        pv(last_time)
+        lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
+        lbl_lastime.set_text(last_time)
+
     def _recordhourdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_recordhourdlg_confirm: {kwargs}")
         iid = cast(int, kwargs["id"])
 
-        lbl_day = cast(LabelCtrl, self._gui.get_control("lblDayRecordHour"))
+        lbl_day = cast(LabelCtrl, self._gui.get_control("lblSelDayRecordHour"))
         day = lbl_day.get_text()
 
-        cmb_strthour = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbStrtHourRecordHour"))
-        strt_hour = cmb_strthour.get_val()
-        # pv(strt_hour)
-        cmb_strtminute = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbStrtMinuteRecordHour"))
-        strt_min = cmb_strtminute.get_val()
-        # pv(strt_minute)
-        strt = datetime.datetime.strptime(f"{day} {int(strt_hour[:-1]):02}:{int(strt_min[:-1]):02}",
-            "%Y-%m-%d %H:%M")
+        lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
+        strt_time = lbl_strtime.get_text()
+
+        strt = datetime.datetime.strptime(f"{day} {strt_time}", "%Y-%m-%d %H:%M")
         po(f"Start time: {strt}")
 
-        cmb_lasthour = cast(ComboboxCtrl, self._gui.get_control("cmbLastHourRecordHour"))
-        last_hour = int(cmb_lasthour.get_val()[:-1])
-        cmb_lastminute = cast(ComboboxCtrl, self._gui.get_control("cmbLastMinuteRecordHour"))
-        last_minute = int(cmb_lastminute.get_val()[:-1])
+        lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
+        last_time = lbl_lastime.get_text().split(":")
+        # pv(last_time)
+        last_hour = int(last_time[0])
+        last_minute = int(last_time[1])
         delta = datetime.timedelta(hours=last_hour, minutes=last_minute)
+        # pv(delta)
         end = strt + delta
         po(f"end time: {end}")
         _ = self._gui.process_message("RecordHour", id=iid, strt=strt, end=end)
@@ -345,8 +365,12 @@ class HourTab:
             match idmsg:
                 case "beforego":
                     self._recordhourdlg_beforego(**kwargs)
-                case "lblDay":
+                case "lblSelDayRecordHour":
                     self._recordhourdlg_selday(**kwargs)
+                case "lblSelStrtRecordHour":
+                    self._recordhourdlg_selstrtime(**kwargs)
+                case "lblSelLastRecordHour":
+                    self._recordhourdlg_sellastime(**kwargs)
                 case "confirm":
                     return self._recordhourdlg_confirm(**kwargs)
                 case _:
