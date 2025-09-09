@@ -448,9 +448,9 @@ class HourTab:
         total_days = cast(float, self._gui.process_message("GetHourTotalDays", id=iid))
         self._update_hourdetail("TotalDays", total_days)
         hours_everyweek = cast(float, self._gui.process_message("GetHoursEveryWeek", id=iid))
-        self._update_hourdetail("HoursEveryWeek", hours_everyweek)
+        self._update_hourdetail("HoursEveryWeek", f"{hours_everyweek:.1f}")
         hours_last7days = cast(float, self._gui.process_message("GetHoursLast7Days", id=iid))
-        self._update_hourdetail("HoursLast7Days", hours_last7days)
+        self._update_hourdetail("HoursLast7Days", f"{hours_last7days:.1f}")
         hours_2milestone = cast(float, self._gui.process_message("GetHours2Milestone",
             id=iid))
         self._update_hourdetail("RestHours2Milestone", hours_2milestone)
