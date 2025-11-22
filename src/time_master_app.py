@@ -366,10 +366,11 @@ class TimeMasterApp:
             sqlclock (): i1_i2_10:00
 
         Returns:
-            str: 每日 22:00
+            str: 每日 10:00
 
         """
         sqlclock_list = sqlclock.split("_")
+        pv(sqlclock_list)
         if len(sqlclock_list) != 3:
             return sqlclock
         i1 = self._every_dict.key_to_value(sqlclock_list[0])
@@ -543,7 +544,7 @@ class TimeMasterApp:
         # r2 = Thread(target=self._gui.go)
         r1.daemon = True
         r1.start()
-        r1.join(0.1)
+        # r1.join(0.1)
         # r2.start()
         # r1.join()
         # r2.join()
@@ -551,3 +552,5 @@ class TimeMasterApp:
 
     def close(self):
         _ = self._hours_db.close()
+        print("App exit!")
+
