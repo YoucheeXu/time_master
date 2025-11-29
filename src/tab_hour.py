@@ -504,11 +504,48 @@ class HourTab:
 
         week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
+        limit_ydata: list[float] = [0] * 7
+        
+        schedule = detail["schedule"]   # schedule = 计划每日45m
+        if schedule:
+            per_typ = schedule[3]
+            unit = 1
+            match per_typ:
+                case "日":
+                    unit = 1
+                case "周":
+                    unit = 7
+                case "月":
+                    unit = 30
+                case _:
+                    unit = 360
+            pv(unit)
+            lastime = schedule[4:-1]
+            hour_pos = lastime.find("h")
+            total_minutes = 0
+            if hour_pos == -1:
+                total_minutes = int(lastime)
+            else:
+                total_minutes = int(lastime[:hour_pos])*60 + int(lastime[hour_pos + 1:])
+            per_minutes = total_minutes / unit
+            clock = detail["clock"]     # clock = 每工作日 21:00
+            if clock:
+                day_typ = clock[1:-6]
+                pv(day_typ)
+                match day_typ:
+                    case "工作日":
+                        limit_ydata = [per_minutes, per_minutes, per_minutes, \
+                            per_minutes, per_minutes, 0, 0]
+                    case "节假日":
+                        limit_ydata = [0, 0, 0, 0, 0, per_minutes, per_minutes]
+                    case _:
+                        limit_ydata = [per_minutes, per_minutes, per_minutes, \
+                            per_minutes, per_minutes, per_minutes, per_minutes]
+
         plt_everyday = cast(MatPlotCtrl, self._gui.get_control("pltEveryDayHour"))
         xdata: list[int] = []
         father_ydata: list[float] = []
         children_ydata: dict[int, list[float]] = {}
-        limit_ydata: list[float] = []
         labels: list[str] = []
         today = datetime.datetime.today().date()
         monday = today + datetime.timedelta(days=-today.weekday())
@@ -517,16 +554,16 @@ class HourTab:
             weekday = day.weekday()
             labels.append(f"{week_day[weekday]}\n{day.day}")
             xdata.append(i)
-            hours = cast(float, self._gui.process_message("GetHoursbyDay", id=iid, day=day))
-            father_ydata.append(hours)
-            limit_ydata.append(1.0)
-            po(f"hours of {day} is {hours}")
+            minutes = cast(float, self._gui.process_message("GetHoursbyDay", id=iid, day=day)) * 60
+            father_ydata.append(minutes)
+            # limit_ydata.append(1.0)
+            po(f"minutes of {day} is {minutes}")
             for sid in children.keys():
-                hours = cast(float, self._gui.process_message("GetHoursbyDay", id=sid, day=day))
+                minutes = cast(float, self._gui.process_message("GetHoursbyDay", id=sid, day=day)) * 60
                 if children_ydata.get(sid) is None:
-                    children_ydata[sid] = [hours]
+                    children_ydata[sid] = [minutes]
                 else:
-                    children_ydata[sid].append(hours)
+                    children_ydata[sid].append(minutes)
         plt_everyday.xdata = xdata
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
