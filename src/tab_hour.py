@@ -303,9 +303,20 @@ class HourTab:
         lbl_day = cast(LabelCtrl, self._gui.get_control("lblSelDayRecordHour"))
         lbl_day.set_text(str(today))
 
-        now = datetime.datetime.now()
         lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
-        lbl_strtime.set_text(f"{now.hour}:{now.minute:02d}")
+        clock = detail["clock"]     # clock = 每工作日 21:00
+        clock_val = clock[-5:].strip()
+        if not clock_val:
+            now = datetime.datetime.now()
+            clock_val = f"{now.hour}:{now.minute:02d}"
+        lbl_strtime.set_text(clock_val)
+
+        lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
+        schedule = detail["schedule"]   # schedule = 计划每日45m
+        schedule_val = schedule[4:]
+        if not schedule_val:
+            schedule_val = "15m"
+        lbl_lastime.set_text(schedule_val)
 
     def _recordhourdlg_selday(self, **kwargs: object):
         x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -316,20 +327,34 @@ class HourTab:
         lbl_day.set_text(date)
 
     def _recordhourdlg_selstrtime(self, **kwargs: object):
+        lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
         x, y = cast(tuple[int, int], kwargs["mousepos"])
-        scrollpicker = TimeScrollPickerCtrl((x, y+20), "开始时间")
+        scrollpicker = TimeScrollPickerCtrl((x, y+20), "开始时间", lbl_strtime.get_text())
         strt_time = scrollpicker.get_datestr()
         pv(strt_time)
         lbl_strtime = cast(LabelCtrl, self._gui.get_control("lblSelStrtRecordHour"))
         lbl_strtime.set_text(strt_time)
 
-    def _recordhourdlg_sellastime(self, **kwargs: object):
-        x, y = cast(tuple[int, int], kwargs["mousepos"])
-        scrollpicker = TimeScrollPickerCtrl((x, y+20), "持续时间", "0:10")
-        last_time = scrollpicker.get_datestr()
-        pv(last_time)
+    def _schedule_txt2clk(self, txt: str):
+        if not txt:
+            return "00:00"
+        clk = txt.replace("h", ":").replace("m", "")
+        if ":" not in clk:
+            clk = "00:" + clk
+        return clk
+
+    def _recordhourdlg_selastime(self, **kwargs: object):
         lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
-        lbl_lastime.set_text(last_time)
+        lastime = self._schedule_txt2clk(lbl_lastime.get_text())
+        x, y = cast(tuple[int, int], kwargs["mousepos"])
+        scrollpicker = TimeScrollPickerCtrl((x, y+20), "持续时间", lastime)
+        lastime = scrollpicker.get_datestr()
+        if lastime.startswith("00"):
+            lastime = lastime[3:]
+        lastime += "m"
+
+        lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
+        lbl_lastime.set_text(lastime)
 
     def _recordhourdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_recordhourdlg_confirm: {kwargs}")
@@ -345,7 +370,7 @@ class HourTab:
         po(f"Start time: {strt}")
 
         lbl_lastime = cast(LabelCtrl, self._gui.get_control("lblSelLastRecordHour"))
-        last_time = lbl_lastime.get_text().split(":")
+        last_time = self._schedule_txt2clk(lbl_lastime.get_text()).split(":")
         # pv(last_time)
         last_hour = int(last_time[0])
         last_minute = int(last_time[1])
@@ -370,7 +395,7 @@ class HourTab:
                 case "lblSelStrtRecordHour":
                     self._recordhourdlg_selstrtime(**kwargs)
                 case "lblSelLastRecordHour":
-                    self._recordhourdlg_sellastime(**kwargs)
+                    self._recordhourdlg_selastime(**kwargs)
                 case "confirm":
                     return self._recordhourdlg_confirm(**kwargs)
                 case _:
