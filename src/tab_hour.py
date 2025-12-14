@@ -495,7 +495,7 @@ class HourTab:
                 clock=child["clock"], schedule=child["schedule"], sums=child["sums"],
                 father=child["father"])
             self._create_child(parent, idx, child["name"],
-                child["rid"], f"{child["sums"] / 60}")
+                child["rid"], f"{child["sums"] / 60: .1f}")
             idx += 1
         pv(self._children)
         self._old_subid = len(self._children) - 1
