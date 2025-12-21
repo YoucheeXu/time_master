@@ -152,7 +152,6 @@ class EditHourDlg(DialogCtrl):
 
         if fid != -1:
             lbl_father = cast(LabelCtrl, self.get_control("lblSelFatherEditHour"))
-            # detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=fid))
             detail_father = self._get_hourdetail(fid)
             name_father = detail_father["name"]
             pv(name_father)
@@ -165,7 +164,6 @@ class EditHourDlg(DialogCtrl):
             grp, idx = 0, 0
         else:
             self.set_title("编辑项目")
-            # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
             detail = self._get_hourdetail(iid)
             pv(detail)
 
@@ -259,13 +257,11 @@ class EditHourDlg(DialogCtrl):
                 case "lblSelClockEditHour":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    # self._selclock_dlg.do_show(self, x+20, y+20, **kwargs)
                     return owner.process_message("showSelClockDlg", owner=self,
                         pos=(x+20,y+20), options=kwargs)
                 case "lblSelScheduleEditHour":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    # self._selschedule_dlg.do_show(self, x+20, y+20, **kwargs)
                     return owner.process_message("showSelScheduleDlg", owner=self,
                         pos=(x+20,y+20), options=kwargs)
                 case "btnDelItemEditHour":
@@ -275,7 +271,6 @@ class EditHourDlg(DialogCtrl):
                     return owner.process_message("deleteItem", id=iid)
                 case _:
                     return super().process_message(idmsg, **kwargs)
-                    # return owner.process_message(idmsg, **kwargs)
             return True
         return super().process_message(idmsg, **kwargs)
 
@@ -323,14 +318,12 @@ class HourDetailDlg(DialogCtrl):
     def _beforego(self, **kwargs: object):
         po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
         detail = self._get_hourdetail(iid)
         # po(f"{iid}: {detail}")
 
         lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
         fid = detail["father"]
         if fid != -1:
-            # detail_father = cast(HourDict, self._gui.process_message("GetHourDetail", id=id_father))
             detail_father = self._get_hourdetail(fid)
             name_father = detail_father["name"]
             pv(name_father)
@@ -343,9 +336,7 @@ class HourDetailDlg(DialogCtrl):
         img_item = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
         img_item.change_image(imagepath)
 
-        # self._update_hourdetail("name", detail["name"])
         strt_date = cast(str, self._app.process_message("GetHourStartDate", id=iid))
-        # self._update_hourdetail("StartDate", strt_date)
         lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
         lbl_item.set_text(f"{detail["name"]}\n从{strt_date}开始")
         self._update_hourdetail("sum", f"{detail["sums"]/ 60:.1f}")
@@ -360,13 +351,11 @@ class HourDetailDlg(DialogCtrl):
         self._update_hourdetail("RestHours2Milestone", hours_2milestone)
 
         lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockItemDetail"))
-        # clock = data["clock"]
         lbl_selclock['text'] = detail["clock"]
         lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleItemDetail"))
         lbl_selschedule['text'] = detail["schedule"]
 
         parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
-        # get subitem info(rid, name, sums) of id
         children = cast(dict[int, HourDict], self._app.process_message("getChildren", father=iid))
         idx = 0
         for sid, child in children.items():
@@ -435,7 +424,6 @@ class HourDetailDlg(DialogCtrl):
             xdata.append(i)
             minutes = cast(float, self._app.process_message("GetHoursbyDay", id=iid, day=day)) * 60
             father_ydata.append(minutes)
-            # limit_ydata.append(1.0)
             po(f"minutes of {day} is {minutes}")
             for sid in children.keys():
                 minutes = cast(float, self._app.process_message("GetHoursbyDay", id=sid, day=day)) * 60
@@ -446,7 +434,6 @@ class HourDetailDlg(DialogCtrl):
         plt_everyday.xdata = xdata
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
-            # {"width":0.4,"facecolor":"green"}, "bar")
         _ = plt_everyday.add_line(father_yline)
         bottom = father_ydata
         for sid, child_ydata in children_ydata.items():
@@ -507,7 +494,6 @@ class HourDetailDlg(DialogCtrl):
 
     def _show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        # self._recordhour_dlg.do_show(owner, x+20, y+20, **kwargs)
         dlg_id = "dlgRecordHour"
         dlg_cfg = self._app.get_customctrlcfg(dlg_id)
         recordhour_dlg = RecordHourDlg(self._app, dlg_cfg)
@@ -599,7 +585,6 @@ class HourDetailDlg(DialogCtrl):
                     lbl_sum.set_text(f"{sums_hours:.1f}\nhours")
                     self._update_hour(iid, "sum", sums_hours)
                 case "btnImageHourDetail":
-                    # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
                     detail = self._get_hourdetail(iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -611,7 +596,6 @@ class HourDetailDlg(DialogCtrl):
                         father=iid, id=0)
                 case "createChild":
                     parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
-                    # cid = cast(int, kwargs["cid"])
                     cid = len(self._children)
                     name =cast(str, kwargs["name"])
                     rid =cast(tuple[int, int], kwargs["rid"])
@@ -624,9 +608,7 @@ class HourDetailDlg(DialogCtrl):
                         clock=clock_val, schedule=schedule_val, sums=0, father=father)
                     lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
-                    # self._last_cid += 1
                 case "btnRecordHourDetail":
-                    # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
                     detail = self._get_hourdetail(iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -637,15 +619,11 @@ class HourDetailDlg(DialogCtrl):
                     self.destroy()
                 case _:
                     return super().process_message(idmsg, **kwargs)
-                    # return owner.process_message(idmsg, **kwargs)
             return True 
         return super().process_message(idmsg, **kwargs)
 
 
 class HourTab(Dialog):
-    # _old_subid: int = 0
-    # _subitem_list: list[ItemDict] = []
-    # _children: dict[int, HourTuple] = {}
     def __init__(self, gui: tkWin):
         super().__init__("", 0, 0)
         self._gui: tkWin = gui
@@ -704,8 +682,6 @@ class HourTab(Dialog):
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
-        # _ = self._gui.process_message("modify", id_, attrib=attrib, val=val)
-
     def get_hour(self, uid: int, attrib: str) -> str:
         val: str = ""
         match attrib:
@@ -740,14 +716,12 @@ class HourTab(Dialog):
         if father == -1:
             self._gui.delete_control(f"frmGroup{iid}")
 
-    # def create_item(self, parent: object, iid: int, item: str, rid: int,
     def create_hourctrl(self, iid: int, item: str, rid: tuple[int, int],
             clock: str, sums: str, is_subitem: bool = False):
         imagepath = self._get_imagepath(rid[0], rid[1])
 
         frmain = self.get_control("frmHourMain")
         if is_subitem:
-            # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
             detail = self._get_hourdetail(iid)
             fid = detail["father"]
             frmgroup = self.get_control(f"frmGroup{fid}")
@@ -791,7 +765,6 @@ class HourTab(Dialog):
             "grid":"{'row':1,'column':1,'sticky':'w'}"}, f"{'  '*level}")
 
         if clock in ["", "选择定时提醒"]:
-            # cast(tk.Widget, btn_clock).grid_remove()
             cast(ImageBtttonCtrl, btn_clock).hide()
 
         lblsum_xml = self._gui.create_xml("Label", {"id": f"lblSumHour{iid}",
@@ -812,63 +785,6 @@ class HourTab(Dialog):
                 pady1 = 5
             self._gui.assemble_control(frmgroup, {"layout": "pack",
                 "pack":f"{{'side':'top','pady':({pady1},5),'fill':'x'}}"}, f"{'  '*(2-1)}")
-
-    def get_childattrib(self, uid: int, attrib: str) -> str:
-        val: str = ""
-        match attrib:
-            case "name":
-                ctrl_item1 = cast(LabelCtrl, self.get_control(f"lblChild{uid}"))
-                val = cast(str, ctrl_item1['text'])
-            # case "image":
-                # ctrl_item2: = cast(ImageBtttonCtrl, self.get_control(f"btnItem{id_}")
-                # raise NotImplementedError("")
-            # case "clcok":
-                # ctrl_item3 = cast(LabelCtrl, self.get_control(f"lblClock{id_}"))
-                # val = ctrl_item3['text']
-            case "sum":
-                ctrl_item4 = cast(LabelCtrl, self.get_control(f"lblSubSum{uid}"))
-                val = cast(str, ctrl_item4['text'])
-            case _:
-                val = ""
-        return val
-
-    def _create_child(self, parent: Widget, uid: int, sub_item: str,
-            rid: tuple[int, int], sums: str):
-        imagepath = self._get_imagepath(rid[0], rid[1])
-
-        level = 2
-        frm_child_xml = self._gui.create_xml("Frame", {"id": f"frmSub{uid}"})
-        _, frm_child = self._gui.create_control(parent, frm_child_xml, level)
-
-        level = 3
-
-        pnlitem_xml = self._gui.create_xml("ImagePanel", {"id": f"pnlChild{uid}",
-            "image": imagepath, 
-            "options": "{'height':20, 'width':20}"}, frm_child_xml)
-        _, pnl_item = self._gui.create_control(frm_child, pnlitem_xml, level)
-        self._gui.assemble_control(pnl_item, {"layout":"pack",
-            "pack":"{'side':'left','anchor':'w'}"}, '  '*level)
-
-        lblitem_xml = self._gui.create_xml("Label", {"id": f"lblChild{uid}", 
-            "text": sub_item, "options": "{'width':40}"}, frm_child_xml)
-        _, lbl_subitem = self._gui.create_control(frm_child, lblitem_xml, level)
-        self._gui.assemble_control(lbl_subitem, {"layout":"pack",
-            "pack":"{'side':'left','anchor':'w'}"}, f"{'  '*level}")
-
-        lblsum_xml = self._gui.create_xml("Label", {"text": f"{sums}h",
-            "id": f"lblSubSum{uid}"}, frm_child_xml)
-        _, lbl_sum = self._gui.create_control(frm_child, lblsum_xml, level)
-        self._gui.assemble_control(lbl_sum, {"layout":"pack",
-            "pack":"{'side':'left','anchor':'e'}"}, f"{'  '*level}")
-
-        self._gui.assemble_control(frm_child, {"layout": "grid",
-            "grid": f"{{'row':{uid},'column':0,'pady':4}}"}, f"{'  '*(level-1)}")
-
-    def _delete_child(self, sid: int):
-        self._gui.delete_control(f"frmSub{sid}")
-        self._gui.delete_control(f"pnlChild{sid}")
-        self._gui.delete_control(f"lblChild{sid}")
-        self._gui.delete_control(f"lblSubSum{sid}")
 
     def _get_imagepath(self, group: int, index: int):
         return self._images_dict[group].get(index, "CircleFlagsUsBetsyRoss.png")
@@ -912,11 +828,9 @@ class HourTab(Dialog):
 
     def show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        # self._recordhour_dlg.do_show(owner, x+20, y+20, **kwargs)
         dlg_id = "dlgRecordHour"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = RecordHourDlg(self._gui, dlg_cfg)
-        # self._gui.register_customctrl(dlg_id, recordhour_dlg)
         dlg.do_show(owner, x+20, y+20, **kwargs)
 
     def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
@@ -924,7 +838,6 @@ class HourTab(Dialog):
         dlg_id = "dlgHourDetail"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = HourDetailDlg(self._gui, dlg_cfg)
-        # self._gui.register_customctrl(dlg_id, recordhour_dlg)
         dlg.do_show(owner, x+20, y+20, **kwargs)
 
     def _show_edithourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
@@ -972,7 +885,6 @@ class HourTab(Dialog):
                 self.update_hourctrl(iid, "sum", sums_hours)
             case "deleteItem":
                 iid = cast(int, kwargs["id"])
-                # detail = cast(HourDict, self._gui.process_message("GetHourDetail", id=iid))
                 detail = self._get_hourdetail(iid)
                 id_father = detail["father"]
                 if id_father == -1:
