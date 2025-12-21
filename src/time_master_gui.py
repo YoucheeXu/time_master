@@ -24,7 +24,7 @@ class TimeMasterGui(tkWin):
         if idmsg.startswith("btnItem"):
             iid = int(idmsg[7:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self._tabhour.show_hourdetaildlg(self, x+20, y+20, id=iid)
+            self._tabhour.show_hourdetaildlg(self._tabhour, x+20, y+20, id=iid)
         elif idmsg.startswith("lblSumHour"):
             iid = int(idmsg[10:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -58,7 +58,7 @@ class TimeMasterGui(tkWin):
                     clock = cast(str, kwargs["clock"])
                     sums = cast(str, kwargs["sums"])
                     is_subitem = cast(bool, kwargs["is_subitem"])
-                    self._tabhour.create_hour(iid, item, rid,
+                    self._tabhour.create_hourctrl(iid, item, rid,
                         clock, sums, is_subitem)
                 case "DeleteFather":
                     iid = cast(int, kwargs["id"])

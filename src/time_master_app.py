@@ -73,7 +73,7 @@ class TimeMasterApp:
 
     def _readcreate_hours(self):
         # for hour in self._hours_db.each("SELECT * FROM ITEMS"):
-        for iid, name, ridstr, clock, schedule, sums, fid in \
+        for hid, name, ridstr, clock, schedule, sums, fid in \
                 cast(Generator[HourSqlTuple, None, None],
                 self._hours_db.each("SELECT * FROM ITEMS")):
             # iid, name, ridstr, clock, schedule, sums, fid = cast(HourSqlTuple, hour)
@@ -86,30 +86,30 @@ class TimeMasterApp:
             if fid == -1:
                 hour = Hour()
                 hour.data = itemdata
-                self._cascade_hours[iid] = hour
+                self._cascade_hours[hid] = hour
             else:
-                self._cascade_hours[fid].children[iid] = itemdata
+                self._cascade_hours[fid].children[hid] = itemdata
 
         pv(self._cascade_hours)
 
-        for iid, hour in self._cascade_hours.items():
-            _ = self._gui.process_message("CreateHour", id=iid, item=hour.data["name"],
+        for hid, hour in self._cascade_hours.items():
+            _ = self._gui.process_message("createHourCtrl", id=hid, name=hour.data["name"],
                 rid=hour.data["rid"], clock= hour.data["clock"],
-                sums=f"{hour.data["sums"]/60:.1f}", is_subitem=False)
-            self._hours_record[iid] = []
-            for sid, child in hour.children.items():
-                _ = self._gui.process_message("CreateHour", id=sid, item=child["name"],
+                sum=f"{hour.data["sums"]/60:.1f}", is_subitem=False)
+            self._hours_record[hid] = []
+            for cid, child in hour.children.items():
+                _ = self._gui.process_message("createHourCtrl", id=cid, name=child["name"],
                     rid=child["rid"], clock= child["clock"],
-                    sums=f"{child["sums"]/60:.1f}", is_subitem=True)
-                self._hours_record[sid] = []
+                    sum=f"{child["sums"]/60:.1f}", is_subitem=True)
+                self._hours_record[cid] = []
 
-        for iid, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
+        for hid, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
                 self._hours_db.each("SELECT * FROM RECORDS")):
             # iid, strt_date, end_date = cast(HourSqlRecord, hourecord)
             day = strt_date.date()
             delta = end_date - strt_date
             endure = int(delta.total_seconds() / 60)
-            self._hours_record[iid].append(HourRecordTuple(day, endure))
+            self._hours_record[hid].append(HourRecordTuple(day, endure))
 
         pv(self._hours_record)
 
@@ -483,7 +483,7 @@ class TimeMasterApp:
                     case "rid":
                         grp, idx = val
                         sqlval = f"{grp}_{idx}"
-                    case "sums":
+                    case "sum":
                         sqlval = val
                     case _:
                         raise ValueError(f"unsupport to modify {attrib}")
