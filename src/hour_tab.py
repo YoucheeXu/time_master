@@ -831,14 +831,14 @@ class HourTab(Dialog):
         dlg_id = "dlgRecordHour"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = RecordHourDlg(self._gui, dlg_cfg)
-        dlg.do_show(owner, x+20, y+20, **kwargs)
+        dlg.do_show(owner, x, y, **kwargs)
 
     def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgHourDetail"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = HourDetailDlg(self._gui, dlg_cfg)
-        dlg.do_show(owner, x+20, y+20, **kwargs)
+        dlg.do_show(owner, x, y, **kwargs)
 
     def _show_edithourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
