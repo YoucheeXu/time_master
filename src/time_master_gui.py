@@ -11,7 +11,7 @@ from typing import Any
 from pyutilities.logit import po, pv, pe
 from pyutilities.tkwin import tkWin
 
-from tab_hour import HourTab
+from hour_tab import HourTab
 
 
 class TimeMasterGui(tkWin):

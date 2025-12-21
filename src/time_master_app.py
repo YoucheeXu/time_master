@@ -11,7 +11,7 @@ import sqlite3
 from typing import cast
 from collections.abc import Generator
 
-from item_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
+from hour_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
 from time_master_gui import TimeMasterGui
 from bidirectionaldict import BidirectionalDict
 from schedule import Schedule

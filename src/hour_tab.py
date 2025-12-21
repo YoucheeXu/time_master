@@ -3,8 +3,7 @@
 from __future__ import annotations
 import datetime
 import xml.etree.ElementTree as et
-from typing import cast, override, Any
-import tkinter as tk
+from typing import cast, override
 
 from pyutilities.logit import po, pv, pe
 from pyutilities.winbasic import Widget, Dialog
@@ -15,7 +14,7 @@ from pyutilities.matplot import MatPlotCtrl, LineData
 # from pyutilities.calendarctrl import CalendarCtrl
 from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
-from item_type import HourTuple, HourDict
+from hour_type import HourTuple, HourDict
 
 
 class RecordHourDlg(DialogCtrl):
