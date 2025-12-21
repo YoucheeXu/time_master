@@ -227,8 +227,7 @@ class EditHourDlg(DialogCtrl):
             rid = lst_itemimage.get_selected()
             if father == -1:
                 _ = owner.process_message("newHour",
-                    name=name, father=father, rid=rid, clock=clock, schedule=schedule,
-                    is_subitem=False)
+                    name=name, father=father, rid=rid, clock=clock, schedule=schedule)
             else:
                 _ = owner.process_message("createChild", name=name, rid=rid,
                     clock=clock_val, schedule=schedule_val, father=father)
@@ -475,8 +474,7 @@ class HourDetailDlg(DialogCtrl):
                 schedule =  child.schedule
                 father = cast(int, kwargs["id"])
                 _ = owner.process_message("newHour",
-                    name=name, father=father, rid=rid, clock=clock, schedule=schedule,
-                    is_subitem=True)
+                    name=name, father=father, rid=rid, clock=clock, schedule=schedule)
             self._delete_childctrl(idx)
         self._children.clear()
         return True, ""
@@ -717,13 +715,12 @@ class HourTab(Dialog):
             self._gui.delete_control(f"frmGroup{iid}")
 
     def create_hourctrl(self, iid: int, item: str, rid: tuple[int, int],
-            clock: str, sums: str, is_subitem: bool = False):
+            clock: str, sums: str, fid: int = -1):
         imagepath = self._get_imagepath(rid[0], rid[1])
 
         frmain = self.get_control("frmHourMain")
+        is_subitem = (fid != -1)
         if is_subitem:
-            detail = self._get_hourdetail(iid)
-            fid = detail["father"]
             frmgroup = self.get_control(f"frmGroup{fid}")
             item_padx1 = 15
             item_padx2 = 5
@@ -902,8 +899,8 @@ class HourTab(Dialog):
                 rid = cast(tuple[int, int], kwargs["rid"])
                 clock = cast(str, kwargs["clock"])
                 sums = cast(str, kwargs["sum"])
-                is_subitem = cast(bool, kwargs["is_subitem"])
-                self.create_hourctrl(iid, name, rid, clock, sums, is_subitem)
+                fid = cast(int, kwargs["fid"])
+                self.create_hourctrl(iid, name, rid, clock, sums, fid)
             case "updateHour":
                 iid = cast(int, kwargs["id"])
                 attr = cast(str, kwargs["attrib"])
@@ -911,17 +908,16 @@ class HourTab(Dialog):
                 self.update_hourctrl(iid, attr, val)
             case "newHour":
                 name =cast(str, kwargs["name"])
-                father = cast(int, kwargs["father"])
+                fid = cast(int, kwargs["father"])
                 rid = cast(tuple[int, int], kwargs["rid"])
                 clock = cast(str, kwargs["clock"])
                 schedule = cast(str, kwargs["schedule"])
-                is_subitem = cast(bool, kwargs["is_subitem"])
 
                 clock_val = "" if clock == "选择定时提醒" else clock
                 schedule_val = "" if schedule == "选择时间投入计划" else schedule
-                iid = cast(int, self._gui.process_message("AddHour", father=father, name=name,
+                iid = cast(int, self._gui.process_message("AddHour", father=fid, name=name,
                     rid=rid, clock=clock_val, schedule=schedule_val))
-                self.create_hourctrl(iid, name, rid, clock, "0.0h", is_subitem)
+                self.create_hourctrl(iid, name, rid, clock, "0.0h", fid)
             case "getImagePath":
                 group = cast(int, kwargs["group"])
                 index = cast(int, kwargs["index"])

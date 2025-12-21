@@ -95,12 +95,12 @@ class TimeMasterApp:
         for hid, hour in self._cascade_hours.items():
             _ = self._gui.process_message("createHourCtrl", id=hid, name=hour.data["name"],
                 rid=hour.data["rid"], clock= hour.data["clock"],
-                sum=f"{hour.data["sums"]/60:.1f}", is_subitem=False)
+                sum=f"{hour.data["sums"]/60:.1f}", fid=-1)
             self._hours_record[hid] = []
             for cid, child in hour.children.items():
                 _ = self._gui.process_message("createHourCtrl", id=cid, name=child["name"],
                     rid=child["rid"], clock= child["clock"],
-                    sum=f"{child["sums"]/60:.1f}", is_subitem=True)
+                    sum=f"{child["sums"]/60:.1f}", fid=hid)
                 self._hours_record[cid] = []
 
         for hid, strt_date, end_date in cast(Generator[HourSqlRecord, None, None],
