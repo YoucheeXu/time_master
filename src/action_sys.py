@@ -26,27 +26,51 @@ class ActTyp(IntEnum):
 
 
 class Action(abc.ABC):
+    """_summary_
+
+    Attributes:
+        _sys_typ (_type_): _description_
+    """
     def __init__(self):
         self._sys_typ: SysTyp = SysTyp.UNKOWN
 
     @abc.abstractmethod
     def speech_text(self, text: str):
+        """_summary_
+
+        Args:
+            text (str): _description_
+        """
         pass
 
     @abc.abstractmethod
     def play_mp3(self, mp3file: str):
+        """_summary_
+
+        Args:
+            mp3file (str): _description_
+        """
         pass
 
     @abc.abstractmethod
     def lock_screen(self):
+        """_summary_
+        """
         pass
 
     @abc.abstractmethod
     def shutdown(self):
+        """_summary_
+        """
         pass
 
 
 class ActionWin(Action):
+    """_summary_
+
+    Attributes:
+        _sys_typ (_type_): _description_
+    """
     def __init__(self):
         super().__init__()
         self._sys_typ: SysTyp = SysTyp.WIN
@@ -126,7 +150,11 @@ class ActionMac(Action):
 
 
 class ActionSys:
+    """_summary_
 
+    Attributes:
+        _action (_type_): _description_
+    """
     def __init__(self):
         self._action: Action = ActionWin()
         if sys.platform.startswith('linux'):
@@ -139,6 +167,12 @@ class ActionSys:
             pass
 
     def exec_action(self, action: ActTyp, paras: str = ""):
+        """_summary_
+
+        Args:
+            action (ActTyp): _description_
+            paras (str, optional): _description_. Defaults to "".
+        """
         match action:
             case ActTyp.SPEECH_TEXT:
                 self._action.speech_text(paras)

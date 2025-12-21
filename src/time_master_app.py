@@ -21,11 +21,37 @@ from pyutilities.sqlite import SQLite
 
 
 class TimeMasterApp:
+    """_summary_
+
+    Attributes:
+        _cascade_hours (dict[int, Hour]): _description_
+        _hours_record (_type_): _description_
+        _every_dict (_type_): _description_
+        _day_dict (_type_): _description_
+        _period_dict (_type_): _description_
+        _gui (_type_): _description_
+        _schedule (_type_): _description_
+        _hours_db (_type_): _description_
+
+    Raises:
+        RuntimeError: _description_
+        KeyError: _description_
+        KeyError: _description_
+        ValueError: _description_
+        ValueError: _description_
+
+    Returns:
+        _type_: _description_
+    """
     _cascade_hours: dict[int, Hour] = {}
     _hours_record: dict[int, list[HourRecordTuple]] = {}
-    # _meds_usage: dict[int, MedUsageDict] = {}
     def __init__(self, curpath: str, xmlfile: str):
+        """_summary_
 
+        Args:
+            curpath (str): _description_
+            xmlfile (str): _description_
+        """
         self._every_dict: BidirectionalDict[str, str] = \
             BidirectionalDict[str, str]({"P": "每", "E": "偶数", "O": "奇数"})
         self._day_dict: BidirectionalDict[str, str] = \
@@ -49,6 +75,8 @@ class TimeMasterApp:
         self._hours_db: SQLite = SQLite()
 
     def _new_hoursdb(self):
+        """_summary_
+        """
         _ = self._hours_db.execute('''
                 PRAGMA foreign_keys = ON
             ''')
@@ -72,11 +100,11 @@ class TimeMasterApp:
         _ = self._hours_db.commit()
 
     def _readcreate_hours(self):
-        # for hour in self._hours_db.each("SELECT * FROM ITEMS"):
+        """_summary_
+        """
         for hid, name, ridstr, clock, schedule, sums, fid in \
                 cast(Generator[HourSqlTuple, None, None],
                 self._hours_db.each("SELECT * FROM ITEMS")):
-            # iid, name, ridstr, clock, schedule, sums, fid = cast(HourSqlTuple, hour)
             if clock:
                 self._schedule.add_event(clock, name)
             rid = ridstr.split("_")
@@ -115,6 +143,22 @@ class TimeMasterApp:
 
     def _add_hour(self, name: str, rid: tuple[int, int], clock: str,
             schedule: str, father: int, sums: int = 0) -> int:
+        """_summary_
+
+        Args:
+            name (str): _description_
+            rid (tuple[int, int]): _description_
+            clock (str): _description_
+            schedule (str): _description_
+            father (int): _description_
+            sums (int, optional): _description_. Defaults to 0.
+
+        Raises:
+            RuntimeError: _description_
+
+        Returns:
+            int: _description_
+        """
         ridstr = f"{rid[0]}_{rid[1]}"
         _ = self._hours_db.execute1("""
                 INSERT INTO ITEMS (name, rid, clock, schedule, sums, father)
@@ -146,6 +190,8 @@ class TimeMasterApp:
         return iid
 
     def _delete_hours(self):
+        """_summary_
+        """
         for iid in self._cascade_hours.keys():
             _ = self._gui.process_message("DeleteFather", id=iid)
         self._cascade_hours.clear()
@@ -175,6 +221,13 @@ class TimeMasterApp:
         self._modify_hourattr(iid, "sums", sums)
 
     def _modify_hourattr(self, iid: int, attrib: str, newval: str | int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            attrib (str): _description_
+            newval (str | int): _description_
+        """
         sql = f"UPDATE ITEMS SET {attrib}='{newval}' WHERE id='{iid}'"
         _ = self._hours_db.execute1(sql)
         po(f"update hour {iid}'s {attrib} to {newval}")
@@ -189,12 +242,25 @@ class TimeMasterApp:
 
     # TODO: do we need to delete corresponding records?
     def _del_hour(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+        """
         sql = f"DELETE FROM ITEMS WHERE id='{iid}'"
         pv(sql)
         _ = self._hours_db.execute1(sql)        
 
-    # def get_hourdetail(self, iid: int) -> HourDict:
     def get_hourdetail(self, iid: int, detail: HourDict):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            detail (HourDict): _description_
+
+        Raises:
+            KeyError: _description_
+        """
         if iid in self._cascade_hours:
             # return self._cascade_hours[iid].data
             data = self._cascade_hours[iid].data
@@ -224,6 +290,18 @@ class TimeMasterApp:
         raise KeyError(f"no item: {iid}")
 
     def get_hourattrib(self, iid: int, attrib: str):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            attrib (str): _description_
+
+        Raises:
+            KeyError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         # detail = self.get_hourdetail(iid)
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
                         "sums": 0, "father": -1}
@@ -233,6 +311,14 @@ class TimeMasterApp:
         return detail.get(attrib)
 
     def _get_hourstartdate(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         first_date = ""
         sql = "SELECT * FROM RECORDS ORDER BY end ASC"
         for iid_record, _, end_date in cast(Generator[HourSqlRecord, None, None],
@@ -243,6 +329,14 @@ class TimeMasterApp:
         return first_date
 
     def _get_hourtotaldays(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         total_days = 0
         last_date = datetime.datetime.strptime("1900-01-01", "%Y-%m-%d")
         sql = "SELECT * FROM RECORDS ORDER BY end ASC"
@@ -255,6 +349,14 @@ class TimeMasterApp:
         return total_days
 
     def _get_hourseveryweek(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         is_firstsave = False
         first_date = datetime.datetime.today()
         last_date = datetime.datetime.today()
@@ -278,6 +380,14 @@ class TimeMasterApp:
         return hours
 
     def _get_hourslast7days(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         hours = 0.0
         # today = datetime.datetime.today()
         # last7day = today + datetime.timedelta(days=-7)
@@ -293,9 +403,26 @@ class TimeMasterApp:
         return hours
 
     def _get_hours2milestone(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         return "∞"
 
     def _get_hoursbyday(self, iid: int, day: datetime.date):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            day (datetime.date): _description_
+
+        Returns:
+            _type_: _description_
+        """
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%F',end)=strftime('%F',{day}) AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
@@ -309,6 +436,15 @@ class TimeMasterApp:
         return hours
 
     def _get_hoursbyweek(self, iid: int, week: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            week (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%W',end)={week} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
@@ -322,6 +458,15 @@ class TimeMasterApp:
         return hours
 
     def _get_hoursbymonth(self, iid: int, month: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            month (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%m',end)={month} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
@@ -335,6 +480,15 @@ class TimeMasterApp:
         return hours
 
     def _get_hoursbyyear(self, iid: int, year: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            year (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         hours = 0.0
         # sql = f"SELECT * FROM RECORDS WHERE strftime('%Y',end)={year} AND id={iid}"
         sql = f"SELECT * FROM RECORDS WHERE id={iid}"
@@ -348,6 +502,11 @@ class TimeMasterApp:
         return hours
 
     def open_user(self, usrpath: str):
+        """_summary_
+
+        Args:
+            usrpath (str): _description_
+        """
         hoursdbpath = os.path.join(usrpath, "hours.db")
         _ = self._hours_db.open(hoursdbpath, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self._delete_hours()
@@ -380,10 +539,14 @@ class TimeMasterApp:
 
     def _clock_app2sql(self, appclock: str) ->str:
         """
+        Args:
             i1_i2_10:00
 
             i1: P: Per(Every), E: Even, O: Odd
             i2: CD: Calendar day, WD: Work day, HD: Holiday day
+        
+        Returns:
+            str: _description_
         """
         if len(appclock) < 8:
             return appclock
@@ -410,9 +573,13 @@ class TimeMasterApp:
 
     def _schedule_sql2app(self, sqlschedule: str) -> str:
         """
+        Args:
             i1_30m
 
             i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        
+        Returns:
+            str: _description_
         """
         sqlschedule_list = sqlschedule.split("_")
         if len(sqlschedule_list) < 2:
@@ -423,9 +590,12 @@ class TimeMasterApp:
 
     def _schedule_app2sql(self, appschedule: str) -> str:
         """
+        Args:
             i1_30m
 
             i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        return:
+            str: _description_
         """
         if len(appschedule) <= 3:
             return appschedule
@@ -538,6 +708,8 @@ class TimeMasterApp:
         return True
 
     def run(self):
+        """_summary_
+        """
         # asyncio.run(self._schedule.exec_schedule())
         # self._gui.go()
         r1 = Thread(target=self._schedule.exec_schedule)
@@ -551,6 +723,7 @@ class TimeMasterApp:
         self._gui.go()
 
     def close(self):
+        """_summary_
+        """
         _ = self._hours_db.close()
         print("App exit!")
-

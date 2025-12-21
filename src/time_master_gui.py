@@ -15,7 +15,18 @@ from hour_tab import HourTab
 
 
 class TimeMasterGui(tkWin):
+    """_summary_
+
+    Attributes:
+        _tabhour (int): _description_
+    """
     def __init__(self, path: str, xmlfile: str):
+        """_summary_
+
+        Args:
+            path (str): _description_
+            xmlfile (str): _description_
+        """
         super().__init__(path, xmlfile)
         self._tabhour: HourTab = HourTab(self)
 

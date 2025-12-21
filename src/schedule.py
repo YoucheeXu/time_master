@@ -14,6 +14,12 @@ from pyutilities.logit import pv, po
 
 @dataclass
 class Agenda:
+    """_summary_
+    Attributes:
+        clock (datetime.datetime): _description_
+        hintstr (str): _description_, default to ""
+        action (ActTyp: _description_, default to ActTyp.NOACTION        
+    """
     clock: datetime.datetime
     # clock: str = ""
     hint: str = ""
@@ -21,8 +27,23 @@ class Agenda:
 
 
 class Schedule:
+    """_summary_
 
+    Attributes:
+        _alarm_mp3 (str): _description_
+        _tolerance_sec (int): _description_, default to 30
+        _today_typ (str): _description_, default to "OWD"
+        _today (datetime.datetime): _description_
+        _event_dict (dict[str, str]): _description_
+        _agenda_list (list[Agenda]): _description_
+        _actionsys (ActionSys): _description_
+    """
     def __init__(self, alarm_mp3: str):
+        """_summary_
+
+        Args:
+            alarm_mp3 (str): _description_
+        """
         self._alarm_mp3: str = alarm_mp3
         self._tolerance_sec: int = 30
         self._today_typ: str = "OWD"
@@ -34,6 +55,8 @@ class Schedule:
 
     def judge_day(self):
         """ return today type
+
+        Returns:
             first leter:
                 P: Per day; E: Even day; O: Odd day
             rest leter:
@@ -42,15 +65,30 @@ class Schedule:
         self._today_typ = "OWD"
 
     def add_event(self, clkstr: str, event: str):
+        """_summary_
+
+        Args:
+            clkstr (str): _description_
+            event (str): _description_
+        """
         self._event_dict[clkstr] = event
 
     def remove_event(self, clkstr: str):
+        """_summary_
+
+        Args:
+            clkstr (str): _description_
+        """
         _ = self._event_dict.pop(clkstr)
 
     def clear_event(self):
+        """_summary_
+        """
         self._event_dict.clear()
 
     def event_to_schedule(self):
+        """_summary_
+        """
         pv(self._event_dict)
         interval_today = self._today_typ[0]
         day_today = self._today_typ[1: ]
@@ -67,6 +105,14 @@ class Schedule:
         pv(self._agenda_list)
 
     def sleep_to_nextday(self, today: datetime.datetime):
+        """_summary_
+
+        Args:
+            today (datetime.datetime): _description_
+
+        Returns:
+            _type_: _description_
+        """
         pv(today)
         # nextday = datetime.datetime.strptime(f'2018-01-31', '%Y-%m-%d')
         nextday = today + datetime.timedelta(days=1, hours=-today.hour, minutes=-today.minute,
@@ -110,14 +156,29 @@ class Schedule:
 
     def add_schedule(self, clock: str, hint: str, action: ActTyp = ActTyp.NOACTION,
             time_format: str = "%H:%M"):
+        """_summary_
+
+        Args:
+            clock (str): _description_
+            hint (str): _description_
+            action (ActTyp, optional): _description_. Defaults to ActTyp.NOACTION.
+            time_format (_type_, optional): _description_. Defaults to "%H:%M".
+        """
         clock_ = datetime.datetime.strptime(clock, time_format)
         agenda = Agenda(clock_, hint, action)
         self._agenda_list.append(agenda)
 
     def sort_schedule(self):
+        """_summary_
+        """
         self._agenda_list = sorted(self._agenda_list, key = lambda agenda: agenda.clock)
 
     def _next_agenda(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         now = datetime.datetime.now()
         if self._today.date() != now.date():     # next day
             self.judge_day()
@@ -136,9 +197,13 @@ class Schedule:
         return None
 
     def clear_schedule(self):
+        """_summary_
+        """
         self._agenda_list.clear()
 
     def exec_schedule(self):
+        """_summary_
+        """
         clock = datetime.datetime.now()
         while True:
             while (agenda := self._next_agenda()) is None:

@@ -18,10 +18,27 @@ from hour_type import HourTuple, HourDict
 
 
 class RecordHourDlg(DialogCtrl):
+    """_summary_
+
+    """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
+        """_summary_
+
+        Args:
+            app (tkWin): _description_
+            dlg_cfg (et.Element): _description_
+        """
         super().__init__(app, dlg_cfg)
 
     def _get_hourdetail(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
         _ = self._app.process_message("GetHourDetail", id=iid, detail=detail)
@@ -72,6 +89,14 @@ class RecordHourDlg(DialogCtrl):
         lbl_strtime.set_text(strt_time)
 
     def _schedule_txt2clk(self, txt: str):
+        """_summary_
+
+        Args:
+            txt (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
         if not txt:
             return "00:00"
         clk = txt.replace("h", ":").replace("m", "")
@@ -140,7 +165,16 @@ class RecordHourDlg(DialogCtrl):
 
 
 class EditHourDlg(DialogCtrl):
+    """_summary_
+
+    """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
+        """_summary_
+
+        Args:
+            app (tkWin): _description_
+            dlg_cfg (et.Element): _description_
+        """
         super().__init__(app, dlg_cfg)
 
     @override
@@ -234,6 +268,14 @@ class EditHourDlg(DialogCtrl):
         return True, ""
 
     def _get_hourdetail(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
         _ = self._app.process_message("GetHourDetail", id=iid, detail=detail)
@@ -275,12 +317,33 @@ class EditHourDlg(DialogCtrl):
 
 
 class HourDetailDlg(DialogCtrl):
+    """_summary_
+
+    Attributes:
+        _last_cid (int): the previous old child index
+        _children (_type_): _description_
+    """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
+        """_summary_
+
+        Args:
+            app (tkWin): _description_
+            dlg_cfg (et.Element): _description_
+        """
         super().__init__(app, dlg_cfg)
-        self._last_cid: int = 0     # the previous old child index
+        self._last_cid: int = 0
         self._children: dict[int, HourTuple] = {}
 
     def _update_hourdetail(self, attrib: str, val: str | float):
+        """_summary_
+
+        Args:
+            attrib (str): _description_
+            val (str | float): _description_
+
+        Raises:
+            KeyError: _description_
+        """
         match attrib:
             case "name":
                 lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
@@ -480,11 +543,28 @@ class HourDetailDlg(DialogCtrl):
         return True, ""
 
     def _get_imagepath(self, group: int, index: int):
+        """_summary_
+
+        Args:
+            group (int): _description_
+            index (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         owner = cast(Dialog, self._owner)
         imagepath = cast(str, owner.process_message("getImagePath", group=group, index=index))
         return imagepath
 
     def _get_hourdetail(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
         _ = self._app.process_message("GetHourDetail", id=iid, detail=detail)
@@ -506,11 +586,27 @@ class HourDetailDlg(DialogCtrl):
         dlg.do_show(owner, x, y, **kwargs)
 
     def _update_hour(self, uid: int, attrib: str, val: str | float):
+        """_summary_
+
+        Args:
+            uid (int): _description_
+            attrib (str): _description_
+            val (str | float): _description_
+        """
         owner = cast(Dialog, self._owner)
         _ = owner.process_message("updateHour", id=uid, attrib=attrib, val=val)
 
     def _create_childctrl(self, parent: Widget, uid: int, sub_item: str,
             rid: tuple[int, int], sums: str):
+        """_summary_
+
+        Args:
+            parent (Widget): _description_
+            uid (int): _description_
+            sub_item (str): _description_
+            rid (tuple[int, int]): _description_
+            sums (str): _description_
+        """
         imagepath = self._get_imagepath(rid[0], rid[1])
 
         level = 2
@@ -542,6 +638,11 @@ class HourDetailDlg(DialogCtrl):
             "grid": f"{{'row':{uid},'column':0,'pady':4}}"}, f"{'  '*(level-1)}")
 
     def _delete_childctrl(self, sid: int):
+        """_summary_
+
+        Args:
+            sid (int): _description_
+        """
         self._app.delete_control(f"frmSub{sid}")
         self._app.delete_control(f"pnlChild{sid}")
         self._app.delete_control(f"lblChild{sid}")
@@ -622,7 +723,20 @@ class HourDetailDlg(DialogCtrl):
 
 
 class HourTab(Dialog):
+    """_summary_
+
+    Attributes:
+        _gui (_type_): _description_
+        _images_dict (_type_): _description_
+        _selclock_dlg (_type_): _description_
+        _selschedule_dlg (_type_): _description_
+    """
     def __init__(self, gui: tkWin):
+        """_summary_
+
+        Args:
+            gui (tkWin): _description_
+        """
         super().__init__("", 0, 0)
         self._gui: tkWin = gui
         self._images_dict: dict[int, dict[int, str]] = {
@@ -658,6 +772,16 @@ class HourTab(Dialog):
         self._gui.filter_message(self.process_message, 1, msglst)
 
     def update_hourctrl(self, uid: int, attrib: str, val: str | float):
+        """_summary_
+
+        Args:
+            uid (int): _description_
+            attrib (str): _description_
+            val (str | float): _description_
+
+        Raises:
+            KeyError: _description_
+        """
         match attrib:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self.get_control(f"lblItem{uid}"))
@@ -681,6 +805,15 @@ class HourTab(Dialog):
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
     def get_hour(self, uid: int, attrib: str) -> str:
+        """_summary_
+
+        Args:
+            uid (int): _description_
+            attrib (str): _description_
+
+        Returns:
+            str: _description_
+        """
         val: str = ""
         match attrib:
             case "name":
@@ -700,12 +833,23 @@ class HourTab(Dialog):
         return val
 
     def delete_father(self, father: int):
+        """_summary_
+
+        Args:
+            father (int): _description_
+        """
         children = cast(dict[int, HourDict], self._gui.process_message("getChildren", father=father))
         for sid in children.keys():
             self.delete_hour(father, sid)
         self.delete_hour(-1, father)
 
     def delete_hour(self, father: int, iid: int):
+        """_summary_
+
+        Args:
+            father (int): _description_
+            iid (int): _description_
+        """
         self._gui.delete_control(f"frmItem{iid}")
         self._gui.delete_control(f"btnItem{iid}")
         self._gui.delete_control(f"lblItem{iid}")
@@ -716,6 +860,16 @@ class HourTab(Dialog):
 
     def create_hourctrl(self, iid: int, item: str, rid: tuple[int, int],
             clock: str, sums: str, fid: int = -1):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+            item (str): _description_
+            rid (tuple[int, int]): _description_
+            clock (str): _description_
+            sums (str): _description_
+            fid (int, optional): _description_. Defaults to -1.
+        """
         imagepath = self._get_imagepath(rid[0], rid[1])
 
         frmain = self.get_control("frmHourMain")
@@ -784,9 +938,26 @@ class HourTab(Dialog):
                 "pack":f"{{'side':'top','pady':({pady1},5),'fill':'x'}}"}, f"{'  '*(2-1)}")
 
     def _get_imagepath(self, group: int, index: int):
+        """_summary_
+
+        Args:
+            group (int): _description_
+            index (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         return self._images_dict[group].get(index, "CircleFlagsUsBetsyRoss.png")
 
     def get_control(self, idctrl: str) -> object:
+        """_summary_
+
+        Args:
+            idctrl (str): _description_
+
+        Returns:
+            object: _description_
+        """
         return self._gui.get_control(idctrl)
 
     def show_selclockdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: object):
@@ -845,6 +1016,14 @@ class HourTab(Dialog):
         dlg.do_show(owner, x, y, **kwargs)
 
     def _get_hourdetail(self, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
         _ = self._gui.process_message("GetHourDetail", id=iid, detail=detail)
