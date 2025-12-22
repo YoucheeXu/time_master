@@ -2,11 +2,8 @@
 # -*- coding: UTF-8 -*-
 import sys
 import os
-# from functools import partial
 import tkinter.filedialog as tkFileDialog
 from typing import override, cast
-from typing import Any
-# from collections.abc import Mapping
 
 from pyutilities.logit import po, pv, pe
 from pyutilities.tkwin import tkWin
@@ -31,7 +28,7 @@ class TimeMasterGui(tkWin):
         self._tabhour: HourTab = HourTab(self)
 
     @override
-    def process_message(self, idmsg: str, **kwargs: Any):
+    def process_message(self, idmsg: str, **kwargs: object):
         if idmsg.startswith("btnItem"):
             iid = int(idmsg[7:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])

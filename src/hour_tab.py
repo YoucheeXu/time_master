@@ -6,7 +6,7 @@ import xml.etree.ElementTree as et
 from typing import cast, override
 
 from pyutilities.logit import po, pv, pe
-from pyutilities.winbasic import Widget, Dialog
+from pyutilities.winbasic import Widget, Container, Dialog
 from pyutilities.tkwin import tkWin
 from pyutilities.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pyutilities.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
@@ -552,7 +552,7 @@ class HourDetailDlg(DialogCtrl):
         Returns:
             _type_: _description_
         """
-        owner = cast(Dialog, self._owner)
+        owner = cast(Container, self._owner)
         imagepath = cast(str, owner.process_message("getImagePath", group=group, index=index))
         return imagepath
 
@@ -570,7 +570,7 @@ class HourDetailDlg(DialogCtrl):
         _ = self._app.process_message("GetHourDetail", id=iid, detail=detail)
         return detail
 
-    def _show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+    def _show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgRecordHour"
         dlg_cfg = self._app.get_customctrlcfg(dlg_id)
@@ -578,7 +578,7 @@ class HourDetailDlg(DialogCtrl):
         # self._gui.register_customctrl(dlg_id, recordhour_dlg)
         recordhour_dlg.do_show(owner, x, y, **kwargs)
 
-    def _show_edithourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+    def _show_edithourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgEditHour"
         dlg_cfg = self._app.get_customctrlcfg(dlg_id)
@@ -593,7 +593,7 @@ class HourDetailDlg(DialogCtrl):
             attrib (str): _description_
             val (str | float): _description_
         """
-        owner = cast(Dialog, self._owner)
+        owner = cast(Container, self._owner)
         _ = owner.process_message("updateHour", id=uid, attrib=attrib, val=val)
 
     def _create_childctrl(self, parent: Widget, uid: int, sub_item: str,
@@ -722,7 +722,7 @@ class HourDetailDlg(DialogCtrl):
         return super().process_message(idmsg, **kwargs)
 
 
-class HourTab(Dialog):
+class HourTab(Container):
     """_summary_
 
     Attributes:
@@ -737,7 +737,7 @@ class HourTab(Dialog):
         Args:
             gui (tkWin): _description_
         """
-        super().__init__("", 0, 0)
+        super().__init__()
         self._gui: tkWin = gui
         self._images_dict: dict[int, dict[int, str]] = {
             0: {0: "items\\CircleFlagsUsBetsyRoss.png", 1: "items\\FlatUiNews.png", 
@@ -960,11 +960,12 @@ class HourTab(Dialog):
         """
         return self._gui.get_control(idctrl)
 
-    def show_selclockdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: object):
+    def show_selclockdlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
         self._selclock_dlg.do_show(owner, x, y, **kwargs)
 
     def _selclockdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_selclockdlg_confirm: {kwargs}")
+        owner = cast(Container, self._selclock_dlg.owner)
         cmb_selday = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelDay"))
         sel_day = cmb_selday.get_val()
         pv(sel_day)
@@ -976,14 +977,15 @@ class HourTab(Dialog):
         pv(sel_minute)
         clock = f"{sel_day} {int(sel_hour[:-1]):02}:{int(sel_minute[:-1]):02}"
         # pv(clock)
-        _ = self._selclock_dlg.owner.process_message("changeClock", clock=clock, **kwargs)
+        _ =owner.process_message("changeClock", clock=clock, **kwargs)
         return True, ""
 
-    def show_selscheduledlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0, **kwargs: object):
+    def show_selscheduledlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
         self._selschedule_dlg.do_show(owner, x, y, **kwargs)
 
     def _selscheduledlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         po(f"_selscheduledlg_confirm: {kwargs}")
+        owner = cast(Container, self._selclock_dlg.owner)
         cmb_selunit = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelUnit"))
         sel_unit = cmb_selunit.get_val()
         pv(sel_unit)
@@ -991,24 +993,24 @@ class HourTab(Dialog):
         sel_val = cmb_selval.get_val()
         pv(sel_val)
         schedule = f"计划{sel_unit}{sel_val}"
-        _ = self._selschedule_dlg.owner.process_message("changeSchedule", schedule=schedule, **kwargs)
+        _ = owner.process_message("changeSchedule", schedule=schedule, **kwargs)
         return True, ""
 
-    def show_recordhourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+    def show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgRecordHour"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = RecordHourDlg(self._gui, dlg_cfg)
         dlg.do_show(owner, x, y, **kwargs)
 
-    def show_hourdetaildlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+    def show_hourdetaildlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgHourDetail"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
         dlg = HourDetailDlg(self._gui, dlg_cfg)
         dlg.do_show(owner, x, y, **kwargs)
 
-    def _show_edithourdlg(self, owner: Dialog | None = None, x: int = 0, y: int = 0,
+    def _show_edithourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         dlg_id = "dlgEditHour"
         dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
@@ -1116,7 +1118,3 @@ class HourTab(Dialog):
             case _:
                 return self._gui.process_message(idmsg, **kwargs)
         return True
-
-    @override
-    def destroy(self, **kwargs: object):
-        pass
