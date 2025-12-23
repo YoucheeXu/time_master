@@ -7,9 +7,11 @@ from collections.abc import Generator
 
 from pyutilities.logit import pv, po, pe
 from pyutilities.sqlite import SQLite
+from pyutilities.winbasic import Container
 
+from bidirectionaldict import BidirectionalDict
 from schedule import Schedule
-from time_master_gui import TimeMasterGui
+# from time_master_gui import TimeMasterGui
 # from time_master_app import TimeMasterApp
 from hour_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
 
@@ -22,13 +24,19 @@ class HourDatabase:
         _cascade_hours (dict[int, Hour]): _description_
         _hours_record (_type_): _description_
     """
-    def __init__(self, app: "TimeMasterApp", gui: "TimeMasterGui", schedule: Schedule):
-        self._app: "TimeMasterApp" = app
-        self._gui: TimeMasterGui = gui
+    def __init__(self, owner: Container, schedule: Schedule):
+        self._owner: Container = owner
         self._schedule: Schedule = schedule
         self._hours_db: SQLite = SQLite()
         self._cascade_hours: dict[int, Hour] = {}
         self._hours_record: dict[int, list[HourRecordTuple]] = {}
+
+        self._every_dict: BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"P": "每", "E": "偶数", "O": "奇数"})
+        self._day_dict: BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"CD": "日", "WD": "工作日", "HD": "节假日"})
+        self._period_dict: BidirectionalDict[str, str] = \
+            BidirectionalDict[str, str]({"PD": "计划每日", "PW": "计划每周", "PM": "计划每月"})
 
     def new_hoursdb(self):
         """_summary_
@@ -68,7 +76,8 @@ class HourDatabase:
                 self._schedule.add_event(clock, name)
             rid = ridstr.split("_")
             itemdata: HourDict = {"name": name, "rid": (int(rid[0]), int(rid[1])),
-                "clock": self._app.clock_sql2app(clock), "schedule": self._app.schedule_sql2app(schedule),
+                "clock": self.clock_sql2app(clock),
+                "schedule": self.schedule_sql2app(schedule),
                 "sums": sums, "father": fid}
             if fid == -1:
                 hour = Hour()
@@ -80,12 +89,12 @@ class HourDatabase:
         pv(self._cascade_hours)
 
         for hid, hour in self._cascade_hours.items():
-            _ = self._gui.process_message("createHourCtrl", id=hid, name=hour.data["name"],
+            _ = self._owner.process_message("createHourCtrl", id=hid, name=hour.data["name"],
                 rid=hour.data["rid"], clock= hour.data["clock"],
                 sum=f"{hour.data["sums"]/60:.1f}", fid=-1)
             self._hours_record[hid] = []
             for cid, child in hour.children.items():
-                _ = self._gui.process_message("createHourCtrl", id=cid, name=child["name"],
+                _ = self._owner.process_message("createHourCtrl", id=cid, name=child["name"],
                     rid=child["rid"], clock= child["clock"],
                     sum=f"{child["sums"]/60:.1f}", fid=hid)
                 self._hours_record[cid] = []
@@ -99,6 +108,93 @@ class HourDatabase:
             self._hours_record[hid].append(HourRecordTuple(day, endure))
 
         pv(self._hours_record)
+
+
+    def clock_sql2app(self, sqlclock: str) ->str:
+        """convert sql clock to app clock
+            i1: P: Per(Every), E: Even, O: Odd
+            i2: CD: Calendar day, WD: Work day, HD: Holiday day
+        Args:
+            sqlclock (): i1_i2_10:00
+
+        Returns:
+            str: 每日 10:00
+
+        """
+        sqlclock_list = sqlclock.split("_")
+        pv(sqlclock_list)
+        if len(sqlclock_list) != 3:
+            return sqlclock
+        i1 = self._every_dict.key_to_value(sqlclock_list[0])
+        i2 = self._day_dict.key_to_value(sqlclock_list[1])
+        appclock = f"{i1}{i2} {sqlclock_list[2]}"
+        return appclock
+
+    def clock_app2sql(self, appclock: str) ->str:
+        """
+        Args:
+            i1_i2_10:00
+
+            i1: P: Per(Every), E: Even, O: Odd
+            i2: CD: Calendar day, WD: Work day, HD: Holiday day
+        
+        Returns:
+            str: _description_
+        """
+        if len(appclock) < 8:
+            return appclock
+
+        if appclock[0] in self._every_dict.backward:
+            # 每日 21:00
+            i1 = self._every_dict.value_to_key(appclock[0])
+            i2 = self._day_dict.value_to_key(appclock[1: -6])
+            i3 = appclock[-5: ]
+        elif appclock[0: 2] in self._every_dict.backward:
+            # 偶数工作日 21:00
+            i1 = self._every_dict.value_to_key(appclock[0: 2])
+            i2 = self._day_dict.value_to_key(appclock[2: -6])
+            i3 = appclock[-5: ]
+        else:
+            # 工作日 21:00
+            i1 = "P"
+            # pv(appclock[0: 3])
+            i2 = self._day_dict.value_to_key(appclock[0: 3])
+            i3 = appclock[-5: ]
+
+        sqlclock = f"{i1}_{i2}_{i3}"
+        return sqlclock
+
+    def schedule_sql2app(self, sqlschedule: str) -> str:
+        """
+        Args:
+            i1_30m
+
+            i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        
+        Returns:
+            str: _description_
+        """
+        sqlschedule_list = sqlschedule.split("_")
+        if len(sqlschedule_list) < 2:
+            return sqlschedule
+        i1 = self._period_dict.key_to_value(sqlschedule_list[0])
+        appschedule = f"{i1}{sqlschedule_list[1]}"
+        return appschedule
+
+    def schedule_app2sql(self, appschedule: str) -> str:
+        """
+        Args:
+            i1_30m
+
+            i1: PD: Per(Every) Day, PW: Per(Every) Week, PM: Per(Every) Month
+        return:
+            str: _description_
+        """
+        if len(appschedule) <= 3:
+            return appschedule
+        i1 = self._period_dict.value_to_key(appschedule[0: 4])
+        sqlschedule = f"{i1}_{appschedule[4: ]}"
+        return sqlschedule
 
     def add_hour(self, name: str, rid: tuple[int, int], clock: str,
             schedule: str, father: int, sums: int = 0) -> int:
@@ -152,7 +248,7 @@ class HourDatabase:
         """_summary_
         """
         for iid in self._cascade_hours.keys():
-            _ = self._gui.process_message("DeleteFather", id=iid)
+            _ = self._owner.process_message("DeleteFather", id=iid)
         self._cascade_hours.clear()
 
     def record_hour(self, iid: int, strt: datetime.datetime, end: datetime.datetime):
