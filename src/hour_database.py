@@ -11,8 +11,6 @@ from pyutilities.winbasic import Container
 
 from bidirectionaldict import BidirectionalDict
 from schedule import Schedule
-# from time_master_gui import TimeMasterGui
-# from time_master_app import TimeMasterApp
 from hour_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
 
 
@@ -20,9 +18,14 @@ class HourDatabase:
     """_summary_
 
     Attributes:
+        _owner (_type_): _description_
         _hours_db (_type_): _description_
+        _schedule (_type_): _description_
         _cascade_hours (dict[int, Hour]): _description_
         _hours_record (_type_): _description_
+        _every_dict (_type_): _description_
+        _day_dict (_type_): _description_
+        _period_dict (_type_): _description_
     """
     def __init__(self, owner: Container, schedule: Schedule):
         self._owner: Container = owner
@@ -63,8 +66,12 @@ class HourDatabase:
             )''')
         _ = self._hours_db.commit()
 
-    def open(self, db_path: str):
-        return self._hours_db.open(db_path, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    def open(self, dbpath: str):
+        """_summary_
+        Args:
+            _dbpath (_type_): _description_
+        """
+        return self._hours_db.open(dbpath, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
 
     def readcreate_hours(self):
         """_summary_
@@ -571,7 +578,7 @@ class HourDatabase:
         if fid in self._cascade_hours:
             return self._cascade_hours[fid].children
         else:
-            return cast(dict[str, HourDict], {})
+            return cast(dict[int, HourDict], {})
 
     def close(self):
         return self._hours_db.close()
