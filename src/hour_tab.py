@@ -347,6 +347,13 @@ class HourDetailDlg(DialogCtrl):
         self._last_cid: int = 0
         self._children: dict[int, HourTuple] = {}
 
+        self._iid: int = 0
+        self._detail: HourDict = {"name": "", "rid": (0, 0), "clock": "",
+            "schedule": "", "sums": 0, "father": -1}
+        self._db: HourDatabase | None = None
+        self._firstday: datetime.date = datetime.date(2025,12,25)
+        
+
     def _update_hourdetail(self, attrib: str, val: str | float):
         """_summary_
 
@@ -404,64 +411,9 @@ class HourDetailDlg(DialogCtrl):
         _ = db.get_hourdetail(iid, detail)
         return detail
 
-    @override
-    def _beforego(self, **kwargs: object):
-        po(f"_hourdetaildlg_beforego: {kwargs}")
-        iid = cast(int, kwargs["id"])
-        db = cast(HourDatabase, kwargs["db"])
-
-        detail = self._get_hourdetail(db, iid)
-        # po(f"{iid}: {detail}")
-        # owner = cast(Container, self._owner)
-
-        lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
-        fid = detail["father"]
-        if fid != -1:
-            detail_father = self._get_hourdetail(db, fid)
-            name_father = detail_father["name"]
-            pv(name_father)
-            lbl_father['text'] = name_father
-        else:
-            lbl_father.hide()
-
-        rid = detail["rid"]
-        imagepath = self._get_imagepath(rid[0], rid[1])
-        img_item = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
-        img_item.change_image(imagepath)
-
-        strt_date = db.get_hourstartdate(iid)
-        lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
-        lbl_item.set_text(f"{detail["name"]}\n从{strt_date}开始")
-        self._update_hourdetail("sum", f"{detail["sums"]/ 60:.1f}")
-        total_days = db.get_hourtotaldays(iid)
-        self._update_hourdetail("TotalDays", total_days)
-        hours_everyweek = db.get_hourseveryweek(iid)
-        self._update_hourdetail("HoursEveryWeek", f"{hours_everyweek:.1f}")
-        hours_last7days = db.get_hourslast7days(iid)
-        self._update_hourdetail("HoursLast7Days", f"{hours_last7days:.1f}")
-        hours_2milestone = db.get_hours2milestone(iid)
-        self._update_hourdetail("RestHours2Milestone", hours_2milestone)
-
-        lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockItemDetail"))
-        lbl_selclock['text'] = detail["clock"]
-        lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleItemDetail"))
-        lbl_selschedule['text'] = detail["schedule"]
-
-        parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
+    def _plot_weekview(self, iid: int, detail: HourDict, db: HourDatabase,
+            firstday: datetime.date):
         children = db.get_children(iid)
-        idx = 0
-        for sid, child in children.items():
-            self._children[idx] = HourTuple(iid=sid, name=child["name"], rid=child["rid"],
-                clock=child["clock"], schedule=child["schedule"], sums=child["sums"],
-                father=child["father"])
-            self._create_childctrl(parent, idx, child["name"],
-                child["rid"], f"{child["sums"] / 60: .1f}")
-            idx += 1
-        pv(self._children)
-        self._last_cid = len(self._children) - 1
-        lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
-        lbl_totalsubitems["text"] = f"共{idx}个子项目"
-
         week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
         limit_ydata: list[float] = [0] * 7
@@ -502,15 +454,14 @@ class HourDetailDlg(DialogCtrl):
                         limit_ydata = [per_minutes, per_minutes, per_minutes, \
                             per_minutes, per_minutes, per_minutes, per_minutes]
 
-        plt_everyday = cast(MatPlotCtrl, self.get_control("pltEveryDayHour"))
+        plt_weekview = cast(MatPlotCtrl, self.get_control("pltEveryDayHour"))
+        plt_weekview.clear_canvas()
         xdata: list[int] = []
         father_ydata: list[float] = []
         children_ydata: dict[int, list[float]] = {}
         labels: list[str] = []
-        today = datetime.datetime.today().date()
-        monday = today + datetime.timedelta(days=-today.weekday())
         for i in range(7):
-            day = monday + datetime.timedelta(days=i)
+            day = firstday + datetime.timedelta(days=i)
             weekday = day.weekday()
             labels.append(f"{week_day[weekday]}\n{day.day}")
             xdata.append(i)
@@ -523,29 +474,94 @@ class HourDetailDlg(DialogCtrl):
                     children_ydata[sid] = [minutes]
                 else:
                     children_ydata[sid].append(minutes)
-        plt_everyday.xdata = xdata
+        plt_weekview.xdata = xdata
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
-        _ = plt_everyday.add_line(father_yline)
+        _ = plt_weekview.add_line(father_yline)
         bottom = father_ydata
         for sid, child_ydata in children_ydata.items():
             child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom}, "bar")
             bottom = child_ydata
-            _ = plt_everyday.add_line(child_yline)
+            _ = plt_weekview.add_line(child_yline)
         limit_yline = LineData(limit_ydata, {"linestyle":"dotted","color":"red"})
-        _ = plt_everyday.add_line(limit_yline)
-        plt_everyday.draw()
+        _ = plt_weekview.add_line(limit_yline)
+        plt_weekview.draw()
+
+    @override
+    def _beforego(self, **kwargs: object):
+        po(f"_hourdetaildlg_beforego: {kwargs}")
+        self._iid = cast(int, kwargs["id"])
+        self._db = cast(HourDatabase, kwargs["db"])
+
+        self._detail = self._get_hourdetail(self._db, self._iid)
+        # po(f"{iid}: {detail}")
+        # owner = cast(Container, self._owner)
+
+        lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
+        fid = self._detail["father"]
+        if fid != -1:
+            detail_father = self._get_hourdetail(self._db, fid)
+            name_father = detail_father["name"]
+            pv(name_father)
+            lbl_father['text'] = name_father
+        else:
+            lbl_father.hide()
+
+        rid = self._detail["rid"]
+        imagepath = self._get_imagepath(rid[0], rid[1])
+        img_item = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
+        img_item.change_image(imagepath)
+
+        strt_date = self._db.get_hourstartdate(self._iid)
+        lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
+        lbl_item.set_text(f"{self._detail["name"]}\n从{strt_date}开始")
+        self._update_hourdetail("sum", f"{self._detail["sums"]/ 60:.1f}")
+        total_days = self._db.get_hourtotaldays(self._iid)
+        self._update_hourdetail("TotalDays", total_days)
+        hours_everyweek = self._db.get_hourseveryweek(self._iid)
+        self._update_hourdetail("HoursEveryWeek", f"{hours_everyweek:.1f}")
+        hours_last7days = self._db.get_hourslast7days(self._iid)
+        self._update_hourdetail("HoursLast7Days", f"{hours_last7days:.1f}")
+        hours_2milestone = self._db.get_hours2milestone(self._iid)
+        self._update_hourdetail("RestHours2Milestone", hours_2milestone)
+
+        lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockItemDetail"))
+        lbl_selclock['text'] = self._detail["clock"]
+        lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleItemDetail"))
+        lbl_selschedule['text'] = self._detail["schedule"]
+
+        parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
+        children = self._db.get_children(self._iid)
+        idx = 0
+        for sid, child in children.items():
+            self._children[idx] = HourTuple(iid=sid, name=child["name"], rid=child["rid"],
+                clock=child["clock"], schedule=child["schedule"], sums=child["sums"],
+                father=child["father"])
+            self._create_childctrl(parent, idx, child["name"],
+                child["rid"], f"{child["sums"] / 60: .1f}")
+            idx += 1
+        pv(self._children)
+        self._last_cid = len(self._children) - 1
+        lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
+        lbl_totalsubitems["text"] = f"共{idx}个子项目"
+
+        btn_prev = cast(ImageBtttonCtrl, self.get_control("btnPrevDayHour"))
+
+        today = datetime.datetime.today().date()
+
+        self._firstday = today + datetime.timedelta(days=-today.weekday())
+        self._plot_weekview(self._iid, self._detail, self._db, self._firstday)
 
         thismonth = today.month
         for i in range(6):
             month = thismonth - i
-            hours = db.get_hoursbymonth(iid, month)
+            hours = self._db.get_hoursbymonth(self._iid, month)
             po(f"hours of month {month} is {hours}")
 
         thisyear = today.year
         for i in range(6):
             year = thisyear - i
-            hours = db.get_hoursbyyear(iid, year)
+            hours = self._db.get_hoursbyyear(self._iid, year)
             po(f"hours of year {year} is {hours}")
 
     @override
@@ -745,6 +761,12 @@ class HourDetailDlg(DialogCtrl):
                     lbl_sum = cast(LabelCtrl, self.get_control("lblSumHourDetail"))
                     lbl_sum.set_text(f"{float(sum_minutes)/60:.1f}\nhours")
                     self._update_hour(iid, "sum", sum_minutes)
+                case "btnPrevDayHour":
+                    self._firstday -= datetime.timedelta(days=1)
+                    self._plot_weekview(self._iid, self._detail, db, self._firstday)
+                case "btnNextDayHour":
+                    self._firstday += datetime.timedelta(days=1)
+                    self._plot_weekview(self._iid, self._detail, db, self._firstday)
                 case _:
                     return super().process_message(idmsg, **kwargs)
             return True 

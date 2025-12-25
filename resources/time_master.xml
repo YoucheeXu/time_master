@@ -53,7 +53,7 @@
     <CustomDialog id="dlgHourDetail" text="项目详情" Width="400" Height="550">
     	<Label id="lblFatherItemDetail" text="" layout="pack" pack="{'pady':4}"/>
         <Frame id="frmItemDetail1" layout="pack" pack="{'pady':4}">
-            <ImageButton id="btnImageHourDetail" image="CircleFlagsUsBetsyRoss.png" options="{'height':60, 'width':60}" layout="grid" grid="{'row':0,'column':0}"/>"
+            <ImageButton id="btnImageHourDetail" image="CircleFlagsUsBetsyRoss.png" options="{'height':60, 'width':60}" layout="grid" grid="{'row':0,'column':0}"/>
             <Label id="lblInfoHourDetail" text="" options="{'width':40}" layout="grid" grid="{'row':0,'column':1,'columnspan':2,'sticky':'w'}"/>
             <Label id="lblSumHourDetail" text="0" options="{'justify':'center'}" layout="grid" grid="{'row':0,'column':3,'sticky':'e'}"/>
             <Label id="lblWholeHourDetail" text="0" options="{'justify':'center'}" layout="grid" grid="{'row':1,'column':0}"/>
@@ -78,8 +78,10 @@
         <Frame id="frmSubItmes" layout="pack" pack="{'pady':4}"/>
 		<Notebook id="ntbStatisticsHour" layout="pack" pack="{'expand':1,'fill':'both'}">
         	<Tab id="tabEveryDayHour" text="每日投入">
-                <MatPlot id="pltEveryDayHour" text="" size="(400,180)" xLabel="" yLabel="" layout="pack" pack="{'pady':2}"/>
-        		<Label id="lblDaySum" text="今日共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':2}"/>
+        		<ImageButton id="btnPrevDayHour" image="left-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':0}"/>
+                <MatPlot id="pltEveryDayHour" text="" size="(400,180)" xLabel="" yLabel="" layout="grid" grid="{'row':0,'column':1}"/>
+                <ImageButton id="btnNextDayHour" image="right-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':2}"/>
+        		<Label id="lblDaySum" text="今日共投入0小时" options="{'width':20}" layout="grid" grid="{'row':1,'column':0, 'columnspan':3}"/>
 			</Tab>
 			<Tab id="tabEveryWeekHour" text="每周投入">
 				<Label id="lblWeekSum" text="本周共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
