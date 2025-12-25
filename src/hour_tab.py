@@ -32,7 +32,7 @@ class RecordHourDlg(DialogCtrl):
         """
         super().__init__(app, dlg_cfg)
 
-    def _get_hourdetail(self, iid: int):
+    def _get_hourdetail(self, db: HourDatabase, iid: int):
         """_summary_
 
         Args:
@@ -43,14 +43,15 @@ class RecordHourDlg(DialogCtrl):
         """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
-        owner = cast(Dialog, self.owner)
-        _ = owner.process_message("GetHourDetail", id=iid, detail=detail)
+        # owner = cast(Container, self._owner)
+        _ = db.get_hourdetail(iid, detail)
         return detail
 
     @override
     def _beforego(self, **kwargs: object):
         iid = cast(int, kwargs["id"])
-        detail = self._get_hourdetail(iid)
+        db = cast(HourDatabase, kwargs["db"])
+        detail = self._get_hourdetail(db, iid)
 
         lbl_item = cast(LabelCtrl, self.get_control("lblItemRecordHour"))
         lbl_item.set_text(detail["name"])
@@ -129,6 +130,7 @@ class RecordHourDlg(DialogCtrl):
     @override
     def _confirm(self, **kwargs: object):
         iid = cast(int, kwargs["id"])
+        db = cast(HourDatabase, kwargs["db"])
         owner = cast(Dialog, self.owner)
 
         lbl_day = cast(LabelCtrl, self.get_control("lblSelDayRecordHour"))
@@ -150,7 +152,7 @@ class RecordHourDlg(DialogCtrl):
         end = strt + delta
         po(f"end time: {end}")
         _ = owner.process_message("RecordHour", id=iid, strt=strt, end=end)
-        detail = self._get_hourdetail(iid)
+        detail = self._get_hourdetail(db, iid)
         sum_minutes = detail["sums"]
         pv(sum_minutes)
         _ = owner.process_message("ChangeSum", id=iid, sum=sum_minutes)
@@ -191,11 +193,12 @@ class EditHourDlg(DialogCtrl):
         po(f"_edithourdlg_beforego: {kwargs}")
         fid = cast(int, kwargs["father"])
         iid = cast(int, kwargs["id"])
+        db = cast(HourDatabase, kwargs["db"])
         owner = cast(Dialog, self.owner)
 
         if fid != -1:
             lbl_father = cast(LabelCtrl, self.get_control("lblSelFatherEditHour"))
-            detail_father = self._get_hourdetail(fid)
+            detail_father = self._get_hourdetail(db, fid)
             name_father = detail_father["name"]
             pv(name_father)
             lbl_father['text'] = name_father
@@ -207,7 +210,7 @@ class EditHourDlg(DialogCtrl):
             grp, idx = 0, 0
         else:
             self.set_title("编辑项目")
-            detail = self._get_hourdetail(iid)
+            detail = self._get_hourdetail(db, iid)
             pv(detail)
 
             ent_name = cast(EntryCtrl, self.get_control("txtItemEditHour"))
@@ -276,7 +279,7 @@ class EditHourDlg(DialogCtrl):
                     clock=clock_val, schedule=schedule_val, father=father)
         return True, ""
 
-    def _get_hourdetail(self, iid: int):
+    def _get_hourdetail(self, db: HourDatabase, iid: int):
         """_summary_
 
         Args:
@@ -287,8 +290,8 @@ class EditHourDlg(DialogCtrl):
         """
         detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
             "sums": 0, "father": -1}
-        owner = cast(Dialog, self.owner)
-        _ = owner.process_message("GetHourDetail", id=iid, detail=detail)
+        # owner = cast(Container, self._owner)
+        _ = db.get_hourdetail(iid, detail)
         return detail
 
     @override
@@ -386,18 +389,35 @@ class HourDetailDlg(DialogCtrl):
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
+    def _get_hourdetail(self, db: HourDatabase, iid: int):
+        """_summary_
+
+        Args:
+            iid (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
+            "sums": 0, "father": -1}
+        # owner = cast(Container, self._owner)
+        _ = db.get_hourdetail(iid, detail)
+        return detail
+
     @override
     def _beforego(self, **kwargs: object):
         po(f"_hourdetaildlg_beforego: {kwargs}")
         iid = cast(int, kwargs["id"])
-        detail = self._get_hourdetail(iid)
+        db = cast(HourDatabase, kwargs["db"])
+
+        detail = self._get_hourdetail(db, iid)
         # po(f"{iid}: {detail}")
-        owner = cast(Container, self._owner)
+        # owner = cast(Container, self._owner)
 
         lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
         fid = detail["father"]
         if fid != -1:
-            detail_father = self._get_hourdetail(fid)
+            detail_father = self._get_hourdetail(db, fid)
             name_father = detail_father["name"]
             pv(name_father)
             lbl_father['text'] = name_father
@@ -409,18 +429,17 @@ class HourDetailDlg(DialogCtrl):
         img_item = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
         img_item.change_image(imagepath)
 
-        strt_date = cast(str, owner.process_message("GetHourStartDate", id=iid))
+        strt_date = db.get_hourstartdate(iid)
         lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
         lbl_item.set_text(f"{detail["name"]}\n从{strt_date}开始")
         self._update_hourdetail("sum", f"{detail["sums"]/ 60:.1f}")
-        total_days = cast(float, owner.process_message("GetHourTotalDays", id=iid))
+        total_days = db.get_hourtotaldays(iid)
         self._update_hourdetail("TotalDays", total_days)
-        hours_everyweek = cast(float, owner.process_message("GetHoursEveryWeek", id=iid))
+        hours_everyweek = db.get_hourseveryweek(iid)
         self._update_hourdetail("HoursEveryWeek", f"{hours_everyweek:.1f}")
-        hours_last7days = cast(float, owner.process_message("GetHoursLast7Days", id=iid))
+        hours_last7days = db.get_hourslast7days(iid)
         self._update_hourdetail("HoursLast7Days", f"{hours_last7days:.1f}")
-        hours_2milestone = cast(float, owner.process_message("GetHours2Milestone",
-            id=iid))
+        hours_2milestone = db.get_hours2milestone(iid)
         self._update_hourdetail("RestHours2Milestone", hours_2milestone)
 
         lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockItemDetail"))
@@ -429,7 +448,7 @@ class HourDetailDlg(DialogCtrl):
         lbl_selschedule['text'] = detail["schedule"]
 
         parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
-        children = cast(dict[int, HourDict], owner.process_message("getChildren", father=iid))
+        children = db.get_children(iid)
         idx = 0
         for sid, child in children.items():
             self._children[idx] = HourTuple(iid=sid, name=child["name"], rid=child["rid"],
@@ -446,7 +465,7 @@ class HourDetailDlg(DialogCtrl):
         week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
         limit_ydata: list[float] = [0] * 7
-        
+
         schedule = detail["schedule"]   # schedule = 计划每日45m
         if schedule:
             per_typ = schedule[3]
@@ -495,11 +514,11 @@ class HourDetailDlg(DialogCtrl):
             weekday = day.weekday()
             labels.append(f"{week_day[weekday]}\n{day.day}")
             xdata.append(i)
-            minutes = cast(float, owner.process_message("GetHoursbyDay", id=iid, day=day)) * 60
+            minutes = db.get_hoursbyday(iid, day) * 60
             father_ydata.append(minutes)
             po(f"minutes of day {day} is {minutes}")
             for sid in children.keys():
-                minutes = cast(float, owner.process_message("GetHoursbyDay", id=sid, day=day)) * 60
+                minutes = db.get_hoursbyday(sid, day) * 60
                 if children_ydata.get(sid) is None:
                     children_ydata[sid] = [minutes]
                 else:
@@ -520,13 +539,13 @@ class HourDetailDlg(DialogCtrl):
         thismonth = today.month
         for i in range(6):
             month = thismonth - i
-            hours = cast(float, owner.process_message("GetHoursbyMonth", id=iid, month=month))
+            hours = db.get_hoursbymonth(iid, month)
             po(f"hours of month {month} is {hours}")
 
         thisyear = today.year
         for i in range(6):
             year = thisyear - i
-            hours = cast(float, owner.process_message("GetHoursbyYear", id=iid, year=year))
+            hours = db.get_hoursbyyear(iid, year)
             po(f"hours of year {year} is {hours}")
 
     @override
@@ -567,22 +586,7 @@ class HourDetailDlg(DialogCtrl):
         imagepath = cast(str, owner.process_message("getImagePath", group=group, index=index))
         return imagepath
 
-    def _get_hourdetail(self, iid: int):
-        """_summary_
-
-        Args:
-            iid (int): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
-            "sums": 0, "father": -1}
-        owner = cast(Container, self._owner)
-        _ = owner.process_message("GetHourDetail", id=iid, detail=detail)
-        return detail
-
-    def _show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
+    def show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
         """_summary_
         Args:
@@ -677,14 +681,15 @@ class HourDetailDlg(DialogCtrl):
         if self.alive:
             kwargs.update(self._extral_msg)
             iid = cast(int, kwargs["id"])
+            db = cast(HourDatabase, kwargs["db"])
             owner = cast(Dialog, self.owner)
             match idmsg:
                 case "btnImageHourDetail":
-                    detail = self._get_hourdetail(iid)
+                    detail = self._get_hourdetail(db, iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        father=father, id=iid)
+                        father=father, id=iid, db=db)
                 case "changeItemImage": # come from `EditHourDlg`
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
@@ -730,11 +735,11 @@ class HourDetailDlg(DialogCtrl):
                     lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
                 case "btnRecordHourDetail":
-                    detail = self._get_hourdetail(iid)
+                    detail = self._get_hourdetail(db, iid)
                     father = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
-                    self._show_recordhourdlg(self, x+20, y+20,
-                        father=father, id=iid)
+                    self.show_recordhourdlg(self, x+20, y+20,
+                        father=father, id=iid, db=db)
                 case "ChangeSum":   # come from `RecordHourDlg`
                     sum_minutes= cast(float, kwargs["sum"])
                     lbl_sum = cast(LabelCtrl, self.get_control("lblSumHourDetail"))
@@ -1161,18 +1166,18 @@ class HourTab(Container):
         if idmsg.startswith("btnItem"):
             iid = int(idmsg[7:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_hourdetaildlg(self, x+20, y+20, id=iid)
+            self.show_hourdetaildlg(self, x+20, y+20, id=iid, db=self._hoursdb)
         elif idmsg.startswith("lblSumHour"):
             iid = int(idmsg[10:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_recordhourdlg(self, x+20, y+20, id=iid)
+            self.show_recordhourdlg(self, x+20, y+20, id=iid, db=self._hoursdb)
         elif idmsg.startswith("btnClock"):
             iid = int(idmsg[8:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_selclockdlg(self, x+20, y+20, id=iid)
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_edithourdlg(self, x+20, y+20, father=-1, id=0)
+            self.show_edithourdlg(self, x+20, y+20, father=-1, id=0, db=self._hoursdb)
         else:
             match idmsg:
                 case "showSelClockDlg": # come from `EditHourDlg` or <-`HourDetailDlg`<-`EditHourDlg`
@@ -1231,7 +1236,7 @@ class HourTab(Container):
                 case "updateHour":  # come from `HourDetailDlg`
                     iid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
-                    val = cast(str | float, kwargs["val"])
+                    val = cast(str | int, kwargs["val"])
                     self.update_hourctrl_attrib(iid, attr, val)
                 case "newHour": # come from `EditHourDlg` or <-`EditHourDlg`<-`HourDetailDlg`
                     name =cast(str, kwargs["name"])
@@ -1250,66 +1255,14 @@ class HourTab(Container):
                     return self._get_imagepath(group, index)
                 case "getImagesDict":   # come from `EditHourDlg`
                     return self._images_dict
-                case "GetHourDetail":
-                    """come from `RecordHourDlg`
-                            TODO: should proactively send the information
-                        or come from `EditHourDlg`
-                            TODO: should proactively send the information
-                        or come from `HourDetailDlg`
-                            TODO: should proactively send the information
-                    """
-                    hid = cast(int, kwargs["id"])
-                    detail = cast(HourDict, kwargs["detail"])
-                    self._hoursdb.get_hourdetail(hid, detail)
-                case "getChildren":
-                    # come from `HourDetailDlg`
-                    # TODO: should proactively send the information
-                    fid = cast(int, kwargs["father"])
-                    return self._hoursdb.get_children(fid)
                 case "RecordHour":  # come from `RecordHourDlg`
                     hid = cast(int, kwargs["id"])
                     strt = cast(datetime.datetime, kwargs["strt"])
                     end = cast(datetime.datetime, kwargs["end"])
                     self._hoursdb.record_hour(hid, strt, end)
-                case "DeleteFather":
-                    # come from `HourDatabase`
-                    # TODO: should rename to "DeleteFatherCtrl"
+                case "DeleteFatherCtrl":    # come from `HourDatabase`
                     iid = cast(int, kwargs["id"])
                     self.delete_fatherctrl(iid)
-                case "GetHourStartDate":
-                    """ come from `HourDetailDlg`, include all meesage starting with "GetHour"
-                        TODO: Should take the initiative to pass the `HourDatabase` instance
-                    """
-                    hid = cast(int, kwargs["id"])
-                    return self._hoursdb.get_hourstartdate(hid)
-                case "GetHourTotalDays":
-                    hid = cast(int, kwargs["id"])
-                    return self._hoursdb.get_hourtotaldays(hid)
-                case "GetHoursEveryWeek":
-                    hid = cast(int, kwargs["id"])
-                    return self._hoursdb.get_hourseveryweek(hid)
-                case "GetHoursLast7Days":
-                    hid = cast(int, kwargs["id"])
-                    return self._hoursdb.get_hourslast7days(hid)
-                case "GetHours2Milestone":
-                    hid = cast(int, kwargs["id"])
-                    return self._hoursdb.get_hours2milestone(hid)
-                case "GetHoursbyDay":
-                    hid = cast(int, kwargs["id"])
-                    day = cast(datetime.date, kwargs["day"])
-                    return self._hoursdb.get_hoursbyday(hid, day)
-                case "GetHoursbyWeek":
-                    hid = cast(int, kwargs["id"])
-                    week = cast(int, kwargs["week"])
-                    return self._hoursdb.get_hoursbyweek(hid, week)
-                case "GetHoursbyMonth":
-                    hid = cast(int, kwargs["id"])
-                    month = cast(int, kwargs["month"])
-                    return self._hoursdb.get_hoursbymonth(hid, month)
-                case "GetHoursbyYear":
-                    hid = cast(int, kwargs["id"])
-                    year = cast(int, kwargs["year"])
-                    return self._hoursdb.get_hoursbyyear(hid, year)
                 case _:
                     pass
             return True

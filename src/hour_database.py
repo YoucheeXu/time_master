@@ -255,7 +255,7 @@ class HourDatabase:
         """_summary_
         """
         for iid in self._cascade_hours.keys():
-            _ = self._owner.process_message("DeleteFather", id=iid)
+            _ = self._owner.process_message("DeleteFatherCtrl", id=iid)
         self._cascade_hours.clear()
 
     def record_hour(self, iid: int, strt: datetime.datetime, end: datetime.datetime):
@@ -334,6 +334,8 @@ class HourDatabase:
         Raises:
             KeyError: _description_
         """
+        # detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
+            # "sums": 0, "father": -1}
         if hid in self._cascade_hours:
             # return self._cascade_hours[iid].data
             data = self._cascade_hours[hid].data
@@ -359,7 +361,7 @@ class HourDatabase:
                     detail["father"] = data["father"]
                     # detail = {**children[iid]}
                     # detail = children[iid].copy()
-                    return     
+                    return
         raise KeyError(f"no item: {hid}")
 
     def get_hourattrib(self, hid: int, attrib: str):
