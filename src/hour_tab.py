@@ -187,11 +187,16 @@ class EditHourDlg(DialogCtrl):
             dlg_cfg (et.Element): _description_
         """
         super().__init__(app, dlg_cfg)
+        self._old_fid: int = -1
+        self._old_clock: str = ""
+        self._old_schedule: str = ""
+        self._old_rid: tuple[int, int] = (0, 0)
 
     @override
     def _beforego(self, **kwargs: object):
         po(f"_edithourdlg_beforego: {kwargs}")
         fid = cast(int, kwargs["father"])
+        self._old_fid = fid
         iid = cast(int, kwargs["id"])
         db = cast(HourDatabase, kwargs["db"])
         owner = cast(Dialog, self.owner)
@@ -222,6 +227,10 @@ class EditHourDlg(DialogCtrl):
             lbl_selschedule['text'] = detail["schedule"] if detail["schedule"] else "选择时间投入计划"
             grp, idx = detail["rid"]
 
+            self._old_clock = lbl_selclock['text']
+            self._old_schedule = lbl_selschedule['text']
+            self._old_rid = detail["rid"]
+
         images_dict = cast(dict[int, dict[int, str]], owner.process_message("getImagesDict"))
         list_itemimage = cast(PicsListviewCtrl, self.get_control("lstImageEditHour"))
         # list_itemimage.display_images(list(self._images_dict.values()))
@@ -234,7 +243,6 @@ class EditHourDlg(DialogCtrl):
         list_itemimage.select(grp, idx)
 
     @override
-    # TODO: only change those which are modified
     def _confirm(self, **kwargs: object):
         po(f"_edithourdlg_confirm: {kwargs}")
         owner = cast(Dialog, self.owner)
@@ -244,18 +252,21 @@ class EditHourDlg(DialogCtrl):
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
             clock = cast(str, lbl_selclock['text'])
             pv(clock)
-            _ = owner.process_message("changeClock", id=iid, clock=clock)
+            if clock != self._old_clock:
+                _ = owner.process_message("changeClock", id=iid, clock=clock)
 
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
             schedule = cast(str, lbl_selschedule['text'])
             pv(schedule)
-            _ = owner.process_message("changeSchedule", id=iid, schedule=schedule)
+            if schedule != self._old_schedule:
+                _ = owner.process_message("changeSchedule", id=iid, schedule=schedule)
 
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
             grp, idx = lst_itemimage.get_selected()
-            _ = owner.process_message("changeItemImage",
-                id=iid, group=grp, index=idx)
+            if (grp, idx) != self._old_rid:
+                _ = owner.process_message("changeItemImage",
+                    id=iid, group=grp, index=idx)
         else:   # New item
             ent_name = cast(EntryCtrl, self.get_control("txtItemEditHour"))
             name = ent_name.get_val()
