@@ -4,14 +4,14 @@ import sys
 import os
 
 from pyutilities.logit import pv, po
-from time_master import TimeMasterApp
+from src.time_master import TimeMasterApp
 
 
 def main():
     file_path = os.path.dirname(os.path.abspath(__file__))
     if getattr(sys, 'frozen', False):
         file_path = os.path.dirname(os.path.abspath(sys.executable))
-    proj_path = os.path.abspath(os.path.join(file_path, ".."))
+    proj_path = os.path.abspath(os.path.join(file_path, "."))
     xml_file = os.path.join(proj_path, 'resources', 'time_master.xml')
     app = TimeMasterApp(proj_path, xml_file)
     usr_path = os.path.join(proj_path, "data", "Youchee")

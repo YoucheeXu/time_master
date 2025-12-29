@@ -9,8 +9,8 @@ from pyutilities.logit import pv, po, pe
 from pyutilities.winbasic import Container
 from pyutilities.tkwin import tkWin
 
-from schedule import Schedule
-from hour_tab import HourTab
+from src.schedule import Schedule
+from src.hour_tab import HourTab
 
 
 class TimeMasterApp(Container):

@@ -9,9 +9,9 @@ from pyutilities.logit import pv, po, pe
 from pyutilities.sqlite import SQLite
 from pyutilities.winbasic import Container
 
-from bidirectionaldict import BidirectionalDict
-from schedule import Schedule
-from hour_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
+from src.bidirectionaldict import BidirectionalDict
+from src.schedule import Schedule
+from src.hour_type import HourSqlTuple, HourDict, Hour, HourSqlRecord, HourRecordTuple
 
 
 class HourDatabase:

@@ -14,9 +14,9 @@ from pyutilities.matplot import MatPlotCtrl, LineData
 # from pyutilities.calendarctrl import CalendarCtrl
 from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
-from schedule import Schedule
-from hour_type import HourTuple, HourDict
-from hour_database import HourDatabase
+from src.schedule import Schedule
+from src.hour_type import HourTuple, HourDict
+from src.hour_database import HourDatabase
 
 
 class RecordHourDlg(DialogCtrl):
