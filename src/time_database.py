@@ -389,20 +389,30 @@ class TimeDatabase:
                 newfid = newval
                 if oldfid == -1:
                     if newfid == -1: # father -> father
-                        raise RuntimeError((f"Don't support father {oldfid} "
-                            f"to father {newfid}"))
+                        warnmsg = (f"no support father #{pid} plan convert "
+                            "to fatherr")
+                        # raise RuntimeWarning(errmsg)
+                        po(warnmsg)
+                        return False
                     elif len(plan.children) > 0:   # father with child-> child 
-                        raise RuntimeError((f"Don't support father {oldfid} "
-                            f"with children degrade to child {newfid}"))
+                        raise RuntimeError((f"no support father #{pid} plan "
+                            f"with children degrade to #{newfid} plan's child"))
                     else:   # father without child-> child
                         self._plan_dict[newfid].children[pid] = plan.data
                         del self._plan_dict[pid]
-                elif oldfid != -1 and newfid == -1:    # child -> father
-                    self._plan_dict[pid].data = plan.data
+                elif newfid == -1:    # child -> father
+                    newplan = Plan()
+                    newplan.data = plan.data
+                    self._plan_dict[pid] = newplan
                     del self._plan_dict[oldfid].children[pid]
-                else:    # one's child -> another's child
+                elif oldfid != newfid:    # one's child -> another's child
                     self._plan_dict[newfid].children[pid] = plan.data
                     del self._plan_dict[oldfid].children[pid]
+                else:   # one's child -> one's child 
+                    warnmsg = (f"no support child #{pid} plan convert "
+                        "its father to the same fatherr")
+                    po(warnmsg)
+                    return False
                 plan.data[attrib] = newval
             case "clk_time" | "bgn_time" | "end_time":
                 assert isinstance(newval, datetime.time)
@@ -452,6 +462,8 @@ class TimeDatabase:
 
         po((f"update '{attrib}' of #{pid} plan '{plan.data["name"]}' "
             f"from '{oldval}' to '{newval}'"))
+
+        return True
 
     def get_planattr(self, pid: int, attrib: str):
         """_summary_
