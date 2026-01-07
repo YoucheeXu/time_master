@@ -397,7 +397,10 @@ class TimeDatabase:
                     elif len(plan.children) > 0:   # father with child-> child 
                         raise RuntimeError((f"no support father #{pid} plan "
                             f"with children degrade to #{newfid} plan's child"))
-                    else:   # father without child-> child
+                    elif newfid == pid:   # father without child-> child
+                        raise RuntimeError((f"no support father #{pid} plan "
+                            f"degrade to itself child"))
+                    else:
                         self._plan_dict[newfid].children[pid] = plan.data
                         del self._plan_dict[pid]
                 elif newfid == -1:    # child -> father

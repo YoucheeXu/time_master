@@ -30,7 +30,8 @@ def db():
     if os.path.isfile(dbfile):
         os.remove(dbfile)
     _ = db.open(dbfile)
-    return db
+    yield db
+    _ = db.close()
 
 
 def test_add_plan(db: TimeDatabase):
@@ -48,8 +49,6 @@ def test_add_plan(db: TimeDatabase):
 
     db.read_plans()
     pv(db.plan_dict)
-
-    # return db
 
 
 def modify_plan(db: TimeDatabase, pid: int, attrib: str, destval,
@@ -82,7 +81,6 @@ def test_modify_plan2(db: TimeDatabase):
     modify_plan(db, pid_brush, "name", "Brush before bedtime")
     modify_plan(db, pid_brush, "note", "(2,3)")
 
-    _ = db.close()
 
 def test_modify_plan_fid(db: TimeDatabase):
     test_add_plan(db)
@@ -101,11 +99,9 @@ def test_modify_plan_fid(db: TimeDatabase):
     modify_plan(db, pid_brush, "fid", desfid)
     pv(db.plan_dict)
 
-    try:
+    with pytest.raises(RuntimeError):
         # father with children to child
         modify_plan(db, desfid, "fid", 1, False)
-    except RuntimeError as e:
-        pv(e)
     pv(db.plan_dict)
 
     # one's child -> one's child
@@ -120,4 +116,20 @@ def test_modify_plan_fid(db: TimeDatabase):
     modify_plan(db, pid_brush, "fid", -1, False)
     pv(db.plan_dict)
 
-    _ = db.close()
+    with pytest.raises(RuntimeError):
+        # father -> itself child
+        modify_plan(db, pid_brush, "fid", pid_brush, False)
+    pv(db.plan_dict)
+
+
+def test_modify_plan_cycle(db: TimeDatabase):
+    test_add_plan(db)
+    pid_brush = db.add_plan("Brush")
+    modify_plan(db, pid_brush, "every", 1)
+    modify_plan(db, pid_brush, "unit", "WK")
+    modify_plan(db, pid_brush, "custom", "WD")
+    modify_plan(db, pid_brush, "custom", [1, 3, 5])
+    cycbgn_dtime = datetime.datetime(2026, 1, 1, 17, 30)
+    modify_plan(db, pid_brush, "cycbgn_dtime", cycbgn_dtime)
+    cycend_dtime = datetime.datetime(2026, 2, 1, 17, 30)
+    modify_plan(db, pid_brush, "cycend_dtime", cycend_dtime)
