@@ -16,7 +16,7 @@ from src.action_sys import ActTyp
 from src.time_database_type import VALID_TIMEUNIT, TimeUnit, VALID_DAYTYPE, DayType
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
-from src.time_database_type import LocTuple, PlanDataDict, Plan, RecordDict
+from src.time_database_type import IconTuple, LocTuple, PlanDataDict, Plan, RecordDict
 
 
 class TimeDatabase:
@@ -27,7 +27,9 @@ class TimeDatabase:
     | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
     | pid | int ||  |
     | name | str ||  |
-    | note | str || resource id for hour |
+    | note | str ||  |
+    | tags | str | list[str] |  |
+    | iid | str | tuple[int, int] | id of icon |
     | fid | int ||  |
     | clk_timestr | str | datetime.time or None ||  |
     | bgn_timestr | str | datetime.time or None |  |
@@ -97,6 +99,8 @@ class TimeDatabase:
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 note TEXT,
+                tags TEXT,                
+                iid TEXT,
                 fid INT,
                 clk_timestr TEXT,
                 bgn_timestr TEXT,
@@ -146,6 +150,18 @@ class TimeDatabase:
         else:
             lat, lng = location.lat, location.lng
         return f"({lat}, {lng})"
+
+    def _str2iid(self, iidstr: str):
+        if iidstr:
+            return cast(tuple[int, int], literal_eval(iidstr))
+        else:
+            return None
+
+    def _str2tags(self, tagstr: str) -> list[str]:
+        if not tagstr:
+            return []
+        else:
+            return cast(list[str], literal_eval(tagstr))
 
     def _str2time(self, timestr: str):
         """_summary_
@@ -222,7 +238,8 @@ class TimeDatabase:
             plan.children.clear()
         self._plan_dict.clear()
 
-        for pid, name, note, fid, clk_timestr, bgn_timestr, end_timestr,  \
+        for pid, name, note, iid, tags, fid, \
+            clk_timestr, bgn_timestr, end_timestr,  \
             every, unit, customstr, cycbgn_timestamp, cycend_timestamp, \
             action, status, locstr in \
                 cast(Generator[PlanSqlTuple, None, None],
@@ -238,6 +255,8 @@ class TimeDatabase:
             plandata: PlanDataDict = {
                 "name": name,
                 "note": note,
+                "tags": self._str2tags(tags),
+                "iid": self._str2iid(iid),
                 "fid": fid,
                 "clk_time": clk_time, "bgn_time": bgn_time, "end_time": end_time,
                 "every": every, "unit": cast(TimeUnit, unit), "custom": custom,
@@ -255,7 +274,8 @@ class TimeDatabase:
 
         # pv(self._plan_dict)
 
-    def add_plan(self, name: str, note: str = "", fid: int = -1,
+    def add_plan(self, name: str, note: str = "", tags: list[str] = [],
+            iid: IconTuple | None = None, fid: int = -1,
             clk_time: datetime.time | None = None,
             bgn_time: datetime.time | None = None,
             end_time: datetime.time | None = None,
@@ -271,6 +291,8 @@ class TimeDatabase:
         Args:
             name (): _description_
             note (): _description_
+            tags (): _description_
+            iid (): id of icon
             fid (): _description_
             clk_time ( ): _description_
             bgn_time ( ): _description_
@@ -294,6 +316,8 @@ class TimeDatabase:
         # else:
             # reminder_str = ""
 
+        tagstr = str(tags)
+        iidstr = str(iid)
         clk_timestr = self._time2str(clk_time)
         bgn_timestr = self._time2str(bgn_time)
         end_timestr = self._time2str(end_time)
@@ -302,11 +326,11 @@ class TimeDatabase:
         locstr = self._loc2geo(locate_at)
 
         _ = self._database.execute1("""
-            INSERT INTO PLANS (name, note, fid, clk_timestr, bgn_timestr, end_timestr,
+            INSERT INTO PLANS (name, note, tags, iid, fid, clk_timestr, bgn_timestr, end_timestr,
                 every, unit, customstr, cycbgn_timestamp, cycend_timestamp,
                 action, status, locstr)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (name, note, fid, clk_timestr, bgn_timestr, end_timestr,  \
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, note, tagstr, iidstr, fid, clk_timestr, bgn_timestr, end_timestr,  \
                 every, unit, str(custom), cycbgn_timestamp, cycend_timestamp, \
                 action, status, locstr)
         )
@@ -319,7 +343,7 @@ class TimeDatabase:
             raise RuntimeError("no last_insert_rowid")
 
         plandata: PlanDataDict = {
-            "name": name, "note": note, "fid": fid,
+            "name": name, "note": note, "tags": tags, "iid": iid, "fid": fid,
             "clk_time": clk_time, "bgn_time": bgn_time, "end_time": end_time,
             "every": every, "unit": unit, "custom": custom,
             "cycbgn_dtime": cycbgn_dtime, "cycend_dtime": cycend_dtime,
@@ -348,8 +372,9 @@ class TimeDatabase:
 
     # TODO: attrib Literal
     def modify_plan(self, pid: int, attrib: str,
-            newval: str | LocTuple | StatusEnum | int | TimeUnit | DayType \
-                | list[int] | datetime.time | datetime.datetime | None | ActTyp):
+            newval: str | IconTuple | list[str] | int \
+                | LocTuple | StatusEnum | TimeUnit | list[int] | DayType \
+                | datetime.time | datetime.datetime | ActTyp | None):
         """_summary_
 
         Args:
@@ -359,8 +384,8 @@ class TimeDatabase:
         """
         oldfid = -1
         plan = Plan()
-        for iid, father in self._plan_dict.items():
-            if iid == pid:
+        for fid, father in self._plan_dict.items():
+            if fid == pid:
                 oldfid = father.data["fid"]
                 plan = father
                 break
@@ -381,6 +406,17 @@ class TimeDatabase:
                 plan.data[attrib] = newval
                 attr_sql = attrib
                 newval_sql = newval
+            case "tags":
+                assert isinstance(newval, list)
+                plan.data[attrib] = cast(list[str], newval)
+                attr_sql = attrib
+                newval_sql = str(newval)
+            case "iid":
+                pe(type(newval))
+                assert isinstance(newval, IconTuple) or (newval is None)
+                plan.data[attrib] = newval
+                attr_sql = attrib
+                newval_sql = str(newval)
             case "fid":
                 assert isinstance(newval, int)
                 attr_sql = attrib
@@ -453,15 +489,16 @@ class TimeDatabase:
                 attr_sql = attrib
                 newval_sql = newval
             case "location":
-                assert isinstance(newval, LocTuple)
+                assert isinstance(newval, LocTuple) or (newval is None)
                 plan.data[attrib] = newval
                 attr_sql = "locstr"
                 newval_sql = self._loc2geo(newval)
             case _:
                 raise KeyError(f"There is no {attrib} in Plan {pid}")
 
-        sql = f"UPDATE PLANS SET {attr_sql}='{newval_sql}' WHERE pid='{pid}'"
-        _ = self._database.execute1(sql)
+        sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
+        pv(sql)
+        _ = self._database.execute1(sql, (newval_sql, pid))
 
         po((f"update '{attrib}' of #{pid} plan '{plan.data["name"]}' "
             f"from '{oldval}' to '{newval}'"))
@@ -481,8 +518,8 @@ class TimeDatabase:
         Returns:
             _type_: _description_
         """
-        for iid, father in self._plan_dict.items():
-            if iid == pid:
+        for fid, father in self._plan_dict.items():
+            if fid == pid:
                 return father.data[attrib]
             for cid, child, in father.children.items():
                 if cid == pid:

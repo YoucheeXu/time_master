@@ -37,6 +37,8 @@ class PlanSqlTuple(NamedTuple):
         pid (int): _description_
         name (): _description_
         note (): _description_
+        tags (): _description_
+        iid (): id of icon
         fid (): _description_
         clk_timestr ( ): reminder time
         bgn_timestr ( ): _description_
@@ -53,6 +55,8 @@ class PlanSqlTuple(NamedTuple):
     pid: int
     name: str
     note: str
+    tags: str
+    iid: str
     fid: int
     clk_timestr: str
     bgn_timestr: str
@@ -92,12 +96,25 @@ class LocTuple(NamedTuple):
     altitude: float = 0.0
 
 
+class IconTuple(NamedTuple):
+    """_summary_
+
+    Attributes:
+        grpidx (): index of group
+        eleidx (): index of element
+    """
+    grpidx: int
+    eleidx: int
+
+
 class PlanDataDict(TypedDict):
     """ _summary_
 
     Attributes:
         name (): _description_
         note (): _description_
+        tags (): _description_
+        iid (): id of icon
         fid (): _description_
         clk_time ( ): _description_
         bgn_time ( ): _description_
@@ -113,6 +130,8 @@ class PlanDataDict(TypedDict):
     """
     name: str
     note: str
+    tags: list[str]
+    iid: IconTuple | None
     fid: int
     clk_time: datetime.time | None
     bgn_time: datetime.time | None
