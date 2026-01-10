@@ -746,7 +746,7 @@ class HourDetailDlg(DialogCtrl):
                 case "btnAddChild":
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        father=iid, id=0)
+                        father=iid, id=0, db=db)
                 case "createChild":  # come from `EditHourDlg`
                     parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
                     cid = len(self._children)
