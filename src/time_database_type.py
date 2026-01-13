@@ -40,14 +40,6 @@ class PlanSqlTuple(NamedTuple):
         tags (): _description_
         iid (): id of icon
         fid (): _description_
-        clk_timestr ( ): reminder time
-        bgn_timestr ( ): _description_
-        end_timestr ( ): _description_        
-        every (int): _description_
-        unit (str): _description_
-        customstr ( ): _description_
-        cycbgn_timestamp ( ): _description_, cycle
-        cycend_timestamp ( ): _description_, end cycle datetime
         action ( ): _description_
         status (): _description_
         locstr (): _description_
@@ -58,6 +50,28 @@ class PlanSqlTuple(NamedTuple):
     tags: str
     iid: str
     fid: int
+    action: int
+    status: int
+    locstr: str
+
+
+class ReminderSqlTuple(NamedTuple):
+    """ _summary_
+
+    Attributes:
+        cid (int): _description_
+        pid (int): _description_
+        clk_timestr ( ): reminder time
+        bgn_timestr ( ): _description_
+        end_timestr ( ): _description_        
+        every (int): _description_
+        unit (str): _description_
+        customstr ( ): _description_
+        cycbgn_timestamp ( ): _description_, cycle
+        cycend_timestamp ( ): _description_, end cycle datetime
+    """
+    cid: int
+    pid: int
     clk_timestr: str
     bgn_timestr: str
     end_timestr: str
@@ -66,9 +80,6 @@ class PlanSqlTuple(NamedTuple):
     customstr: str
     cycbgn_timestamp: float
     cycend_timestamp: float
-    action: int
-    status: int
-    locstr: str
 
 
 class StatusEnum(IntEnum):
@@ -107,6 +118,33 @@ class IconTuple(NamedTuple):
     eleidx: int
 
 
+class ReminderDict(TypedDict):
+    """ _summary_
+
+    Attributes:
+        clk_time ( ): _description_
+        bgn_time ( ): _description_
+        end_time ( ): _description_
+        every (int): _description_
+        unit (TimeUnit): _description_
+        custom ( ): _description_
+        cycbgn_dtime ( ): _description_
+        cycend_dtime ( ): _description_
+    """
+    clk_time: datetime.time | None
+    bgn_time: datetime.time | None
+    end_time: datetime.time | None
+    every: int
+    unit: TimeUnit
+    custom: DayType | list[int]
+    cycbgn_dtime: datetime.datetime | None
+    cycend_dtime: datetime.datetime | None
+
+ReminderAttrType = Literal["clk_time", "bgn_time", "end_time", "every", \
+    "unit", "custom", "cycbgn_dtime", "cycend_dtime"]
+ReminderValType = datetime.time | int | TimeUnit  | DayType | list[int] \
+    | datetime.datetime | None
+
 class PlanDataDict(TypedDict):
     """ _summary_
 
@@ -116,14 +154,7 @@ class PlanDataDict(TypedDict):
         tags (): _description_
         iid (): id of icon
         fid (): _description_
-        clk_time ( ): _description_
-        bgn_time ( ): _description_
-        end_time ( ): _description_
-        every (int): _description_, cycle interval
-        unit (str): _description_, cycle time unit
-        custom ( ): _description_
-        cycbgn_dtime ( ): _description_
-        cycend_dtime ( ): _description_
+        cycle_reminder ( ): _description_
         action ( ): _description_
         status (): _description_
         location (): _description_
@@ -133,18 +164,15 @@ class PlanDataDict(TypedDict):
     tags: list[str]
     iid: IconTuple | None
     fid: int
-    clk_time: datetime.time | None
-    bgn_time: datetime.time | None
-    end_time: datetime.time | None
-    every: int
-    unit: TimeUnit
-    custom: DayType | list[int]
-    cycbgn_dtime: datetime.datetime | None
-    cycend_dtime: datetime.datetime | None
+    cycle_reminder: dict[int, ReminderDict]
     action: ActTyp
     status: StatusEnum
     location: LocTuple | None
 
+PlanAttrType = Literal["name", "note", "tags", "iid", "fid", \
+    "cycle_reminder", "action", "status", "location"]
+PlanValType = str | list[str] | IconTuple \
+    | int | ActTyp | StatusEnum | LocTuple| None
 
 @dataclass
 class Plan:
@@ -178,8 +206,7 @@ class RecordDict(TypedDict):
     """_summary_
 
     Attributes:
-        rid (int): _description_
-        eid (int): _description_
+        pid (int): _description_
         bgn_dtime (): _description_
         end_dtime (): _description_
     """

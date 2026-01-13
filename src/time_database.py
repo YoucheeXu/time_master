@@ -15,8 +15,9 @@ from src.bidirectionaldict import BidirectionalDict
 from src.action_sys import ActTyp
 from src.time_database_type import VALID_TIMEUNIT, TimeUnit, VALID_DAYTYPE, DayType
 from src.time_database_type import StatusEnum
-from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
-from src.time_database_type import IconTuple, LocTuple, PlanDataDict, Plan, RecordDict
+from src.time_database_type import GeoSqlTuple, ReminderSqlTuple, PlanSqlTuple, RecordSqlTuple
+from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
+from src.time_database_type import IconTuple, LocTuple, ReminderDict, PlanDataDict, Plan, RecordDict
 
 
 class TimeDatabase:
@@ -31,6 +32,16 @@ class TimeDatabase:
     | tags | str | list[str] |  |
     | iid | str | tuple[int, int] | id of icon |
     | fid | int ||  |
+    | action | int | ActTyp |  |
+    | status | int | StatusEnum |  |
+    | locstr | str | LocDict or None |  |
+    |  |  |  |  |
+
+    Reminders
+    | Item | SqlType | PyType | Notes |
+    | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+    | cid | int ||  |
+    | pid | int || refere to pid in Plan |
     | clk_timestr | str | datetime.time or None ||  |
     | bgn_timestr | str | datetime.time or None |  |
     | end_timestr | str | datetime.time or None |  |
@@ -39,10 +50,6 @@ class TimeDatabase:
     | customstr | str  | DayType or list[int] | |
     | cycbgn_timestamp | float | datetime.datetime or None |  |
     | cycend_timestamp | float | datetime.datetime or None |  |
-    | action | int | ActTyp |  |
-    | status | int | StatusEnum |  |
-    | locstr | str | LocDict or None |  |
-    |  |  |  |  |
 
     Records
     | Item | SqlType | PyType | Notes |
@@ -102,6 +109,15 @@ class TimeDatabase:
                 tags TEXT,                
                 iid TEXT,
                 fid INT,
+                action INT,
+                status INT,
+                locstr TEXT
+            )''')
+
+        _ = self._database.execute('''
+            CREATE TABLE IF NOT EXISTS REMINDERS(
+                cid INTEGER PRIMARY KEY AUTOINCREMENT,
+                pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 clk_timestr TEXT,
                 bgn_timestr TEXT,
                 end_timestr TEXT,
@@ -110,17 +126,18 @@ class TimeDatabase:
                 customstr TEXT,
                 cycbgn_timestamp REAL,
                 cycend_timestamp REAL,
-                action INT,
-                status INT,
-                locstr TEXT)''')
+                FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
+            )''')
 
         _ = self._database.execute('''
             CREATE TABLE IF NOT EXISTS RECORDS(
                 rid INTEGER PRIMARY KEY AUTOINCREMENT,
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 bgn_timestamp REAL
-                end_timestamp REAL
+                end_timestamp REAL,
+                FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
             )''')
+
         _ = self._database.commit()
 
     # TODO: convert geo to locatoin
@@ -151,9 +168,11 @@ class TimeDatabase:
             lat, lng = location.lat, location.lng
         return f"({lat}, {lng})"
 
-    def _str2iid(self, iidstr: str):
+    def _str2icon(self, iidstr: str):
         if iidstr:
-            return cast(tuple[int, int], literal_eval(iidstr))
+            iid = cast(tuple[int, int], literal_eval(iidstr))
+            icon = IconTuple(iid[0], iid[1])
+            return icon
         else:
             return None
 
@@ -239,28 +258,18 @@ class TimeDatabase:
         self._plan_dict.clear()
 
         for pid, name, note, iid, tags, fid, \
-            clk_timestr, bgn_timestr, end_timestr,  \
-            every, unit, customstr, cycbgn_timestamp, cycend_timestamp, \
             action, status, locstr in \
                 cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
-            clk_time = self._str2time(clk_timestr)
-            bgn_time = self._str2time(bgn_timestr)
-            end_time = self._str2time(end_timestr)
-            custom = self._str2custom(customstr)
-            cycbgn_dtime = self._timestamp2datetime(cycbgn_timestamp)
-            cycend_dtime = self._timestamp2datetime(cycend_timestamp)
             geo = GeoSqlTuple(*literal_eval(locstr))
             locate_at = self._geo2loc(geo.latitude, geo.longitude)
             plandata: PlanDataDict = {
                 "name": name,
                 "note": note,
                 "tags": self._str2tags(tags),
-                "iid": self._str2iid(iid),
+                "iid": self._str2icon(iid),
                 "fid": fid,
-                "clk_time": clk_time, "bgn_time": bgn_time, "end_time": end_time,
-                "every": every, "unit": cast(TimeUnit, unit), "custom": custom,
-                "cycbgn_dtime": cycbgn_dtime, "cycend_dtime": cycend_dtime,
+                "cycle_reminder": {},
                 "action": ActTyp(action),
                 "status": StatusEnum(status),
                 "location": locate_at
@@ -272,17 +281,33 @@ class TimeDatabase:
             else:
                 self._plan_dict[fid].children[pid] = plandata
 
+        for cid, pid, \
+            clk_timestr, bgn_timestr, end_timestr,  \
+            every, unit, customstr, cycbgn_timestamp, cycend_timestamp in \
+                cast(Generator[ReminderSqlTuple, None, None],
+                self._database.each("SELECT * FROM REMINDERS")):
+            clk_time = self._str2time(clk_timestr)
+            bgn_time = self._str2time(bgn_timestr)
+            end_time = self._str2time(end_timestr)
+            custom = self._str2custom(customstr)
+            cycbgn_dtime = self._timestamp2datetime(cycbgn_timestamp)
+            cycend_dtime = self._timestamp2datetime(cycend_timestamp)
+            reminder: ReminderDict = {
+                "clk_time": clk_time,
+                "bgn_time": bgn_time,
+                "end_time": end_time,
+                "every": every,
+                "unit": cast(TimeUnit, unit),
+                "custom": custom,
+                "cycbgn_dtime": cycbgn_dtime,
+                "cycend_dtime": cycend_dtime
+            }
+            self._plan_dict[pid].data["cycle_reminder"][cid] = reminder
+
         # pv(self._plan_dict)
 
-    def add_plan(self, name: str, note: str = "", tags: list[str] = [],
-            iid: IconTuple | None = None, fid: int = -1,
-            clk_time: datetime.time | None = None,
-            bgn_time: datetime.time | None = None,
-            end_time: datetime.time | None = None,
-            every: int = 0, unit: TimeUnit = "WK",
-            custom: DayType | list[int] = "ED",            
-            cycbgn_dtime: datetime.datetime | None = None,
-            cycend_dtime: datetime.datetime | None = None,
+    def add_plan(self, name: str, note: str = "", tags: list[str] | None = None,
+            icon: IconTuple | None = None, fid: int = -1,
             action: ActTyp = ActTyp.NOACTION,
             status: StatusEnum = StatusEnum.ONGOING,
             locate_at: LocTuple | None = None) -> int:
@@ -294,14 +319,6 @@ class TimeDatabase:
             tags (): _description_
             iid (): id of icon
             fid (): _description_
-            clk_time ( ): _description_
-            bgn_time ( ): _description_
-            end_time ( ): _description_
-            every (int): _description_, cycle interval
-            unit (str): _description_, cycle time unit
-            custom ( ): _description_
-            cycbgn_dtime ( ): _description_
-            cycend_dtime ( ): _description_
             action ( ): _description_
             status (): _description_
             location (): _description_
@@ -315,23 +332,18 @@ class TimeDatabase:
             # reminder_str = self._time2str(reminder_time)
         # else:
             # reminder_str = ""
-
         tagstr = str(tags)
-        iidstr = str(iid)
-        clk_timestr = self._time2str(clk_time)
-        bgn_timestr = self._time2str(bgn_time)
-        end_timestr = self._time2str(end_time)
-        cycbgn_timestamp = self._datetime2timestamp(cycbgn_dtime)
-        cycend_timestamp  = self._datetime2timestamp(cycend_dtime)
+        if tags is None:
+            tags = []
+            tagstr = ""
+        iconstr = str(icon)
         locstr = self._loc2geo(locate_at)
 
         _ = self._database.execute1("""
-            INSERT INTO PLANS (name, note, tags, iid, fid, clk_timestr, bgn_timestr, end_timestr,
-                every, unit, customstr, cycbgn_timestamp, cycend_timestamp,
+            INSERT INTO PLANS (name, note, tags, iid, fid,
                 action, status, locstr)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (name, note, tagstr, iidstr, fid, clk_timestr, bgn_timestr, end_timestr,  \
-                every, unit, str(custom), cycbgn_timestamp, cycend_timestamp, \
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, note, tagstr, iconstr, fid,  \
                 action, status, locstr)
         )
         data = self._database.get(
@@ -343,10 +355,8 @@ class TimeDatabase:
             raise RuntimeError("no last_insert_rowid")
 
         plandata: PlanDataDict = {
-            "name": name, "note": note, "tags": tags, "iid": iid, "fid": fid,
-            "clk_time": clk_time, "bgn_time": bgn_time, "end_time": end_time,
-            "every": every, "unit": unit, "custom": custom,
-            "cycbgn_dtime": cycbgn_dtime, "cycend_dtime": cycend_dtime,
+            "name": name, "note": note, "tags": tags, "iid": icon, "fid": fid,
+            "cycle_reminder": {},
             "action": action,
             "status": status,
             "location": locate_at
@@ -370,11 +380,8 @@ class TimeDatabase:
         pv(sql)
         _ = self._database.execute1(sql)
 
-    # TODO: attrib Literal
-    def modify_plan(self, pid: int, attrib: str,
-            newval: str | IconTuple | list[str] | int \
-                | LocTuple | StatusEnum | TimeUnit | list[int] | DayType \
-                | datetime.time | datetime.datetime | ActTyp | None):
+    def modify_plan(self, pid: int, attrib: PlanAttrType,
+            newval: PlanValType):
         """_summary_
 
         Args:
@@ -408,7 +415,7 @@ class TimeDatabase:
                 newval_sql = newval
             case "tags":
                 assert isinstance(newval, list)
-                plan.data[attrib] = cast(list[str], newval)
+                plan.data[attrib] = newval
                 attr_sql = attrib
                 newval_sql = str(newval)
             case "iid":
@@ -453,31 +460,6 @@ class TimeDatabase:
                     po(warnmsg)
                     return False
                 plan.data[attrib] = newval
-            case "clk_time" | "bgn_time" | "end_time":
-                assert isinstance(newval, datetime.time)
-                plan.data[attrib] = newval
-                attr_sql = attrib + "str"
-                newval_sql = self._time2str(newval)
-            case "every":
-                assert isinstance(newval, int)
-                plan.data[attrib] = newval
-                attr_sql = attrib
-                newval_sql = newval
-            case "unit":
-                assert newval in VALID_TIMEUNIT
-                plan.data[attrib] = cast(TimeUnit, newval)
-                attr_sql = attrib
-                newval_sql = newval
-            case "custom":
-                assert newval in VALID_DAYTYPE or isinstance(newval, list)
-                plan.data[attrib] = cast(DayType | list[int], newval)
-                attr_sql = "customstr"
-                newval_sql = str(newval)
-            case "cycbgn_dtime" | "cycend_dtime":
-                assert isinstance(newval, datetime.datetime)
-                plan.data[attrib] = newval
-                attr_sql = attrib.replace("_dtime", "_timestamp")
-                newval_sql = self._datetime2timestamp(newval)
             case "action":
                 assert isinstance(newval, ActTyp)
                 plan.data[attrib] = newval
@@ -505,7 +487,7 @@ class TimeDatabase:
 
         return True
 
-    def get_planattr(self, pid: int, attrib: str):
+    def get_plan_attr(self, pid: int, attrib: str):
         """_summary_
 
         Args:
@@ -520,15 +502,169 @@ class TimeDatabase:
         """
         for fid, father in self._plan_dict.items():
             if fid == pid:
-                return father.data[attrib]
+                return cast(PlanValType, father.data[attrib])
             for cid, child, in father.children.items():
                 if cid == pid:
-                    return child[attrib]
+                    return cast(PlanValType, child[attrib])
         raise KeyError(f"There is no {attrib} in Plan {pid}")
 
     @property
     def plan_dict(self):
         return self._plan_dict
+
+    def add_reminder(self, pid: int,
+            clk_time: datetime.time | None = None,
+            bgn_time: datetime.time | None = None,
+            end_time: datetime.time | None = None,
+            every: int = 0, unit: TimeUnit = "WK",
+            custom: DayType | list[int] = "ED",            
+            cycbgn_dtime: datetime.datetime | None = None,
+            cycend_dtime: datetime.datetime | None = None) -> int:
+        """_summary_
+
+        Args:
+            pid (): _description_
+            clk_time ( ): _description_
+            bgn_time ( ): _description_
+            end_time ( ): _description_
+            every (int): _description_, cycle interval
+            unit (str): _description_, cycle time unit
+            custom ( ): _description_
+            cycbgn_dtime ( ): _description_
+            cycend_dtime ( ): _description_
+        Raises:
+            RuntimeError: _description_
+
+        Returns:
+            int: id of new reminder
+        """
+        clk_timestr = self._time2str(clk_time)
+        bgn_timestr = self._time2str(bgn_time)
+        end_timestr = self._time2str(end_time)
+        cycbgn_timestamp = self._datetime2timestamp(cycbgn_dtime)
+        cycend_timestamp  = self._datetime2timestamp(cycend_dtime)
+
+        _ = self._database.execute1("""
+            INSERT INTO REMINDERS (pid, clk_timestr, bgn_timestr, end_timestr,
+                every, unit, customstr, cycbgn_timestamp, cycend_timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (pid, clk_timestr, bgn_timestr, end_timestr,  \
+                every, unit, str(custom), cycbgn_timestamp, cycend_timestamp)
+        )
+        data = self._database.get(
+                "SELECT last_insert_rowid()"
+            )
+        if data is not None:
+            cid = cast(int, data[0])
+        else:
+            raise RuntimeError("no last_insert_rowid")
+
+        reminder: ReminderDict = {
+            "clk_time": clk_time,
+            "bgn_time": bgn_time,
+            "end_time": end_time,
+            "every": every,
+            "unit": unit,
+            "custom": custom,
+            "cycbgn_dtime": cycbgn_dtime,
+            "cycend_dtime": cycend_dtime
+        }
+        self._plan_dict[pid].data["cycle_reminder"][cid] = reminder
+
+        return cid
+
+    def del_reminder(self, cid: int):
+        """_summary_
+
+        Args:
+            cid (int): _description_
+        """
+        sql = f"DELETE FROM REMINDERS WHERE cid='{cid}'"
+        pv(sql)
+        _ = self._database.execute1(sql)
+
+    def modify_reminder(self, pid: int, cid: int, attrib: ReminderAttrType,
+            newval: ReminderValType):
+        """_summary_
+
+        Args:
+            pid (int): _description_
+            cid (int): _description_
+            attrib (str): _description_
+            newval (_type_): _description_
+        """
+        plan = Plan()
+        for fid, father in self._plan_dict.items():
+            if fid == pid:
+                plan = father
+                break
+            for cid, child, in father.children.items():
+                if cid == pid:
+                    plan.data = child
+                    break
+        reminder = plan.data["cycle_reminder"][cid]
+        oldval = reminder[attrib]
+        match attrib:
+            case "clk_time" | "bgn_time" | "end_time":
+                assert isinstance(newval, datetime.time)
+                reminder[attrib] = newval
+                attr_sql = attrib + "str"
+                newval_sql = self._time2str(newval)
+            case "every":
+                assert isinstance(newval, int)
+                reminder[attrib] = newval
+                attr_sql = attrib
+                newval_sql = newval
+            case "unit":
+                assert newval in VALID_TIMEUNIT
+                reminder[attrib] = cast(TimeUnit, newval)
+                attr_sql = attrib
+                newval_sql = newval
+            case "custom":
+                assert newval in VALID_DAYTYPE or isinstance(newval, list)
+                reminder[attrib] = cast(DayType | list[int], newval)
+                attr_sql = "customstr"
+                newval_sql = str(newval)
+            case "cycbgn_dtime" | "cycend_dtime":
+                assert isinstance(newval, datetime.datetime)
+                reminder[attrib] = newval
+                attr_sql = attrib.replace("_dtime", "_timestamp")
+                newval_sql = self._datetime2timestamp(newval)
+            # case _:
+            #     raise KeyError(f"There is no {attrib} in Plan {pid}")
+
+        sql = f"UPDATE REMINDERS SET {attr_sql} = ? WHERE pid = ?"
+        pv(sql)
+        _ = self._database.execute1(sql, (newval_sql, pid))
+
+        po((f"update '{attrib}' of #{cid} 'cycle_reminder' in #{pid} plan "
+            f"from '{oldval}' to '{newval}'"))
+
+        return True
+
+    def get_reminder_attr(self, pid: int, cid: int, attrib: str):
+        """_summary_
+
+        Args:
+            pi (int): _description_
+            cid (int): _description_
+            attrib (str): _description_
+
+        Raises:
+            KeyError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        for fid, father in self._plan_dict.items():
+            if fid == pid:
+                return cast(ReminderValType, 
+                    father.data["cycle_reminder"][cid][attrib])
+            for cid, child, in father.children.items():
+                if cid == pid:
+                    return cast(ReminderValType,
+                        child["cycle_reminder"][cid][attrib])
+        raise KeyError(f"There is no {attrib} in Plan {pid}")
 
     # def read_allrecord(self):
         # for event, strt_dtime, end_dtime in \
