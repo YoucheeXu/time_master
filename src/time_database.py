@@ -56,6 +56,7 @@ class TimeDatabase:
     | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
     | rid | int ||  |
     | pid | int || refere to pid in Plan |
+    | name | str ||  |
     | bgn_timestamp | float | datetime.datetime |  |
     | end_timestamp | float | datetime.datetime |  |
 
@@ -133,7 +134,8 @@ class TimeDatabase:
             CREATE TABLE IF NOT EXISTS RECORDS(
                 rid INTEGER PRIMARY KEY AUTOINCREMENT,
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
-                bgn_timestamp REAL
+                name TEXT NOT NULL,
+                bgn_timestamp REAL,
                 end_timestamp REAL,
                 FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
             )''')
@@ -678,7 +680,9 @@ class TimeDatabase:
             # self._record_dict[rid] = record
         # pv(self._record_dict)
 
-    def add_record(self, pid: int, bgn_dtime: datetime.datetime, end_dtime: datetime.datetime | None = None):
+    def add_record(self, name: str, bgn_dtime: datetime.datetime,
+            pid: int = -1,
+            end_dtime: datetime.datetime | None = None):
         """_summary_
 
         Args:
@@ -690,9 +694,9 @@ class TimeDatabase:
         end_timestamp = self._datetime2timestamp(end_dtime)
 
         _ = self._database.execute1(
-            """INSERT INTO RECORDS (pid, bgn_timestamp, end_timestamp) 
-                VALUES (?, ?, ?)""",
-            (pid, bgn_timestamp, end_timestamp)
+            """INSERT INTO RECORDS (pid, name, bgn_timestamp, end_timestamp) 
+                VALUES (?, ?, ?, ?)""",
+            (pid, name, bgn_timestamp, end_timestamp)
         )
         data = self._database.get(
             "SELECT last_insert_rowid()"
@@ -723,13 +727,14 @@ class TimeDatabase:
             _type_: _description_
         """
         record_dict: dict[int, RecordDict] = {}
-        for rid, pid, bgn_timestamp, end_timestamp in \
+        for rid, pid, name, bgn_timestamp, end_timestamp in \
             cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(
                     "SELECT * FROM RECORDS WHERE date(bgn_timestamp) = ?",
                     (date,))):
             record: RecordDict = {
                 "pid": pid,
+                "name": name,
                 "bgn_dtime": self._timestamp2datetime(bgn_timestamp),
                 "end_dtime": self._timestamp2datetime(end_timestamp)
             }

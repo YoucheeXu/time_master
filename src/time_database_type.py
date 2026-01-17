@@ -193,11 +193,13 @@ class RecordSqlTuple(NamedTuple):
     Attributes:
         rid (int): _description_
         pid (int): _description_
+        name (str): _description_
         bgn_timestamp (): _description_
         end_timestamp (): _description_
     """
     rid: int
     pid: int
+    name: str
     bgn_timestamp: float
     end_timestamp: float
 
@@ -207,9 +209,11 @@ class RecordDict(TypedDict):
 
     Attributes:
         pid (int): _description_
+        name (str): _description_
         bgn_dtime (): _description_
         end_dtime (): _description_
     """
     pid: int
+    name: str
     bgn_dtime: datetime.datetime | None
     end_dtime: datetime.datetime | None
