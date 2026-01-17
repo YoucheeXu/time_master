@@ -13,6 +13,7 @@ sys.path.append(root_path)
 from pyutilities.logit import pv, po, pe
 from src.time_database_type import IconTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
+from src.time_database_type import RecordDict
 from src.time_database import TimeDatabase
 """
     uv run pytest --cov=src.time_database .\tests\test_timedatabase_pytest.py -v
@@ -172,3 +173,29 @@ def test_modify_plan3(db: TimeDatabase):
     icon = IconTuple(1,1)
     modify_plan(db, pid_brush, "iid", icon)
     modify_plan(db, pid_brush, "iid", None)
+
+
+def add_record(db: TimeDatabase, name: str, bgn_dtime: datetime.datetime,
+        pid: int = -1,
+        end_dtime: datetime.datetime | None = None):
+    rid = db.add_record(name, bgn_dtime, pid, end_dtime)
+    record: RecordDict = {
+        "pid": pid,
+        "name": name,
+        "bgn_dtime": bgn_dtime,
+        "end_dtime": end_dtime
+    }
+    speic_day = bgn_dtime.date()
+    print(f"speic_day = {speic_day}")
+    records = db.get_records(speic_day)
+    print(f"records = {records}")
+
+    assert record == records[rid]
+
+
+def test_add_record(db: TimeDatabase):
+    test_add_plan(db)
+    clock1 = datetime.datetime(2016, 1, 16, 7, 45)
+    add_record(db, "Wakeup", clock1, 1)
+    clock2 = datetime.datetime(2016, 1, 16, 7, 50)
+    add_record(db, "Brush", clock1, 1, clock2)

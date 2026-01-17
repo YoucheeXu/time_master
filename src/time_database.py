@@ -727,11 +727,15 @@ class TimeDatabase:
             _type_: _description_
         """
         record_dict: dict[int, RecordDict] = {}
+        target_date = date.isoformat()
+        print(f"speict_day = {target_date}")
         for rid, pid, name, bgn_timestamp, end_timestamp in \
             cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(
-                    "SELECT * FROM RECORDS WHERE date(bgn_timestamp) = ?",
-                    (date,))):
+                    "SELECT * FROM RECORDS WHERE \
+                        date(bgn_timestamp, 'unixepoch', 'localtime') = ?",
+                    (target_date,)
+                )):
             record: RecordDict = {
                 "pid": pid,
                 "name": name,
