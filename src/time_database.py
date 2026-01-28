@@ -78,24 +78,27 @@ class TimeDatabase:
             BidirectionalDict[str, str]({"HR": "小时", "DY": "日", \
                 "WK": "周", "MH": "月", "SZ": "季节", "YR": "年"})
 
-    # TODO: check version
-    def open(self, dbfile: str) -> tuple[int, str]:
+    def open(self, dbfile: str, req_ver: int = 0) -> tuple[int, str]:
         """_summary_
 
         Args:
             dbfile (_type_): _description_
         """
         if not os.path.isfile(dbfile):
-            ret, str = self._database.open(dbfile, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+            ret, str = self._database.open(dbfile,
+                sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+            ver = self._database.read_version()
+            if ver != req_ver:
+                return -1, (f"Version don't match, require version is "
+                    f"{req_ver}, version of database actaully is {ver}")
             if ret == 1:
-                self._new()
+                self._new(req_ver)
                 return 1, f"OK to open {dbfile} and creat table 'Plans' and 'Records'."
         else:
             ret, str = self._database.open(dbfile, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)   
         return ret, str
 
-    # TODO: add version
-    def _new(self):
+    def _new(self, ver: int):
         """_summary_
         """
         _ = self._database.execute('''
@@ -141,8 +144,10 @@ class TimeDatabase:
             )''')
 
         _ = self._database.commit()
+        if ver != 0:
+            self._database.write_version(ver)
 
-    # TODO: convert geo to locatoin
+    # TODO: convert geo to location
     def _geo2loc(self, latitude: float, longitude: float):
         """_summary_
 
