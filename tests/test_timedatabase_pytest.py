@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+"""
+    uv run pytest --cov=src.time_database .\tests\test_timedatabase_pytest.py -v
+"""
 import pytest
 import sys
 import os
@@ -7,17 +10,11 @@ import datetime
 import uuid
 from typing import cast
 
-root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(root_path)
-
 from pyutilities.logit import pv, po, pe
 from src.time_database_type import IconTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
 from src.time_database_type import RecordDict
 from src.time_database import TimeDatabase
-"""
-    uv run pytest --cov=src.time_database .\tests\test_timedatabase_pytest.py -v
-"""
 
 
 @pytest.fixture(scope="function")
