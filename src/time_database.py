@@ -683,12 +683,21 @@ class TimeDatabase:
     def add_record(self, name: str, bgn_dtime: datetime.datetime,
             pid: int = -1,
             end_dtime: datetime.datetime | None = None):
-        """_summary_
+        """ Insert a new record into the RECORDS table
 
         Args:
-            pid (int): _description_
-            bgn_dtime (datetime.datetime): _description_
-            end_dtime (datetime.datetime | None, optional): _description_. Defaults to None.
+            name (str): Name of the record
+            bgn_dtime (datetime.datetime): Start datetime of the record
+            pid (int, optional): Associated pid, default value is -1
+            end_dtime (datetime.datetime | None, optional): End datetime of the record,
+                None means no end time
+        
+        Returns:
+            int: Auto-increment ID (rid) of the newly added record
+        
+        Raises:
+            RuntimeError: Raised when insertion fails or
+                auto-increment ID cannot be obtained
         """
         bgn_timestamp = self._datetime2timestamp(bgn_dtime)
         end_timestamp = self._datetime2timestamp(end_dtime)
@@ -708,11 +717,24 @@ class TimeDatabase:
         return rid
 
     def del_record(self, rid: int):
-        """_summary_
+        """Delete a record by rid
 
         Args:
-            rid (int): _description_
+            rid (int): Record ID to delete (must be positive integer)
+
+        Raises:
+            TypeError: If rid is not an integer
+            ValueError: If rid is a non-positive integer (invalid for AUTOINCREMENT)
         """
+        # Step 1: Validate rid type (enforce int, even in dynamic Python)
+        if not isinstance(rid, int):
+            raise TypeError(f"rid must be an integer (got {type(rid).__name__}: {rid})")
+
+        # Step 2: Validate rid value (AUTOINCREMENT rid is always positive)
+        if rid <= 0:
+            raise ValueError(f"rid must be a positive integer (got {rid})")
+
+        # Step 3: Build and execute SQL (keep your original logic)
         sql = f"DELETE FROM RECORDS WHERE rid='{rid}'"
         pv(sql)
         _ = self._database.execute1(sql)
