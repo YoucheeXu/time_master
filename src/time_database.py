@@ -739,25 +739,49 @@ class TimeDatabase:
         pv(sql)
         _ = self._database.execute1(sql)
 
-    def get_records(self, date: datetime.date):
-        """_summary_
+    def get_records(self, start_date: datetime.date, pid: int = -1,
+            end_date: datetime.date | None = None):
+        """ Query records within the specified date range from the RECORDS table
 
         Args:
-            date (datetime.date): _description_
+            start_date (datetime.date): Start date of record
+            pid (int, optional): Filter records by pid; use -1 to query all pids (default: -1)
+            end_date (datetime.date | None): End date of the record,
+                defaults to start_date if None (single-day query)
 
         Returns:
-            _type_: _description_
+            dict[int, RecordDict]: Dictionary with record ID (rid) as key and record details as value
         """
         record_dict: dict[int, RecordDict] = {}
-        target_date = date.isoformat()
-        print(f"speict_day = {target_date}")
+        # Handle default case when end_date is None: query single day
+        if end_date is None:
+            end_date = start_date
+
+        # Convert dates to ISO format (YYYY-MM-DD) for SQL query
+        start_date_iso = start_date.isoformat()
+        end_date_iso = end_date.isoformat()
+        print((f"Query date range: {start_date_iso} to {end_date_iso}, "
+            f"pid filter: {pid if pid != -1 else 'all'}"))
+
+        # Step 1: Dynamically build SQL query and parameters based on pid
+        query_parts = [
+            "SELECT * FROM RECORDS",
+            "WHERE date(bgn_timestamp, 'unixepoch', 'localtime') BETWEEN ? AND ?"
+        ]
+        query_params = [start_date_iso, end_date_iso]
+
+        # Add pid condition if pid != -1 (ignore pid when pid = -1)
+        if pid != -1:
+            query_parts.append("AND pid = ?")
+            query_params.append(str(pid))
+
+        # Combine query parts into final SQL
+        query_sql = "\n    ".join(query_parts)
+
+        # Step 2: Iterate over query results and build record dictionary
         for rid, pid, name, bgn_timestamp, end_timestamp in \
             cast(Generator[RecordSqlTuple, None, None],
-                self._database.each(
-                    "SELECT * FROM RECORDS WHERE \
-                        date(bgn_timestamp, 'unixepoch', 'localtime') = ?",
-                    (target_date,)
-                )):
+                self._database.each(query_sql, tuple(query_params))):
             record: RecordDict = {
                 "pid": pid,
                 "name": name,
