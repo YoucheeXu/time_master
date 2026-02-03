@@ -17,7 +17,7 @@ from src.time_database_type import VALID_TIMEUNIT, TimeUnit, VALID_DAYTYPE, DayT
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, ReminderSqlTuple, PlanSqlTuple, RecordSqlTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
-from src.time_database_type import IconTuple, LocTuple, ReminderDict, PlanDataDict, Plan, RecordDataDict
+from src.time_database_type import IconTuple, LocTuple, ReminderDataDict, PlanDataDict, Plan, RecordDataDict
 
 
 class TimeDatabase:
@@ -299,7 +299,7 @@ class TimeDatabase:
             custom = self._str2custom(customstr)
             cycbgn_dtime = self._timestamp2datetime(cycbgn_timestamp)
             cycend_dtime = self._timestamp2datetime(cycend_timestamp)
-            reminder: ReminderDict = {
+            reminder: ReminderDataDict = {
                 "clk_time": clk_time,
                 "bgn_time": bgn_time,
                 "end_time": end_time,
@@ -566,7 +566,7 @@ class TimeDatabase:
         else:
             raise RuntimeError("no last_insert_rowid")
 
-        reminder: ReminderDict = {
+        reminder: ReminderDataDict = {
             "clk_time": clk_time,
             "bgn_time": bgn_time,
             "end_time": end_time,

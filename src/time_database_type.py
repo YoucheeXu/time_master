@@ -118,7 +118,7 @@ class IconTuple(NamedTuple):
     eleidx: int
 
 
-class ReminderDict(TypedDict):
+class ReminderDataDict(TypedDict):
     """ _summary_
 
     Attributes:
@@ -164,7 +164,7 @@ class PlanDataDict(TypedDict):
     tags: list[str]
     iid: IconTuple | None
     fid: int
-    cycle_reminder: dict[int, ReminderDict]
+    cycle_reminder: dict[int, ReminderDataDict]
     action: ActTyp
     status: StatusEnum
     location: LocTuple | None
