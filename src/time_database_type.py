@@ -76,7 +76,7 @@ class ReminderSqlTuple(NamedTuple):
         pid (int): _description_
         clk_timestr ( ): reminder time
         bgn_timestr ( ): _description_
-        end_timestr ( ): _description_        
+        duration ( ): _description_, int
         every (int): _description_
         unit (int): _description_
         customstr ( ): _description_
@@ -87,7 +87,7 @@ class ReminderSqlTuple(NamedTuple):
     pid: int
     clk_timestr: str
     bgn_timestr: str
-    end_timestr: str
+    duration: int
     every: int
     unit: int
     customstr: str
@@ -137,7 +137,7 @@ class ReminderDataDict(TypedDict):
     Attributes:
         clk_time ( ): _description_
         bgn_time ( ): _description_
-        end_time ( ): _description_
+        duration ( ): _description_, in minute
         every (int): _description_
         unit (TimeUnit): _description_
         custom ( ): _description_
@@ -146,14 +146,14 @@ class ReminderDataDict(TypedDict):
     """
     clk_time: datetime.time | None
     bgn_time: datetime.time | None
-    end_time: datetime.time | None
+    duration: int
     every: int
     unit: TimeUnit
     custom: DayType | list[int]
     cycbgn_dtime: datetime.datetime | None
     cycend_dtime: datetime.datetime | None
 
-ReminderAttrType = Literal["clk_time", "bgn_time", "end_time", "every", \
+ReminderAttrType = Literal["clk_time", "bgn_time", "duration", "every", \
     "unit", "custom", "cycbgn_dtime", "cycend_dtime"]
 ReminderValType = datetime.time | int | TimeUnit  | DayType | list[int] \
     | datetime.datetime | None

@@ -45,7 +45,7 @@ class TimeDatabase:
     | pid | int || refere to pid in Plan |
     | clk_timestr | str | datetime.time or None ||  |
     | bgn_timestr | str | datetime.time or None |  |
-    | end_timestr | str | datetime.time or None |  |
+    | duration | int || in minute |
     | every | int ||  |
     | unit | str | TimeUnit | |
     | customstr | str  | DayType or list[int] | |
@@ -126,7 +126,7 @@ class TimeDatabase:
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 clk_timestr TEXT,
                 bgn_timestr TEXT,
-                end_timestr TEXT,
+                duration INT,
                 every INT,
                 unit TEXT,
                 customstr TEXT,
@@ -297,20 +297,19 @@ class TimeDatabase:
                 self._plan_dict[fid].children[pid] = plandata
 
         for cid, pid, \
-            clk_timestr, bgn_timestr, end_timestr,  \
+            clk_timestr, bgn_timestr, duration,  \
             every, unit, customstr, cycbgn_timestamp, cycend_timestamp in \
                 cast(Generator[ReminderSqlTuple, None, None],
                 self._database.each("SELECT * FROM REMINDERS")):
             clk_time = self._str2time(clk_timestr)
             bgn_time = self._str2time(bgn_timestr)
-            end_time = self._str2time(end_timestr)
             custom = self._str2custom(customstr)
             cycbgn_dtime = self._timestamp2datetime(cycbgn_timestamp)
             cycend_dtime = self._timestamp2datetime(cycend_timestamp)
             reminder: ReminderDataDict = {
                 "clk_time": clk_time,
                 "bgn_time": bgn_time,
-                "end_time": end_time,
+                "duration": duration,
                 "every": every,
                 "unit": TimeUnit(unit),
                 "custom": custom,
@@ -535,7 +534,7 @@ class TimeDatabase:
     def add_reminder(self, pid: int,
             clk_time: datetime.time | None = None,
             bgn_time: datetime.time | None = None,
-            end_time: datetime.time | None = None,
+            duration: int = 0,
             every: int = 0, unit: TimeUnit = TimeUnit.WEEK,
             custom: DayType | list[int] = DayType.EVERYDAY,            
             cycbgn_dtime: datetime.datetime | None = None,
@@ -546,7 +545,7 @@ class TimeDatabase:
             pid (): _description_
             clk_time ( ): _description_
             bgn_time ( ): _description_
-            end_time ( ): _description_
+            duration ( ): _description_, in minute
             every (int): _description_, cycle interval
             unit (str): _description_, cycle time unit
             custom ( ): _description_
@@ -560,15 +559,14 @@ class TimeDatabase:
         """
         clk_timestr = self._time2str(clk_time)
         bgn_timestr = self._time2str(bgn_time)
-        end_timestr = self._time2str(end_time)
         cycbgn_timestamp = self._datetime2timestamp(cycbgn_dtime)
         cycend_timestamp  = self._datetime2timestamp(cycend_dtime)
 
         _ = self._database.execute1("""
-            INSERT INTO REMINDERS (pid, clk_timestr, bgn_timestr, end_timestr,
+            INSERT INTO REMINDERS (pid, clk_timestr, bgn_timestr, duration,
                 every, unit, customstr, cycbgn_timestamp, cycend_timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (pid, clk_timestr, bgn_timestr, end_timestr,  \
+            (pid, clk_timestr, bgn_timestr, duration,  \
                 every, unit, str(custom), cycbgn_timestamp, cycend_timestamp)
         )
         data = self._database.get(
@@ -582,7 +580,7 @@ class TimeDatabase:
         reminder: ReminderDataDict = {
             "clk_time": clk_time,
             "bgn_time": bgn_time,
-            "end_time": end_time,
+            "duration": duration,
             "every": every,
             "unit": unit,
             "custom": custom,
@@ -625,13 +623,13 @@ class TimeDatabase:
         reminder = plan.data["reminders"][cid]
         oldval = reminder[attrib]
         match attrib:
-            case "clk_time" | "bgn_time" | "end_time":
+            case "clk_time" | "bgn_time":
                 assert isinstance(newval, datetime.time)
                 reminder[attrib] = newval
                 attr_sql = attrib + "str"
                 newval_sql = self._time2str(newval)
-            case "every":
-                assert isinstance(newval, TimeUnit)
+            case "duration" | "every":
+                assert isinstance(newval, int)
                 reminder[attrib] = newval
                 attr_sql = attrib
                 newval_sql = newval
