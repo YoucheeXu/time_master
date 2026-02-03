@@ -195,13 +195,13 @@ class RecordSqlTuple(NamedTuple):
         pid (int): _description_
         name (str): _description_
         bgn_timestamp (): _description_
-        end_timestamp (): _description_
+        duration (): _description_, in minute
     """
     rid: int
     pid: int
     name: str
     bgn_timestamp: float
-    end_timestamp: float
+    duration: int
 
 
 class RecordDataDict(TypedDict):
@@ -211,9 +211,9 @@ class RecordDataDict(TypedDict):
         pid (int): _description_
         name (str): _description_
         bgn_dtime (): _description_
-        end_dtime (): _description_
+        duration (): _description_, in minute
     """
     pid: int
     name: str
     bgn_dtime: datetime.datetime | None
-    end_dtime: datetime.datetime | None
+    duration: int

@@ -58,7 +58,7 @@ class TimeDatabase:
     | pid | int || refere to pid in Plan |
     | name | str ||  |
     | bgn_timestamp | float | datetime.datetime |  |
-    | end_timestamp | float | datetime.datetime |  |
+    | duration | int || in minute |
 
     Attributes:
         _database (_type_): _description_
@@ -139,7 +139,7 @@ class TimeDatabase:
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 name TEXT NOT NULL,
                 bgn_timestamp REAL,
-                end_timestamp REAL,
+                duration INT,
                 FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
             )''')
 
@@ -687,15 +687,14 @@ class TimeDatabase:
 
     def add_record(self, name: str, bgn_dtime: datetime.datetime,
             pid: int = -1,
-            end_dtime: datetime.datetime | None = None):
+            duration: int = 0):
         """ Insert a new record into the RECORDS table
 
         Args:
             name (str): Name of the record
             bgn_dtime (datetime.datetime): Start datetime of the record
             pid (int, optional): Associated pid, default value is -1
-            end_dtime (datetime.datetime | None, optional): End datetime of the record,
-                None means no end time
+            duration (int, optional): duration of the record in minute, default value is 0
         
         Returns:
             int: Auto-increment ID (rid) of the newly added record
@@ -705,12 +704,11 @@ class TimeDatabase:
                 auto-increment ID cannot be obtained
         """
         bgn_timestamp = self._datetime2timestamp(bgn_dtime)
-        end_timestamp = self._datetime2timestamp(end_dtime)
 
         _ = self._database.execute1(
-            """INSERT INTO RECORDS (pid, name, bgn_timestamp, end_timestamp) 
+            """INSERT INTO RECORDS (pid, name, bgn_timestamp, duration) 
                 VALUES (?, ?, ?, ?)""",
-            (pid, name, bgn_timestamp, end_timestamp)
+            (pid, name, bgn_timestamp, duration)
         )
         data = self._database.get(
             "SELECT last_insert_rowid()"
@@ -784,14 +782,14 @@ class TimeDatabase:
         query_sql = "\n    ".join(query_parts)
 
         # Step 2: Iterate over query results and build record dictionary
-        for rid, pid, name, bgn_timestamp, end_timestamp in \
+        for rid, pid, name, bgn_timestamp, duration in \
             cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(query_sql, tuple(query_params))):
             record: RecordDataDict = {
                 "pid": pid,
                 "name": name,
                 "bgn_dtime": self._timestamp2datetime(bgn_timestamp),
-                "end_dtime": self._timestamp2datetime(end_timestamp)
+                "duration": duration
             }
             record_dict[rid] = record
 

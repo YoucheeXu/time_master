@@ -71,7 +71,7 @@ def test_add_record_raise_no_last_insert_rowid(time_database: TimeDatabase, mock
             name=test_name,
             bgn_dtime=test_bgn_dtime,
             pid=test_pid,
-            end_dtime=None
+            duration=None
         )
 
     # Critical assertion: verify the right error is thrown (core test goal)
@@ -120,7 +120,7 @@ def test_add_record_success(time_database: TimeDatabase):
         name=record_name,
         bgn_dtime=bgn_dtime,
         pid=pid,
-        end_dtime=end_dtime
+        duration=end_dtime
     )
 
     # Verify ID is integer and starts at 1 (first record)
@@ -142,7 +142,7 @@ def test_add_record_with_none_end_dtime(time_database: TimeDatabase):
         name="No End Time",
         bgn_dtime=datetime.datetime(2026, 1, 27, 8, 0, 0),
         pid=2,
-        end_dtime=None
+        duration=None
     )
 
     assert rid == 1
