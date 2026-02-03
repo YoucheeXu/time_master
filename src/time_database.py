@@ -13,7 +13,7 @@ from pyutilities.sqlite import SQLite
 
 from src.bidirectionaldict import BidirectionalDict
 from src.action_sys import ActTyp
-from src.time_database_type import VALID_TIMEUNIT, TimeUnit, VALID_DAYTYPE, DayType
+from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, ReminderSqlTuple, PlanSqlTuple, RecordSqlTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
@@ -254,10 +254,15 @@ class TimeDatabase:
         Returns:
             _type_: _description_
         """
-        if specialstr in VALID_DAYTYPE:
-            return cast(DayType, specialstr)
+        # if specialstr in VALID_DAYTYPE:
+        #     return cast(DayType, specialstr)
+        # else:
+        #     return cast(list[int], literal_eval(specialstr))
+        custom = cast(int | list[int], literal_eval(specialstr))
+        if isinstance(custom, int):
+            return DayType(custom)
         else:
-            return cast(list[int], literal_eval(specialstr))
+            return custom
 
     def read_plans(self):
         """ _summary_
@@ -307,7 +312,7 @@ class TimeDatabase:
                 "bgn_time": bgn_time,
                 "end_time": end_time,
                 "every": every,
-                "unit": cast(TimeUnit, unit),
+                "unit": TimeUnit(unit),
                 "custom": custom,
                 "cycbgn_dtime": cycbgn_dtime,
                 "cycend_dtime": cycend_dtime
@@ -531,8 +536,8 @@ class TimeDatabase:
             clk_time: datetime.time | None = None,
             bgn_time: datetime.time | None = None,
             end_time: datetime.time | None = None,
-            every: int = 0, unit: TimeUnit = "WK",
-            custom: DayType | list[int] = "ED",            
+            every: int = 0, unit: TimeUnit = TimeUnit.WEEK,
+            custom: DayType | list[int] = DayType.EVERYDAY,            
             cycbgn_dtime: datetime.datetime | None = None,
             cycend_dtime: datetime.datetime | None = None) -> int:
         """_summary_
@@ -626,18 +631,18 @@ class TimeDatabase:
                 attr_sql = attrib + "str"
                 newval_sql = self._time2str(newval)
             case "every":
-                assert isinstance(newval, int)
+                assert isinstance(newval, TimeUnit)
                 reminder[attrib] = newval
                 attr_sql = attrib
                 newval_sql = newval
             case "unit":
-                assert newval in VALID_TIMEUNIT
-                reminder[attrib] = cast(TimeUnit, newval)
+                assert isinstance(newval, TimeUnit)
+                reminder[attrib] = newval
                 attr_sql = attrib
                 newval_sql = newval
             case "custom":
-                assert newval in VALID_DAYTYPE or isinstance(newval, list)
-                reminder[attrib] = cast(DayType | list[int], newval)
+                assert isinstance(newval, DayType) or isinstance(newval, list)
+                reminder[attrib] = newval
                 attr_sql = "customstr"
                 newval_sql = str(newval)
             case "cycbgn_dtime" | "cycend_dtime":

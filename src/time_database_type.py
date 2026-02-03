@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 import datetime
-from enum import IntEnum
+from enum import IntEnum, auto
 from typing import Literal, NamedTuple, TypedDict
 from dataclasses import dataclass, field
 
@@ -9,15 +9,26 @@ from src.action_sys import ActTyp
 
 
 # HR: hour, DY: day, WK: Week, MH: Month, SZ: season, YR: year
-VALID_TIMEUNIT = ["HR", "DY", "WK", "MH", "SZ", "YR"]
-TimeUnit = Literal["HR", "DY", "WK", "MH", "SZ", "YR"]
+# VALID_TIMEUNIT = ["HR", "DY", "WK", "MH", "SZ", "YR"]
+# TimeUnit = Literal["HR", "DY", "WK", "MH", "SZ", "YR"]
 # TimeUnit = Literal[*VALID_TIMEUNIT]
+class TimeUnit(IntEnum):
+    HOUR = auto()
+    DAY = auto()
+    WEEK = auto()
+    MONTH = auto()
+    SEASON = auto()
+    YEAR = auto()
 
 # ED: Every day, WD: Work day, HD: Holiday day
-VALID_DAYTYPE = ["ED", "WD", "HD"]
-DayType = Literal["ED", "WD", "HD"]
+# VALID_DAYTYPE = ["ED", "WD", "HD"]
+# DayType = Literal["ED", "WD", "HD"]
 # DayType = Literal[*VALID_DAYTYPE]
-
+class DayType(IntEnum):
+    EVERYDAY = auto()
+    WORKDAY = auto()
+    WEEKEND = auto()
+    HOLIDAY = auto()
 
 class GeoSqlTuple(NamedTuple):
     """_summary_
@@ -67,7 +78,7 @@ class ReminderSqlTuple(NamedTuple):
         bgn_timestr ( ): _description_
         end_timestr ( ): _description_        
         every (int): _description_
-        unit (str): _description_
+        unit (int): _description_
         customstr ( ): _description_
         cycbgn_timestamp ( ): _description_, cycle
         cycend_timestamp ( ): _description_, end cycle datetime
@@ -78,7 +89,7 @@ class ReminderSqlTuple(NamedTuple):
     bgn_timestr: str
     end_timestr: str
     every: int
-    unit: str
+    unit: int
     customstr: str
     cycbgn_timestamp: float
     cycend_timestamp: float
