@@ -13,7 +13,7 @@ from typing import cast
 from pyutilities.logit import pv, po, pe
 from src.time_database_type import IconTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
-from src.time_database_type import RecordDict
+from src.time_database_type import RecordDataDict
 from src.time_database import TimeDatabase
 
 
@@ -176,7 +176,7 @@ def add_record(db: TimeDatabase, name: str, bgn_dtime: datetime.datetime,
         pid: int = -1,
         end_dtime: datetime.datetime | None = None):
     rid = db.add_record(name, bgn_dtime, pid, end_dtime)
-    record: RecordDict = {
+    record: RecordDataDict = {
         "pid": pid,
         "name": name,
         "bgn_dtime": bgn_dtime,

@@ -17,7 +17,7 @@ from src.time_database_type import VALID_TIMEUNIT, TimeUnit, VALID_DAYTYPE, DayT
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, ReminderSqlTuple, PlanSqlTuple, RecordSqlTuple
 from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
-from src.time_database_type import IconTuple, LocTuple, ReminderDict, PlanDataDict, Plan, RecordDict
+from src.time_database_type import IconTuple, LocTuple, ReminderDict, PlanDataDict, Plan, RecordDataDict
 
 
 class TimeDatabase:
@@ -757,7 +757,7 @@ class TimeDatabase:
         Returns:
             dict[int, RecordDict]: Dictionary with record ID (rid) as key and record details as value
         """
-        record_dict: dict[int, RecordDict] = {}
+        record_dict: dict[int, RecordDataDict] = {}
         # Handle default case when end_date is None: query single day
         if end_date is None:
             end_date = start_date
@@ -787,7 +787,7 @@ class TimeDatabase:
         for rid, pid, name, bgn_timestamp, end_timestamp in \
             cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(query_sql, tuple(query_params))):
-            record: RecordDict = {
+            record: RecordDataDict = {
                 "pid": pid,
                 "name": name,
                 "bgn_dtime": self._timestamp2datetime(bgn_timestamp),

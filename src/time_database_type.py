@@ -204,7 +204,7 @@ class RecordSqlTuple(NamedTuple):
     end_timestamp: float
 
 
-class RecordDict(TypedDict):
+class RecordDataDict(TypedDict):
     """_summary_
 
     Attributes:
