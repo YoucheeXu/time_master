@@ -43,6 +43,7 @@ class PlanSqlTuple(NamedTuple):
         action ( ): _description_
         status (): _description_
         locstr (): _description_
+        sums (): _description_, in minute
     """
     pid: int
     name: str
@@ -53,6 +54,7 @@ class PlanSqlTuple(NamedTuple):
     action: int
     status: int
     locstr: str
+    sums: int
 
 
 class ReminderSqlTuple(NamedTuple):
@@ -158,6 +160,7 @@ class PlanDataDict(TypedDict):
         action ( ): _description_
         status (): _description_
         location (): _description_
+        sums (): _description_, in minute
     """
     name: str
     note: str
@@ -168,9 +171,10 @@ class PlanDataDict(TypedDict):
     action: ActTyp
     status: StatusEnum
     location: LocTuple | None
+    sums: int
 
 PlanAttrType = Literal["name", "note", "tags", "iid", "fid", \
-    "reminders", "action", "status", "location"]
+    "reminders", "action", "status", "location", "sums"]
 PlanValType = str | list[str] | IconTuple \
     | int | ActTyp | StatusEnum | LocTuple| None
 

@@ -35,6 +35,7 @@ class TimeDatabase:
     | action | int | ActTyp |  |
     | status | int | StatusEnum |  |
     | locstr | str | LocDict or None |  |
+    | sums | int | in minute |  |
     |  |  |  |  |
 
     Reminders
@@ -115,7 +116,8 @@ class TimeDatabase:
                 fid INT,
                 action INT,
                 status INT,
-                locstr TEXT
+                locstr TEXT,
+                susm INT
             )''')
 
         _ = self._database.execute('''
@@ -265,7 +267,7 @@ class TimeDatabase:
         self._plan_dict.clear()
 
         for pid, name, note, iid, tags, fid, \
-            action, status, locstr in \
+            action, status, locstr, sums in \
                 cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
             geo = GeoSqlTuple(*literal_eval(locstr))
@@ -279,7 +281,8 @@ class TimeDatabase:
                 "reminders": {},
                 "action": ActTyp(action),
                 "status": StatusEnum(status),
-                "location": locate_at
+                "location": locate_at,
+                "sums": sums
             }
             if fid == -1:
                 plan = Plan()
@@ -366,7 +369,8 @@ class TimeDatabase:
             "reminders": {},
             "action": action,
             "status": status,
-            "location": locate_at
+            "location": locate_at,
+            "sums": 0
         }
         if fid == -1:
             plan = Plan()
@@ -482,11 +486,15 @@ class TimeDatabase:
                 plan.data[attrib] = newval
                 attr_sql = "locstr"
                 newval_sql = self._loc2geo(newval)
+            case "sums":
+                assert isinstance(newval, int)
+                plan.data[attrib] = newval
+                attr_sql = attrib
+                newval_sql = newval
             case _:
                 raise KeyError(f"There is no {attrib} in Plan {pid}")
 
         sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
-        pv(sql)
         _ = self._database.execute1(sql, (newval_sql, pid))
 
         po((f"update '{attrib}' of #{pid} plan '{plan.data["name"]}' "
