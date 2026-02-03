@@ -41,7 +41,7 @@ class TimeDatabase:
     Reminders
     | Item | SqlType | PyType | Notes |
     | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
-    | cid | int ||  |
+    | eid | int ||  |
     | pid | int || refere to pid in Plan |
     | clk_timestr | str | datetime.time or None ||  |
     | bgn_timestr | str | datetime.time or None |  |
@@ -122,7 +122,7 @@ class TimeDatabase:
 
         _ = self._database.execute('''
             CREATE TABLE IF NOT EXISTS REMINDERS(
-                cid INTEGER PRIMARY KEY AUTOINCREMENT,
+                eid INTEGER PRIMARY KEY AUTOINCREMENT,
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 clk_timestr TEXT,
                 bgn_timestr TEXT,
@@ -296,7 +296,7 @@ class TimeDatabase:
             else:
                 self._plan_dict[fid].children[pid] = plandata
 
-        for cid, pid, \
+        for eid, pid, \
             clk_timestr, bgn_timestr, duration,  \
             every, unit, customstr, cycbgn_timestamp, cycend_timestamp in \
                 cast(Generator[ReminderSqlTuple, None, None],
@@ -316,7 +316,7 @@ class TimeDatabase:
                 "cycbgn_dtime": cycbgn_dtime,
                 "cycend_dtime": cycend_dtime
             }
-            self._plan_dict[pid].data["reminders"][cid] = reminder
+            self._plan_dict[pid].data["reminders"][eid] = reminder
 
         # pv(self._plan_dict)
 
@@ -573,7 +573,7 @@ class TimeDatabase:
                 "SELECT last_insert_rowid()"
             )
         if data is not None:
-            cid = cast(int, data[0])
+            eid = cast(int, data[0])
         else:
             raise RuntimeError("no last_insert_rowid")
 
@@ -587,27 +587,27 @@ class TimeDatabase:
             "cycbgn_dtime": cycbgn_dtime,
             "cycend_dtime": cycend_dtime
         }
-        self._plan_dict[pid].data["reminders"][cid] = reminder
+        self._plan_dict[pid].data["reminders"][eid] = reminder
 
-        return cid
+        return eid
 
-    def del_reminder(self, cid: int):
+    def del_reminder(self, eid: int):
         """_summary_
 
         Args:
-            cid (int): _description_
+            eid (int): _description_
         """
-        sql = f"DELETE FROM REMINDERS WHERE cid='{cid}'"
+        sql = f"DELETE FROM REMINDERS WHERE eid='{eid}'"
         pv(sql)
         _ = self._database.execute1(sql)
 
-    def modify_reminder(self, pid: int, cid: int, attrib: ReminderAttrType,
+    def modify_reminder(self, pid: int, eid: int, attrib: ReminderAttrType,
             newval: ReminderValType):
         """_summary_
 
         Args:
             pid (int): _description_
-            cid (int): _description_
+            eid (int): _description_
             attrib (str): _description_
             newval (_type_): _description_
         """
@@ -616,11 +616,11 @@ class TimeDatabase:
             if fid == pid:
                 plan = father
                 break
-            for cid, child, in father.children.items():
-                if cid == pid:
+            for eid, child, in father.children.items():
+                if eid == pid:
                     plan.data = child
                     break
-        reminder = plan.data["reminders"][cid]
+        reminder = plan.data["reminders"][eid]
         oldval = reminder[attrib]
         match attrib:
             case "clk_time" | "bgn_time":
@@ -655,17 +655,17 @@ class TimeDatabase:
         pv(sql)
         _ = self._database.execute1(sql, (newval_sql, pid))
 
-        po((f"update '{attrib}' of #{cid} 'cycle_reminder' in #{pid} plan "
+        po((f"update '{attrib}' of #{eid} 'cycle_reminder' in #{pid} plan "
             f"from '{oldval}' to '{newval}'"))
 
         return True
 
-    def get_reminder_attr(self, pid: int, cid: int, attrib: str):
+    def get_reminder_attr(self, pid: int, eid: int, attrib: str):
         """_summary_
 
         Args:
             pi (int): _description_
-            cid (int): _description_
+            eid (int): _description_
             attrib (str): _description_
 
         Raises:
@@ -677,11 +677,11 @@ class TimeDatabase:
         for fid, father in self._plan_dict.items():
             if fid == pid:
                 return cast(ReminderValType, 
-                    father.data["reminders"][cid][attrib])
-            for cid, child, in father.children.items():
-                if cid == pid:
+                    father.data["reminders"][eid][attrib])
+            for eid, child, in father.children.items():
+                if eid == pid:
                     return cast(ReminderValType,
-                        child["reminders"][cid][attrib])
+                        child["reminders"][eid][attrib])
         raise KeyError(f"There is no {attrib} in Plan {pid}")
 
     # def read_allrecord(self):

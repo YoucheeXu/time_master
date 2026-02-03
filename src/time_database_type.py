@@ -72,7 +72,7 @@ class ReminderSqlTuple(NamedTuple):
     """ _summary_
 
     Attributes:
-        cid (int): _description_
+        eid (int): _description_
         pid (int): _description_
         clk_timestr ( ): reminder time
         bgn_timestr ( ): _description_
@@ -83,7 +83,7 @@ class ReminderSqlTuple(NamedTuple):
         cycbgn_timestamp ( ): _description_, cycle
         cycend_timestamp ( ): _description_, end cycle datetime
     """
-    cid: int
+    eid: int
     pid: int
     clk_timestr: str
     bgn_timestr: str
