@@ -276,7 +276,7 @@ class TimeDatabase:
                 "tags": self._str2tags(tags),
                 "iid": self._str2icon(iid),
                 "fid": fid,
-                "cycle_reminder": {},
+                "reminders": {},
                 "action": ActTyp(action),
                 "status": StatusEnum(status),
                 "location": locate_at
@@ -309,7 +309,7 @@ class TimeDatabase:
                 "cycbgn_dtime": cycbgn_dtime,
                 "cycend_dtime": cycend_dtime
             }
-            self._plan_dict[pid].data["cycle_reminder"][cid] = reminder
+            self._plan_dict[pid].data["reminders"][cid] = reminder
 
         # pv(self._plan_dict)
 
@@ -363,7 +363,7 @@ class TimeDatabase:
 
         plandata: PlanDataDict = {
             "name": name, "note": note, "tags": tags, "iid": icon, "fid": fid,
-            "cycle_reminder": {},
+            "reminders": {},
             "action": action,
             "status": status,
             "location": locate_at
@@ -576,7 +576,7 @@ class TimeDatabase:
             "cycbgn_dtime": cycbgn_dtime,
             "cycend_dtime": cycend_dtime
         }
-        self._plan_dict[pid].data["cycle_reminder"][cid] = reminder
+        self._plan_dict[pid].data["reminders"][cid] = reminder
 
         return cid
 
@@ -609,7 +609,7 @@ class TimeDatabase:
                 if cid == pid:
                     plan.data = child
                     break
-        reminder = plan.data["cycle_reminder"][cid]
+        reminder = plan.data["reminders"][cid]
         oldval = reminder[attrib]
         match attrib:
             case "clk_time" | "bgn_time" | "end_time":
@@ -666,11 +666,11 @@ class TimeDatabase:
         for fid, father in self._plan_dict.items():
             if fid == pid:
                 return cast(ReminderValType, 
-                    father.data["cycle_reminder"][cid][attrib])
+                    father.data["reminders"][cid][attrib])
             for cid, child, in father.children.items():
                 if cid == pid:
                     return cast(ReminderValType,
-                        child["cycle_reminder"][cid][attrib])
+                        child["reminders"][cid][attrib])
         raise KeyError(f"There is no {attrib} in Plan {pid}")
 
     # def read_allrecord(self):

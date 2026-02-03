@@ -154,7 +154,7 @@ class PlanDataDict(TypedDict):
         tags (): _description_
         iid (): id of icon
         fid (): _description_
-        cycle_reminder ( ): _description_
+        reminders ( ): _description_
         action ( ): _description_
         status (): _description_
         location (): _description_
@@ -164,13 +164,13 @@ class PlanDataDict(TypedDict):
     tags: list[str]
     iid: IconTuple | None
     fid: int
-    cycle_reminder: dict[int, ReminderDataDict]
+    reminders: dict[int, ReminderDataDict]
     action: ActTyp
     status: StatusEnum
     location: LocTuple | None
 
 PlanAttrType = Literal["name", "note", "tags", "iid", "fid", \
-    "cycle_reminder", "action", "status", "location"]
+    "reminders", "action", "status", "location"]
 PlanValType = str | list[str] | IconTuple \
     | int | ActTyp | StatusEnum | LocTuple| None
 
