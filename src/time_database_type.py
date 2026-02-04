@@ -199,13 +199,13 @@ class RecordSqlTuple(NamedTuple):
         rid (int): _description_
         pid (int): _description_
         name (str): _description_
-        bgn_timestamp (): _description_
+        bgn_dtime (): _description_
         duration (): _description_, in minute
     """
     rid: int
     pid: int
     name: str
-    bgn_timestamp: float
+    bgn_dtime: float
     duration: int
 
 

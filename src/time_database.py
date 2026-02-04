@@ -50,7 +50,7 @@ class TimeDatabase:
     | rid | int ||  |
     | pid | int || refere to pid in Plan |
     | name | str ||  |
-    | bgn_timestamp | float | datetime.datetime |  |
+    | bgn_dtime | float | datetime.datetime |  |
     | duration | int || in minute |
 
     Attributes:
@@ -118,7 +118,7 @@ class TimeDatabase:
                 rid INTEGER PRIMARY KEY AUTOINCREMENT,
                 pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
                 name TEXT NOT NULL,
-                bgn_timestamp REAL,
+                bgn_dtime REAL,
                 duration INT,
                 FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
             )''')
@@ -684,16 +684,15 @@ class TimeDatabase:
         query_sql = "\n    ".join(query_parts)
 
         # Step 2: Iterate over query results and build record dictionary
-        for rid, pid, name, bgn_timestamp, duration in \
-            cast(Generator[RecordSqlTuple, None, None],
+        for recordtuple in cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(query_sql, tuple(query_params))):
             record: RecordDataDict = {
                 "pid": pid,
-                "name": name,
-                "bgn_dtime": self._timestamp2datetime(bgn_timestamp),
-                "duration": duration
+                "name": recordtuple.name,
+                "bgn_dtime": self._timestamp2datetime(recordtuple.bgn_dtime),
+                "duration": recordtuple.duration
             }
-            record_dict[rid] = record
+            record_dict[recordtuple.rid] = record
 
         return record_dict
 
