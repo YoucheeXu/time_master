@@ -160,24 +160,21 @@ class PlanDataDict(TypedDict):
     location: LocTuple | None
     sums: int
 
+PlanAttr = list(PlanDataDict.__annotations__.keys())
 PlanAttrType = Literal["name", "note", "tags", "iid", "fid", \
     "reminders", "action", "status", "location", "sums"]
 PlanValType = str | list[str] | IconTuple \
     | int | ActTyp | StatusEnum | LocTuple| None
 
-@dataclass
-class Plan:
-    """_summary_
 
-    Attributes:
-        data (): _description_
-        children (): _description_
+def default_plan_data() -> PlanDataDict:
+    """ Independent factory function to return default PlanDataDict values.
+    Replaces the inline lambda for better maintainability and testability.
+
+    Returns:
+        PlanDataDict: Default data structure for Plan.data field
     """
-    # TypedDict("ItemDict",{})
-    # data: PlanDataDict = field(default_factory=lambda: PlanDataDict(
-        # "name"="", "rid"=0, "clock"="", "schedule"="", "sums"=0, "father"=-1
-    # ))
-    data: PlanDataDict = field(default_factory=lambda: {
+    return {
         "name": "",
         "note": "",
         "tags": [],
@@ -188,7 +185,17 @@ class Plan:
         "status": StatusEnum.ONGOING,
         "location": None,
         "sums": 0
-    })
+    }
+
+@dataclass
+class Plan:
+    """ Data class representing a plan with core data and child plans.
+
+    Attributes:
+        data (PlanDataDict): Core plan metadata (name, status, reminders, etc.)
+        children (dict[int, PlanDataDict]): Nested child plans (key = child ID, value = child plan data)
+    """
+    data: PlanDataDict = field(default_factory=default_plan_data)
     children: dict[int, PlanDataDict] = field(default_factory=dict)
 
 
@@ -222,3 +229,30 @@ class RecordDataDict(TypedDict):
     name: str
     bgn_dtime: datetime.datetime | None
     duration: int
+
+def generate_sqlite_fields(tuple_class: type[NamedTuple],
+        exclude_fields: list[str] | None = None):
+    """ Generate safe field names, placeholder string, and field string for SQL.
+
+    Returns:
+        tuple: (filtered_fields list, field_string "name, note...", placeholder_string "?, ?...")
+    """
+    # all fields
+    all_fields = list(tuple_class._fields)
+    # Validate excluded fields (prevent typos)
+    if exclude_fields is not None:
+        invalid_fields = [f for f in exclude_fields if f not in all_fields]
+        if invalid_fields:
+            raise ValueError(f"Invalid excluded fields: {invalid_fields}")
+
+        # Filter fields (remove excluded ones)
+        filtered_fields = [f for f in all_fields if f not in exclude_fields]
+    else:
+        
+        filtered_fields = all_fields
+
+    # Generate safe strings (field names = static, no injection risk)
+    field_string = ", ".join(filtered_fields)  # e.g., "name, note, tags..."
+    placeholder_string = ", ".join(["?"] * len(filtered_fields))  # e.g., "?, ?, ?..."
+
+    return filtered_fields, field_string, placeholder_string

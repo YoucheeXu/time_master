@@ -7,7 +7,7 @@ import copy
 import sqlite3
 import datetime
 import uuid
-from typing import cast
+from typing import Unpack, cast
 from collections.abc import Generator
 
 from pyutilities.logit import pv, po, pe
@@ -15,14 +15,16 @@ from pyutilities.sqlite import SQLite
 
 from src.bidirectionaldict import BidirectionalDict
 from src.action_sys import ActTyp
+from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
 from src.time_database_type import ReminderDataDict, ReminderAttrType, ReminderValType
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
-from src.time_database_type import PlanAttrType, PlanValType
-from src.time_database_type import IconTuple, LocTuple, PlanDataDict, Plan, RecordDataDict
+from src.time_database_type import PlanAttr, PlanAttrType, PlanValType
+from src.time_database_type import PlanDataDict, default_plan_data
+from src.time_database_type import IconTuple, LocTuple, Plan, RecordDataDict
 
 
 class TimeDatabase:
@@ -276,11 +278,7 @@ class TimeDatabase:
 
         # pv(self._plan_dict)
 
-    def add_plan(self, name: str, note: str = "", tags: list[str] | None = None,
-            icon: IconTuple | None = None, fid: int = -1,
-            action: ActTyp = ActTyp.NOACTION,
-            status: StatusEnum = StatusEnum.ONGOING,
-            locate_at: LocTuple | None = None) -> int:
+    def add_plan(self, **kwargs: Unpack[PlanDataDict]) -> int:
         """_summary_
 
         Args:
@@ -298,24 +296,42 @@ class TimeDatabase:
         Returns:
             int: id of new plan
         """
-        # if reminder_time is not None:
-            # reminder_str = self._time2str(reminder_time)
-        # else:
-            # reminder_str = ""
-        tagstr = str(tags)
-        if tags is None:
-            tags = []
-            tagstr = ""
-        iconstr = str(icon)
-        locstr = self._loc2geo(locate_at)
+        plandata = default_plan_data()
+        for key in PlanAttr:
+            if key in kwargs:
+                plandata[key] = kwargs[key]
 
-        _ = self._database.execute1("""
-            INSERT INTO PLANS (name, note, tags, iid, fid,
-                action, status, locstr)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (name, note, tagstr, iconstr, fid,  \
-                action, status, locstr)
+        fid = plandata["fid"]
+        tags = plandata["tags"]
+        tagstr = str(tags)
+        iconstr = str(plandata["iid"])
+        locstr = self._loc2geo(plandata["location"])
+
+        plandata_sql = PlanSqlTuple(-1,
+            plandata["name"],
+            plandata["note"],
+            tagstr,
+            iconstr,
+            plandata["fid"],
+            "",
+            plandata["action"],
+            plandata["status"],
+            locstr,
+            plandata["sums"]
         )
+
+        filtered_fields, field_string, placeholder_string = \
+            generate_sqlite_fields(PlanSqlTuple, exclude_fields=['pid'])
+
+        sql = f""" INSERT INTO PLANS ({field_string})
+            VALUES ({placeholder_string})"""
+        po(sql)
+        # Convert PlanSqlTuple to dict, then extract filtered fields in order
+        plan_dict_sql = plandata_sql._asdict()
+        param_values = tuple(plan_dict_sql[field] for field in filtered_fields)
+        po(param_values)
+
+        _ = self._database.execute1(sql,param_values)
         data = self._database.get(
                 "SELECT last_insert_rowid()"
             )
@@ -324,14 +340,6 @@ class TimeDatabase:
         else:
             raise RuntimeError("no last_insert_rowid")
 
-        plandata: PlanDataDict = {
-            "name": name, "note": note, "tags": tags, "iid": icon, "fid": fid,
-            "reminders": {},
-            "action": action,
-            "status": status,
-            "location": locate_at,
-            "sums": 0
-        }
         if fid == -1:
             plan = Plan()
             plan.data = plandata
