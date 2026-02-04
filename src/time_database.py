@@ -96,7 +96,7 @@ class TimeDatabase:
                 self._new(req_ver)
                 return 1, f"OK to open {dbfile} and creat table 'Plans' and 'Records'."
         else:
-            ret, str = self._database.open(dbfile, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)   
+            ret, str = self._database.open(dbfile, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         return ret, str
 
     def _new(self, ver: int):
@@ -111,7 +111,7 @@ class TimeDatabase:
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 note TEXT,
-                tags TEXT,                
+                tags TEXT,
                 iid TEXT,
                 fid INT,
                 action INT,
@@ -452,7 +452,7 @@ class TimeDatabase:
                         # raise RuntimeWarning(errmsg)
                         po(warnmsg)
                         return False
-                    elif len(plan.children) > 0:   # father with child-> child 
+                    elif len(plan.children) > 0:   # father with child-> child
                         raise RuntimeError((f"no support father #{pid} plan "
                             f"with children degrade to #{newfid} plan's child"))
                     elif newfid == pid:   # father without child-> child
@@ -469,7 +469,7 @@ class TimeDatabase:
                 elif oldfid != newfid:    # one's child -> another's child
                     self._plan_dict[newfid].children[pid] = plan.data
                     del self._plan_dict[oldfid].children[pid]
-                else:   # one's child -> one's child 
+                else:   # one's child -> one's child
                     warnmsg = (f"no support child #{pid} plan convert "
                         "its father to the same fatherr")
                     po(warnmsg)
@@ -506,12 +506,12 @@ class TimeDatabase:
 
         return True
 
-    def get_plan_attr(self, pid: int, attrib: str):
+    # TODO: risk to modify plan
+    def get_plan(self, pid: int):
         """_summary_
 
         Args:
             pid (int): _description_
-            attrib (str): _description_
 
         Raises:
             KeyError: _description_
@@ -521,22 +521,18 @@ class TimeDatabase:
         """
         for fid, father in self._plan_dict.items():
             if fid == pid:
-                return cast(PlanValType, father.data[attrib])
-            for cid, child, in father.children.items():
+                return father.data
+            for cid, childdata, in father.children.items():
                 if cid == pid:
-                    return cast(PlanValType, child[attrib])
-        raise KeyError(f"There is no {attrib} in Plan {pid}")
-
-    @property
-    def plan_dict(self):
-        return self._plan_dict
+                    return childdata
+        raise KeyError(f"There is no {pid} in self._plan_dict")
 
     def add_reminder(self, pid: int,
             clk_time: datetime.time | None = None,
             bgn_time: datetime.time | None = None,
             duration: int = 0,
             every: int = 0, unit: TimeUnit = TimeUnit.WEEK,
-            custom: DayType | list[int] = DayType.EVERYDAY,            
+            custom: DayType | list[int] = DayType.EVERYDAY,
             cycbgn_dtime: datetime.datetime | None = None,
             cycend_dtime: datetime.datetime | None = None) -> int:
         """_summary_
@@ -706,10 +702,10 @@ class TimeDatabase:
             bgn_dtime (datetime.datetime): Start datetime of the record
             pid (int, optional): Associated pid, default value is -1
             duration (int, optional): duration of the record in minute, default value is 0
-        
+
         Returns:
             int: Auto-increment ID (rid) of the newly added record
-        
+
         Raises:
             RuntimeError: Raised when insertion fails or
                 auto-increment ID cannot be obtained
@@ -717,7 +713,7 @@ class TimeDatabase:
         bgn_timestamp = self._datetime2timestamp(bgn_dtime)
 
         _ = self._database.execute1(
-            """INSERT INTO RECORDS (pid, name, bgn_timestamp, duration) 
+            """INSERT INTO RECORDS (pid, name, bgn_timestamp, duration)
                 VALUES (?, ?, ?, ?)""",
             (pid, name, bgn_timestamp, duration)
         )

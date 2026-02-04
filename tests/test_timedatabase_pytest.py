@@ -59,13 +59,13 @@ def test_add_plan(db: TimeDatabase):
 
 def modify_plan(db: TimeDatabase, pid: int, attrib: PlanAttrType, 
         destval: PlanValType, exp_ret: bool = True):
-    name = cast(str, db.get_plan_attr(pid, "name"))
-    oldval = cast(int, db.get_plan_attr(pid, attrib))
+    name = cast(str, db.get_plan(pid, "name"))
+    oldval = cast(int, db.get_plan(pid, attrib))
     po((f"want to modif '{attrib}' of #{pid} plan '{name}' "
         f"from '{oldval}' to '{destval}'"))
     ret = db.modify_plan(pid, attrib, destval)
     if ret:
-        newval = cast(int, db.get_plan_attr(pid, attrib))
+        newval = cast(int, db.get_plan(pid, attrib))
         assert newval == destval
         po((f"'{attrib}' of #{pid} plan '{name}' has modified "
             f"from '{oldval}' to '{newval}'"))
@@ -74,12 +74,12 @@ def modify_plan(db: TimeDatabase, pid: int, attrib: PlanAttrType,
 
 def modify_reminder(db: TimeDatabase, pid: int, cid: int, attrib: ReminderAttrType, 
         destval: ReminderValType, exp_ret: bool = True):
-    oldval = cast(int, db.get_reminder_attr(pid, cid, attrib))
+    oldval = cast(int, db.get_reminder(pid, cid, attrib))
     po((f"want to modify '{attrib}' of #{cid} 'cycle_reminder' in #{pid} plan "
         f"from '{oldval}' to '{destval}'"))
     ret = db.modify_reminder(pid, cid, attrib, destval)
     if ret:
-        newval = cast(int, db.get_reminder_attr(pid, cid, attrib))
+        newval = cast(int, db.get_reminder(pid, cid, attrib))
         assert newval == destval
         po((f"'{attrib}' of #{cid} 'cycle_reminder' in #{pid} plan has "
             f"modified from '{oldval}' to '{newval}'"))
