@@ -3,8 +3,10 @@
 # import abc
 import os
 from ast import literal_eval
+import copy
 import sqlite3
 import datetime
+import uuid
 from typing import cast
 from collections.abc import Generator
 
@@ -15,9 +17,12 @@ from src.bidirectionaldict import BidirectionalDict
 from src.action_sys import ActTyp
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
-from src.time_database_type import GeoSqlTuple, ReminderSqlTuple, PlanSqlTuple, RecordSqlTuple
-from src.time_database_type import ReminderAttrType, ReminderValType, PlanAttrType, PlanValType
-from src.time_database_type import IconTuple, LocTuple, ReminderDataDict, PlanDataDict, Plan, RecordDataDict
+from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
+from src.time_database_type import ReminderDataDict, ReminderAttrType, ReminderValType
+from src.time_database_reminder import serialize_reminder_collection
+from src.time_database_reminder import deserialize_reminder_collection
+from src.time_database_type import PlanAttrType, PlanValType
+from src.time_database_type import IconTuple, LocTuple, PlanDataDict, Plan, RecordDataDict
 
 
 class TimeDatabase:
@@ -32,25 +37,12 @@ class TimeDatabase:
     | tags | str | list[str] |  |
     | iid | str | tuple[int, int] | id of icon |
     | fid | int ||  |
+    | reminders | int ||  |
     | action | int | ActTyp |  |
     | status | int | StatusEnum |  |
     | locstr | str | LocDict or None |  |
     | sums | int | in minute |  |
     |  |  |  |  |
-
-    Reminders
-    | Item | SqlType | PyType | Notes |
-    | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
-    | eid | int ||  |
-    | pid | int || refere to pid in Plan |
-    | clk_timestr | str | datetime.time or None ||  |
-    | bgn_timestr | str | datetime.time or None |  |
-    | duration | int || in minute |
-    | every | int ||  |
-    | unit | str | TimeUnit | |
-    | customstr | str  | DayType or list[int] | |
-    | cycbgn_timestamp | float | datetime.datetime or None |  |
-    | cycend_timestamp | float | datetime.datetime or None |  |
 
     Records
     | Item | SqlType | PyType | Notes |
@@ -114,25 +106,11 @@ class TimeDatabase:
                 tags TEXT,
                 iid TEXT,
                 fid INT,
+                reminders TEXT,
                 action INT,
                 status INT,
                 locstr TEXT,
                 susm INT
-            )''')
-
-        _ = self._database.execute('''
-            CREATE TABLE IF NOT EXISTS REMINDERS(
-                eid INTEGER PRIMARY KEY AUTOINCREMENT,
-                pid INT NOT NULL REFERENCES PLANS(pid) ON UPDATE CASCADE,
-                clk_timestr TEXT,
-                bgn_timestr TEXT,
-                duration INT,
-                every INT,
-                unit TEXT,
-                customstr TEXT,
-                cycbgn_timestamp REAL,
-                cycend_timestamp REAL,
-                FOREIGN KEY (pid) REFERENCES PLANS(pid) ON DELETE CASCADE
             )''')
 
         _ = self._database.execute('''
@@ -271,7 +249,7 @@ class TimeDatabase:
             plan.children.clear()
         self._plan_dict.clear()
 
-        for pid, name, note, iid, tags, fid, \
+        for pid, name, note, iid, tags, fid, reminders_str, \
             action, status, locstr, sums in \
                 cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
@@ -283,7 +261,7 @@ class TimeDatabase:
                 "tags": self._str2tags(tags),
                 "iid": self._str2icon(iid),
                 "fid": fid,
-                "reminders": {},
+                "reminders": deserialize_reminder_collection(reminders_str),
                 "action": ActTyp(action),
                 "status": StatusEnum(status),
                 "location": locate_at,
@@ -295,28 +273,6 @@ class TimeDatabase:
                 self._plan_dict[pid] = plan
             else:
                 self._plan_dict[fid].children[pid] = plandata
-
-        for eid, pid, \
-            clk_timestr, bgn_timestr, duration,  \
-            every, unit, customstr, cycbgn_timestamp, cycend_timestamp in \
-                cast(Generator[ReminderSqlTuple, None, None],
-                self._database.each("SELECT * FROM REMINDERS")):
-            clk_time = self._str2time(clk_timestr)
-            bgn_time = self._str2time(bgn_timestr)
-            custom = self._str2custom(customstr)
-            cycbgn_dtime = self._timestamp2datetime(cycbgn_timestamp)
-            cycend_dtime = self._timestamp2datetime(cycend_timestamp)
-            reminder: ReminderDataDict = {
-                "clk_time": clk_time,
-                "bgn_time": bgn_time,
-                "duration": duration,
-                "every": every,
-                "unit": TimeUnit(unit),
-                "custom": custom,
-                "cycbgn_dtime": cycbgn_dtime,
-                "cycend_dtime": cycend_dtime
-            }
-            self._plan_dict[pid].data["reminders"][eid] = reminder
 
         # pv(self._plan_dict)
 
@@ -553,26 +509,7 @@ class TimeDatabase:
         Returns:
             int: id of new reminder
         """
-        clk_timestr = self._time2str(clk_time)
-        bgn_timestr = self._time2str(bgn_time)
-        cycbgn_timestamp = self._datetime2timestamp(cycbgn_dtime)
-        cycend_timestamp  = self._datetime2timestamp(cycend_dtime)
-
-        _ = self._database.execute1("""
-            INSERT INTO REMINDERS (pid, clk_timestr, bgn_timestr, duration,
-                every, unit, customstr, cycbgn_timestamp, cycend_timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (pid, clk_timestr, bgn_timestr, duration,  \
-                every, unit, str(custom), cycbgn_timestamp, cycend_timestamp)
-        )
-        data = self._database.get(
-                "SELECT last_insert_rowid()"
-            )
-        if data is not None:
-            eid = cast(int, data[0])
-        else:
-            raise RuntimeError("no last_insert_rowid")
-
+        eid = uuid.uuid4().int
         reminder: ReminderDataDict = {
             "clk_time": clk_time,
             "bgn_time": bgn_time,
@@ -583,7 +520,17 @@ class TimeDatabase:
             "cycbgn_dtime": cycbgn_dtime,
             "cycend_dtime": cycend_dtime
         }
-        self._plan_dict[pid].data["reminders"][eid] = reminder
+
+        reminders = self.get_plan(pid)["reminders"]
+        reminders[eid] = reminder
+
+        attr_sql = "reminders"
+        newval_sql = serialize_reminder_collection(reminders)
+        sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
+        _ = self._database.execute1(sql, (newval_sql, pid))
+
+        po((f"update '{attr_sql}' of #{pid} plan "
+            f"add #{eid} reminder"))
 
         return eid
 
@@ -607,78 +554,35 @@ class TimeDatabase:
             attrib (str): _description_
             newval (_type_): _description_
         """
-        plan = Plan()
-        for fid, father in self._plan_dict.items():
-            if fid == pid:
-                plan = father
-                break
-            for eid, child, in father.children.items():
-                if eid == pid:
-                    plan.data = child
-                    break
-        reminder = plan.data["reminders"][eid]
+        plan = self.get_plan(pid)
+        reminders = plan["reminders"]
+        reminder = reminders[eid]
         oldval = reminder[attrib]
-        match attrib:
-            case "clk_time" | "bgn_time":
-                assert isinstance(newval, datetime.time)
-                reminder[attrib] = newval
-                attr_sql = attrib + "str"
-                newval_sql = self._time2str(newval)
-            case "duration" | "every":
-                assert isinstance(newval, int)
-                reminder[attrib] = newval
-                attr_sql = attrib
-                newval_sql = newval
-            case "unit":
-                assert isinstance(newval, TimeUnit)
-                reminder[attrib] = newval
-                attr_sql = attrib
-                newval_sql = newval
-            case "custom":
-                assert isinstance(newval, DayType) or isinstance(newval, list)
-                reminder[attrib] = newval
-                attr_sql = "customstr"
-                newval_sql = str(newval)
-            case "cycbgn_dtime" | "cycend_dtime":
-                assert isinstance(newval, datetime.datetime)
-                reminder[attrib] = newval
-                attr_sql = attrib.replace("_dtime", "_timestamp")
-                newval_sql = self._datetime2timestamp(newval)
-            # case _:
-            #     raise KeyError(f"There is no {attrib} in Plan {pid}")
 
-        sql = f"UPDATE REMINDERS SET {attr_sql} = ? WHERE pid = ?"
-        pv(sql)
+        attr_sql = "reminders"
+        newval_sql = serialize_reminder_collection(reminders)
+        sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
         _ = self._database.execute1(sql, (newval_sql, pid))
 
-        po((f"update '{attrib}' of #{eid} 'cycle_reminder' in #{pid} plan "
+        po((f"update '{attrib}' of 'reminders' of #{pid} plan '{plan["name"]}' "
             f"from '{oldval}' to '{newval}'"))
 
         return True
 
-    def get_reminder_attr(self, pid: int, eid: int, attrib: str):
+    # TODO: return copy version
+    def get_reminder(self, pid: int, eid: int):
         """_summary_
 
         Args:
             pi (int): _description_
             eid (int): _description_
-            attrib (str): _description_
-
-        Raises:
-            KeyError: _description_
 
         Returns:
             _type_: _description_
         """
-        for fid, father in self._plan_dict.items():
-            if fid == pid:
-                return cast(ReminderValType, 
-                    father.data["reminders"][eid][attrib])
-            for eid, child, in father.children.items():
-                if eid == pid:
-                    return cast(ReminderValType,
-                        child["reminders"][eid][attrib])
-        raise KeyError(f"There is no {attrib} in Plan {pid}")
+        plan = self.get_plan(pid)
+        reminders = copy.deepcopy(plan["reminders"])
+        return  reminders[eid]
 
     # def read_allrecord(self):
         # for event, strt_dtime, end_dtime in \

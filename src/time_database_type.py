@@ -51,6 +51,7 @@ class PlanSqlTuple(NamedTuple):
         tags (): _description_
         iid (): id of icon
         fid (): _description_
+        reminders (): _description_
         action ( ): _description_
         status (): _description_
         locstr (): _description_
@@ -62,37 +63,11 @@ class PlanSqlTuple(NamedTuple):
     tags: str
     iid: str
     fid: int
+    reminders: str
     action: int
     status: int
     locstr: str
     sums: int
-
-
-class ReminderSqlTuple(NamedTuple):
-    """ _summary_
-
-    Attributes:
-        eid (int): _description_
-        pid (int): _description_
-        clk_timestr ( ): reminder time
-        bgn_timestr ( ): _description_
-        duration ( ): _description_, int
-        every (int): _description_
-        unit (int): _description_
-        customstr ( ): _description_
-        cycbgn_timestamp ( ): _description_, cycle
-        cycend_timestamp ( ): _description_, end cycle datetime
-    """
-    eid: int
-    pid: int
-    clk_timestr: str
-    bgn_timestr: str
-    duration: int
-    every: int
-    unit: int
-    customstr: str
-    cycbgn_timestamp: float
-    cycend_timestamp: float
 
 
 class StatusEnum(IntEnum):
@@ -158,6 +133,7 @@ ReminderAttrType = Literal["clk_time", "bgn_time", "duration", "every", \
 ReminderValType = datetime.time | int | TimeUnit  | DayType | list[int] \
     | datetime.datetime | None
 
+
 class PlanDataDict(TypedDict):
     """ _summary_
 
@@ -197,8 +173,22 @@ class Plan:
         data (): _description_
         children (): _description_
     """
-    # TypedDict("ItemDict",{"id": 0, "name": "", "rid": 0, "clock": "", "schedule": "", "sums": 0, "father": -1})
-    data: PlanDataDict = field(default_factory=PlanDataDict)
+    # TypedDict("ItemDict",{})
+    # data: PlanDataDict = field(default_factory=lambda: PlanDataDict(
+        # "name"="", "rid"=0, "clock"="", "schedule"="", "sums"=0, "father"=-1
+    # ))
+    data: PlanDataDict = field(default_factory=lambda: {
+        "name": "",
+        "note": "",
+        "tags": [],
+        "iid": None,
+        "fid": -1,
+        "reminders": {},
+        "action": ActTyp.NOACTION,
+        "status": StatusEnum.ONGOING,
+        "location": None,
+        "sums": 0
+    })
     children: dict[int, PlanDataDict] = field(default_factory=dict)
 
 
