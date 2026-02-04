@@ -54,7 +54,7 @@ class PlanSqlTuple(NamedTuple):
         reminders (): _description_
         action ( ): _description_
         status (): _description_
-        locstr (): _description_
+        location (): _description_
         sums (): _description_, in minute
     """
     pid: int
@@ -66,7 +66,7 @@ class PlanSqlTuple(NamedTuple):
     reminders: str
     action: int
     status: int
-    locstr: str
+    location: str
     sums: int
 
 

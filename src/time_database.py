@@ -40,7 +40,7 @@ class TimeDatabase:
     | reminders | int ||  |
     | action | int | ActTyp |  |
     | status | int | StatusEnum |  |
-    | locstr | str | LocDict or None |  |
+    | location | str | LocTuple or None |  |
     | sums | int | in minute |  |
     |  |  |  |  |
 
@@ -109,7 +109,7 @@ class TimeDatabase:
                 reminders TEXT,
                 action INT,
                 status INT,
-                locstr TEXT,
+                location TEXT,
                 susm INT
             )''')
 
@@ -249,23 +249,23 @@ class TimeDatabase:
             plan.children.clear()
         self._plan_dict.clear()
 
-        for pid, name, note, iid, tags, fid, reminders_str, \
-            action, status, locstr, sums in \
-                cast(Generator[PlanSqlTuple, None, None],
+        for plantuple in cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
-            geo = GeoSqlTuple(*literal_eval(locstr))
+            fid = plantuple.fid
+            pid = plantuple.pid
+            geo = GeoSqlTuple(*literal_eval(plantuple.location))
             locate_at = self._geo2loc(geo.latitude, geo.longitude)
             plandata: PlanDataDict = {
-                "name": name,
-                "note": note,
-                "tags": self._str2tags(tags),
-                "iid": self._str2icon(iid),
+                "name": plantuple.name,
+                "note": plantuple.note,
+                "tags": self._str2tags(plantuple.tags),
+                "iid": self._str2icon(plantuple.iid),
                 "fid": fid,
-                "reminders": deserialize_reminder_collection(reminders_str),
-                "action": ActTyp(action),
-                "status": StatusEnum(status),
+                "reminders": deserialize_reminder_collection(plantuple.reminders),
+                "action": ActTyp(plantuple.action),
+                "status": StatusEnum(plantuple.status),
                 "location": locate_at,
-                "sums": sums
+                "sums": plantuple.sums
             }
             if fid == -1:
                 plan = Plan()
@@ -377,27 +377,22 @@ class TimeDatabase:
             case "name":
                 assert isinstance(newval, str)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = newval
             case "note":
                 assert isinstance(newval, str)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = newval
             case "tags":
                 assert isinstance(newval, list)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = str(newval)
             case "iid":
                 pe(type(newval))
                 assert isinstance(newval, IconTuple) or (newval is None)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = str(newval)
             case "fid":
                 assert isinstance(newval, int)
-                attr_sql = attrib
                 newval_sql = newval
 
                 newfid = newval
@@ -434,27 +429,23 @@ class TimeDatabase:
             case "action":
                 assert isinstance(newval, ActTyp)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = newval
             case "status":
                 assert isinstance(newval, StatusEnum)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = newval
             case "location":
                 assert isinstance(newval, LocTuple) or (newval is None)
                 plan.data[attrib] = newval
-                attr_sql = "locstr"
                 newval_sql = self._loc2geo(newval)
             case "sums":
                 assert isinstance(newval, int)
                 plan.data[attrib] = newval
-                attr_sql = attrib
                 newval_sql = newval
             case _:
                 raise KeyError(f"There is no {attrib} in Plan {pid}")
 
-        sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
+        sql = f"UPDATE PLANS SET {attrib} = ? WHERE pid = ?"
         _ = self._database.execute1(sql, (newval_sql, pid))
 
         po((f"update '{attrib}' of #{pid} plan '{plan.data["name"]}' "
