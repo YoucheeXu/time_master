@@ -18,9 +18,9 @@ from src.action_sys import ActTyp
 from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
-from src.time_database_type import GeoSqlTuple, PlanSqlTuple, 
-from src.time_database_type import ReminderDataDict, ReminderAttr, default_reminder_data
-from src.time_database_type import ReminderDataDict, ReminderAttrType, ReminderValType
+from src.time_database_type import GeoSqlTuple, PlanSqlTuple
+from src.time_database_type import ReminderAttr, ReminderAttrType, ReminderValType
+from src.time_database_type import ReminderDataDict, default_reminder_data
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
 from src.time_database_type import PlanAttr, PlanAttrType, PlanValType
@@ -115,7 +115,7 @@ class TimeDatabase:
                 action INT,
                 status INT,
                 location TEXT,
-                susm INT
+                sums INT
             )''')
 
         _ = self._database.execute('''
