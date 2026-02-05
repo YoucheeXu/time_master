@@ -521,15 +521,19 @@ class TimeDatabase:
 
         return eid
 
-    def del_reminder(self, eid: int):
+    def del_reminder(self, pid: int, eid: int):
         """_summary_
 
         Args:
             eid (int): _description_
         """
-        sql = f"DELETE FROM REMINDERS WHERE eid='{eid}'"
-        pv(sql)
-        _ = self._database.execute1(sql)
+        reminders = self.get_plan(pid)["reminders"]
+        del reminders[eid]
+
+        attr_sql = "reminders"
+        newval_sql = serialize_reminder_collection(reminders)
+        sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
+        _ = self._database.execute1(sql, (newval_sql, pid))
 
     def modify_reminder(self, pid: int, eid: int, attrib: ReminderAttrType,
             newval: ReminderValType):
