@@ -162,10 +162,17 @@ class TimeDatabase:
 
     def _str2icon(self, iidstr: str):
         if iidstr:
-            icon = cast(IconTuple, eval(iidstr))
-            return icon
+            icon = cast(tuple[int, int], literal_eval(iidstr))
+            return IconTuple(*icon)
         else:
             return None
+
+    def _icon2str(self, icon: IconTuple | None):
+        if icon is not None:
+            iconstr= str(tuple(icon))
+        else:
+            iconstr  = "(0, 0)"
+        return iconstr
 
     def _str2tags(self, tagstr: str) -> list[str]:
         if not tagstr:
@@ -295,14 +302,14 @@ class TimeDatabase:
         fid = plandata["fid"]
         tags = plandata["tags"]
         tagstr = str(tags)
-        iconstr = str(plandata["iid"])
+        icon = plandata["iid"]
         locstr = self._loc2geo(plandata["location"])
 
         plandata_sql = PlanSqlTuple(-1,
             plandata["name"],
             plandata["note"],
             tagstr,
-            iconstr,
+            self._icon2str(icon),
             plandata["fid"],
             "",
             plandata["action"],
