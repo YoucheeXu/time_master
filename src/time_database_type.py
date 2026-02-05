@@ -243,6 +243,17 @@ class RecordDataDict(TypedDict):
     bgn_dtime: datetime.datetime | None
     duration: int
 
+RecordAttr = list(RecordDataDict.__annotations__.keys())
+
+def default_record_data() ->RecordDataDict:
+    return {
+        "pid": -1,
+        "name": "",
+        "bgn_dtime": None,
+        "duration": 0,
+    }
+
+
 def generate_sqlite_fields(tuple_class: type[NamedTuple],
         exclude_fields: list[str] | None = None):
     """ Generate safe field names, placeholder string, and field string for SQL.

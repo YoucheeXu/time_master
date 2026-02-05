@@ -18,14 +18,16 @@ from src.action_sys import ActTyp
 from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
-from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
+from src.time_database_type import GeoSqlTuple, PlanSqlTuple, 
 from src.time_database_type import ReminderDataDict, ReminderAttr, default_reminder_data
 from src.time_database_type import ReminderDataDict, ReminderAttrType, ReminderValType
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
 from src.time_database_type import PlanAttr, PlanAttrType, PlanValType
 from src.time_database_type import PlanDataDict, default_plan_data
-from src.time_database_type import IconTuple, LocTuple, Plan, RecordDataDict
+from src.time_database_type import IconTuple, LocTuple, Plan
+from src.time_database_type import RecordSqlTuple, RecordDataDict
+from src.time_database_type import RecordAttr, default_record_data
 
 
 class TimeDatabase:
@@ -575,21 +577,7 @@ class TimeDatabase:
         reminders = copy.deepcopy(plan["reminders"])
         return  reminders[eid]
 
-    # def read_allrecord(self):
-        # for event, strt_dtime, end_dtime in \
-                # cast(Generator[RecordSqlTuple, None, None],
-                # self._database.each("SELECT * FROM RECORDS")):
-            # iid, strt_date, end_date = cast(CalendarSqlRecord, calendarecord)
-            # start_time = datetime.datetime.fromtimestamp(strt_dtime)
-            # end_time = datetime.datetime.fromtimestamp(end_dtime)
-            # date = start_time.date()
-            # record = RecordDict(start_time, end_time)
-            # self._record_dict[rid] = record
-        # pv(self._record_dict)
-
-    def add_record(self, name: str, bgn_dtime: datetime.datetime,
-            pid: int = -1,
-            duration: int = 0):
+    def add_record(self, **kwargs: Unpack[RecordDataDict]):
         """ Insert a new record into the RECORDS table
 
         Args:
@@ -605,13 +593,30 @@ class TimeDatabase:
             RuntimeError: Raised when insertion fails or
                 auto-increment ID cannot be obtained
         """
-        bgn_timestamp = self._datetime2timestamp(bgn_dtime)
+        record = default_record_data()
+        for key in RecordAttr:
+            if key in kwargs:
+                record[key] = kwargs[key]
 
-        _ = self._database.execute1(
-            """INSERT INTO RECORDS (pid, name, bgn_timestamp, duration)
-                VALUES (?, ?, ?, ?)""",
-            (pid, name, bgn_timestamp, duration)
+        record_sql = RecordSqlTuple(-1,
+            record["pid"],
+            record["name"],
+            self._datetime2timestamp(record["bgn_dtime"]),
+            record["duration"],
         )
+
+        filtered_fields, field_string, placeholder_string = \
+            generate_sqlite_fields(RecordSqlTuple, exclude_fields=['rid'])
+
+        sql = f""" INSERT INTO RECORDS ({field_string})
+            VALUES ({placeholder_string})"""
+        po(sql)
+        # Convert RecordSqlTuple to dict, then extract filtered fields in order
+        record_dict_sql = record_sql._asdict()
+        param_values = tuple(record_dict_sql[field] for field in filtered_fields)
+        po(param_values)
+
+        _ = self._database.execute1(sql,param_values)
         data = self._database.get(
             "SELECT last_insert_rowid()"
         )
