@@ -162,8 +162,7 @@ class TimeDatabase:
 
     def _str2icon(self, iidstr: str):
         if iidstr:
-            iid = cast(tuple[int, int], literal_eval(iidstr))
-            icon = IconTuple(iid[0], iid[1])
+            icon = cast(IconTuple, eval(iidstr))
             return icon
         else:
             return None
