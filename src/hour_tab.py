@@ -17,7 +17,7 @@ from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerC
 from src.schedule import Schedule
 from src.hour_type import HourTuple, HourDict
 from src.time_database_type import IconTuple
-from src.time_database_type import reminder2clkstr
+from src.time_database_type import reminder2clkstr, time2str
 
 from src.time_database import TimeDatabase
 
@@ -35,7 +35,7 @@ class RecordHourDlg(DialogCtrl):
         """
         super().__init__(app, dlg_cfg)
 
-    def _get_hourdetail(self, db: TimeDatabase, iid: int):
+    def _get_hourdetail(self, db: TimeDatabase, hid: int):
         """_summary_
 
         Args:
@@ -44,11 +44,7 @@ class RecordHourDlg(DialogCtrl):
         Returns:
             _type_: _description_
         """
-        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
-            "sums": 0, "father": -1}
-        # owner = cast(Container, self._owner)
-        _ = db.get_hourdetail(iid, detail)
-        return detail
+        return db.get_plan(hid)
 
     @override
     def _beforego(self, **kwargs: object):
@@ -63,19 +59,20 @@ class RecordHourDlg(DialogCtrl):
         lbl_day = cast(LabelCtrl, self.get_control("lblSelDayRecordHour"))
         lbl_day.set_text(str(today))
 
+        # TODO: get now's nearby reminder
+        reminders = detail["reminders"]
+        reminder = next(iter(reminders.values()))
+
         lbl_strtime = cast(LabelCtrl, self.get_control("lblSelStrtRecordHour"))
-        clock = detail["clock"]     # clock = 每工作日 21:00
-        clock_val = clock[-5:].strip()
+        clock_val = time2str(reminder['clk_time'])
         if not clock_val:
             now = datetime.datetime.now()
             clock_val = f"{now.hour}:{now.minute:02d}"
         lbl_strtime.set_text(clock_val)
 
         lbl_lastime = cast(LabelCtrl, self.get_control("lblSelLastRecordHour"))
-        schedule = detail["schedule"]   # schedule = 计划每日45m
-        schedule_val = schedule[4:]
-        if not schedule_val:
-            schedule_val = "15m"
+        schedule = reminder["duration"]
+        schedule_val = f"{schedule}m"
         lbl_lastime.set_text(schedule_val)
 
     def _select_day(self, **kwargs: object):
@@ -132,7 +129,7 @@ class RecordHourDlg(DialogCtrl):
 
     @override
     def _confirm(self, **kwargs: object):
-        iid = cast(int, kwargs["id"])
+        hid = cast(int, kwargs["id"])
         db = cast(TimeDatabase, kwargs["db"])
         owner = cast(Dialog, self.owner)
 
@@ -142,23 +139,20 @@ class RecordHourDlg(DialogCtrl):
         lbl_strtime = cast(LabelCtrl, self.get_control("lblSelStrtRecordHour"))
         strt_time = lbl_strtime.get_text()
 
-        strt = datetime.datetime.strptime(f"{day} {strt_time}", "%Y-%m-%d %H:%M")
-        po(f"Start time: {strt}")
+        strt_dtime = datetime.datetime.strptime(f"{day} {strt_time}", "%Y-%m-%d %H:%M")
+        po(f"Start time: {strt_dtime}")
 
         lbl_lastime = cast(LabelCtrl, self.get_control("lblSelLastRecordHour"))
         last_time = self._schedule_txt2clk(lbl_lastime.get_text()).split(":")
         # pv(last_time)
-        last_hour = int(last_time[0])
-        last_minute = int(last_time[1])
-        delta = datetime.timedelta(hours=last_hour, minutes=last_minute)
-        # pv(delta)
-        end = strt + delta
-        po(f"end time: {end}")
-        _ = owner.process_message("RecordHour", id=iid, strt=strt, end=end)
-        detail = self._get_hourdetail(db, iid)
-        sum_minutes = detail["sums"]
+        duration = int(last_time[0]) * 60 + int(last_time[1])
+        po(f"duration: {duration}")
+        _ = owner.process_message("RecordHour", id=hid,
+            strt_dtime=strt_dtime, duration=duration)
+        detail = self._get_hourdetail(db, hid)
+        sum_minutes = detail["sums"] + duration
         pv(sum_minutes)
-        _ = owner.process_message("ChangeSum", id=iid, sum=sum_minutes)
+        _ = owner.process_message("ChangeSum", id=hid, sum=sum_minutes)
         return True, ""
 
     @override
@@ -1202,9 +1196,6 @@ class HourTab(Container):
                 sqlval = f"{grp}_{idx}"
                 imagepath = self._get_imagepath(grp, idx)
                 self.update_hourctrl_attrib(hid, "image", imagepath)
-            case "sums":
-                sqlval = cast(int, val)
-                self.update_hourctrl_attrib(hid, "sum", sqlval)
             case _:
                 raise ValueError(f"unsupport to modify {attrib}")
         po(f"modify {hid}'s {attrib} to {sqlval}")
@@ -1213,17 +1204,17 @@ class HourTab(Container):
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         if idmsg.startswith("btnItem"):
-            iid = int(idmsg[7:])
+            hid = int(idmsg[7:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_hourdetaildlg(self, x+20, y+20, id=iid, db=self._hoursdb)
+            self.show_hourdetaildlg(self, x+20, y+20, id=hid, db=self._hoursdb)
         elif idmsg.startswith("lblSumHour"):
-            iid = int(idmsg[10:])
+            hid = int(idmsg[10:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_recordhourdlg(self, x+20, y+20, id=iid, db=self._hoursdb)
+            self.show_recordhourdlg(self, x+20, y+20, id=hid, db=self._hoursdb)
         elif idmsg.startswith("btnClock"):
-            iid = int(idmsg[8:])
+            hid = int(idmsg[8:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_selclockdlg(self, x+20, y+20, id=iid)
+            self.show_selclockdlg(self, x+20, y+20, id=hid)
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_edithourdlg(self, x+20, y+20, father=-1, id=0, db=self._hoursdb)
@@ -1239,54 +1230,63 @@ class HourTab(Container):
                     x, y = cast(tuple[int, int], kwargs["pos"])
                     options = cast(dict[str, object], kwargs["options"])
                     self.show_selscheduledlg(owner, x, y, **options)
+                case "RecordHour":  # come from `RecordHourDlg`
+                    hid = cast(int, kwargs["id"])
+                    strt_dtime = cast(datetime.datetime, kwargs["strt_dtime"])
+                    duration = cast(int, kwargs["duration"])
+                    # po(kwargs)
+                    name = self._hoursdb.get_plan(hid)["name"]
+                    _ = self._hoursdb.add_record(pid=hid, name=name,
+                        bgn_dtime=strt_dtime, duration=duration)
+                case "ChangeSum":   # come from RecordHourDlg
+                    hid = cast(int, kwargs["id"])
+                    sum_minutes= cast(int, kwargs["sum"])
+                    self.update_hourctrl_attrib(hid, "sum", sum_minutes)
+                    _ = self._hoursdb.modify_plan(hid, "sums", sum_minutes)
                 case "changeItemImage": # come from <-`HourDetailDlg`<-`EditHourDlg`
-                    iid = cast(int, kwargs["id"])
+                    hid = cast(int, kwargs["id"])
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
-                    self.modify_hour(iid, "rid", f"{grp}_{idx}")
+                    self.modify_hour(hid, "rid", f"{grp}_{idx}")
                 case "changeClock":
                     # come from `SelClockDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelClockDlg`
-                    iid = cast(int, kwargs["id"])
+                    hid = cast(int, kwargs["id"])
                     clock = cast(str, kwargs["clock"])
                     clock = "" if clock=="选择定时提醒" else clock
-                    self.modify_hour(iid, "clock", clock)
+                    self.modify_hour(hid, "clock", clock)
                 case "changeSchedule":
                     # come from `SelScheduleDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
-                    iid = cast(int, kwargs["id"])
+                    hid = cast(int, kwargs["id"])
                     schedule = cast(str, kwargs["schedule"])
                     schedule = "" if schedule=="选择时间投入计划" else schedule
-                    self.modify_hour(iid, "schedule", schedule)
-                case "ChangeSum":   # come from RecordHourDlg
-                    iid = cast(int, kwargs["id"])
-                    sum_minutes= cast(int, kwargs["sum"])
-                    self.modify_hour(iid, "sums", sum_minutes)
+                    self.modify_hour(hid, "schedule", schedule)
                 case "deleteItem":  # come from <-`HourDetailDlg`<-`EditHourDlg`
-                    iid = cast(int, kwargs["id"])
-                    detail = self._get_hourdetail(iid)
+                    hid = cast(int, kwargs["id"])
+                    detail = self._get_hourdetail(hid)
                     id_father = detail["father"]
                     if id_father == -1:
-                        self._gui.delete_control(f"frmGroup{iid}")
+                        self._gui.delete_control(f"frmGroup{hid}")
                     else:
-                        self._gui.delete_control(f"frmItem{iid}")
-                        self._gui.delete_control(f"btnItem{iid}")
-                        self._gui.delete_control(f"lblItem{iid}")
-                        self._gui.delete_control(f"btnClock{iid}")
-                        self._gui.delete_control(f"lblSum{iid}")
+                        self._gui.delete_control(f"frmItem{hid}")
+                        self._gui.delete_control(f"btnItem{hid}")
+                        self._gui.delete_control(f"lblItem{hid}")
+                        self._gui.delete_control(f"btnClock{hid}")
+                        self._gui.delete_control(f"lblSum{hid}")
 
-                        self._hoursdb.del_hour(iid)
+                        self._hoursdb.del_hour(hid)
                 case "createHourCtrl":  # come from `TimeDatabase`<-`TimeMasterApp`
-                    iid = cast(int, kwargs["id"])
+                    hid = cast(int, kwargs["id"])
                     name =cast(str, kwargs["name"])
                     rid = cast(tuple[int, int], kwargs["rid"])
                     clock = cast(str, kwargs["clock"])
                     sums = cast(str, kwargs["sum"])
                     fid = cast(int, kwargs["fid"])
-                    self.create_hourctrl(iid, name, rid, clock, sums, fid)
+                    self.create_hourctrl(hid, name, rid, clock, sums, fid)
                 case "updateHour":  # come from `HourDetailDlg`
-                    iid = cast(int, kwargs["id"])
+                    hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
                     val = cast(str | int, kwargs["val"])
-                    self.update_hourctrl_attrib(iid, attr, val)
+                    self.update_hourctrl_attrib(hid, attr, val)
                 case "newHour": # come from `EditHourDlg` or <-`EditHourDlg`<-`HourDetailDlg`
                     name =cast(str, kwargs["name"])
                     fid = cast(int, kwargs["father"])
@@ -1296,22 +1296,17 @@ class HourTab(Container):
 
                     clock_val = "" if clock == "选择定时提醒" else clock
                     schedule_val = "" if schedule == "选择时间投入计划" else schedule
-                    iid = self._hoursdb.add_hour(name, rid, clock_val, schedule_val, fid)
-                    self.create_hourctrl(iid, name, rid, clock, "0.0h", fid)
+                    hid = self._hoursdb.add_hour(name, rid, clock_val, schedule_val, fid)
+                    self.create_hourctrl(hid, name, rid, clock, "0.0h", fid)
                 case "getImagePath": # come from `HourDetailDlg`
                     group = cast(int, kwargs["group"])
                     index = cast(int, kwargs["index"])
                     return self._get_imagepath(group, index)
                 case "getImagesDict":   # come from `EditHourDlg`
                     return self._images_dict
-                case "RecordHour":  # come from `RecordHourDlg`
-                    hid = cast(int, kwargs["id"])
-                    strt = cast(datetime.datetime, kwargs["strt"])
-                    end = cast(datetime.datetime, kwargs["end"])
-                    self._hoursdb.record_hour(hid, strt, end)
                 case "DeleteFatherCtrl":    # come from `TimeDatabase`
-                    iid = cast(int, kwargs["id"])
-                    self.delete_fatherctrl(iid)
+                    hid = cast(int, kwargs["id"])
+                    self.delete_fatherctrl(hid)
                 case _:
                     pass
             return True

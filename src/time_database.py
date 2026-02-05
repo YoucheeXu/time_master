@@ -187,19 +187,6 @@ class TimeDatabase:
         else:
             return None
 
-    def _time2str(self, time: datetime.time | None):
-        """_summary_
-
-        Args:
-            time (datetime.time | None): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        if time is None:
-            return ""
-        return datetime.time.strftime(time, "%H:%M")
-
     def _timestamp2datetime(self, timestamp: float):
         """_summary_
 

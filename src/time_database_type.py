@@ -223,6 +223,19 @@ def reminder2clkstr(reminder: ReminderDataDict) -> str:
     return description
 
 
+def time2str(time: datetime.time | None):
+    """_summary_
+
+    Args:
+        time (datetime.time | None): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if time is None:
+        return ""
+    return datetime.time.strftime(time, "%H:%M")
+
 class PlanDataDict(TypedDict):
     """ _summary_
 
