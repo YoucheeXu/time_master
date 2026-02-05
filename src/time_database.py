@@ -19,6 +19,7 @@ from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, PlanSqlTuple, RecordSqlTuple
+from src.time_database_type import ReminderDataDict, ReminderAttr, default_reminder_data
 from src.time_database_type import ReminderDataDict, ReminderAttrType, ReminderValType
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
@@ -482,14 +483,7 @@ class TimeDatabase:
                     return childdata
         raise KeyError(f"There is no {pid} in self._plan_dict")
 
-    def add_reminder(self, pid: int,
-            clk_time: datetime.time | None = None,
-            bgn_time: datetime.time | None = None,
-            duration: int = 0,
-            every: int = 0, unit: TimeUnit = TimeUnit.WEEK,
-            custom: DayType | list[int] = DayType.EVERYDAY,
-            cycbgn_dtime: datetime.datetime | None = None,
-            cycend_dtime: datetime.datetime | None = None) -> int:
+    def add_reminder(self, pid: int, **kwargs: Unpack[ReminderDataDict]) -> int:
         """_summary_
 
         Args:
@@ -509,16 +503,10 @@ class TimeDatabase:
             int: id of new reminder
         """
         eid = uuid.uuid4().int
-        reminder: ReminderDataDict = {
-            "clk_time": clk_time,
-            "bgn_time": bgn_time,
-            "duration": duration,
-            "every": every,
-            "unit": unit,
-            "custom": custom,
-            "cycbgn_dtime": cycbgn_dtime,
-            "cycend_dtime": cycend_dtime
-        }
+        reminder = default_reminder_data()
+        for key in ReminderAttr:
+            if key in kwargs:
+                reminder[key] = kwargs[key]
 
         reminders = self.get_plan(pid)["reminders"]
         reminders[eid] = reminder

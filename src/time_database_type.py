@@ -128,10 +128,23 @@ class ReminderDataDict(TypedDict):
     cycbgn_dtime: datetime.datetime | None
     cycend_dtime: datetime.datetime | None
 
+ReminderAttr = list(ReminderDataDict.__annotations__.keys())
 ReminderAttrType = Literal["clk_time", "bgn_time", "duration", "every", \
     "unit", "custom", "cycbgn_dtime", "cycend_dtime"]
 ReminderValType = datetime.time | int | TimeUnit  | DayType | list[int] \
     | datetime.datetime | None
+
+def default_reminder_data() -> ReminderDataDict:
+    return {
+        "clk_time": None,
+        "bgn_time": None,
+        "duration": 0,
+        "every": 0,
+        "unit": TimeUnit.WEEK,
+        "custom": DayType.EVERYDAY,
+        "cycbgn_dtime": None,
+        "cycend_dtime": None
+    }
 
 
 class PlanDataDict(TypedDict):
