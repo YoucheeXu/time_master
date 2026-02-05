@@ -254,23 +254,24 @@ class TimeDatabase:
             plan.children.clear()
         self._plan_dict.clear()
 
-        for plantuple in cast(Generator[PlanSqlTuple, None, None],
+        for pid, name, note, tags, iid, fid, reminders, action, status, \
+            location, sums in cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
-            fid = plantuple.fid
-            pid = plantuple.pid
-            geo = GeoSqlTuple(*literal_eval(plantuple.location))
+            fid = fid
+            pid = pid
+            geo = GeoSqlTuple(*literal_eval(location))
             locate_at = self._geo2loc(geo.latitude, geo.longitude)
             plandata: PlanDataDict = {
-                "name": plantuple.name,
-                "note": plantuple.note,
-                "tags": self._str2tags(plantuple.tags),
-                "iid": self._str2icon(plantuple.iid),
+                "name": name,
+                "note": note,
+                "tags": self._str2tags(tags),
+                "iid": self._str2icon(iid),
                 "fid": fid,
-                "reminders": deserialize_reminder_collection(plantuple.reminders),
-                "action": ActTyp(plantuple.action),
-                "status": StatusEnum(plantuple.status),
+                "reminders": deserialize_reminder_collection(reminders),
+                "action": ActTyp(action),
+                "status": StatusEnum(status),
                 "location": locate_at,
-                "sums": plantuple.sums
+                "sums": sums
             }
             if fid == -1:
                 plan = Plan()
