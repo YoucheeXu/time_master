@@ -146,6 +146,82 @@ def default_reminder_data() -> ReminderDataDict:
         "cycend_dtime": None
     }
 
+# Weekday number to name mapping (1=Monday, 7=Sunday - conforms to common conventions)
+WEEKDAY_MAPPING = {
+    1: "Monday",
+    2: "Tuesday",
+    3: "Wednesday",
+    4: "Thursday",
+    5: "Friday",
+    6: "Saturday",
+    7: "Sunday"
+}
+
+# TODO: very limit
+def reminder2clkstr(reminder: ReminderDataDict) -> str:
+    """ Convert ReminderDataDict to a human-readable natural language description string
+
+    Args:
+        reminder: Dictionary conforming to ReminderDict type
+
+    Returns:
+        Natural language description string (e.g., "Work day 21:00", "Monday of every 4 weeks 21:00")
+
+    Raises:
+        ValueError: Raised when field values are invalid (e.g., every < 1, weekday numbers outside 1-7)
+        TypeError: Raised when custom field has unsupported type (not str/List[int])
+    """
+    # 1. Extract and validate base fields
+    clk_time = reminder["clk_time"]
+
+    if clk_time is None:
+        # raise ValueError("Value of 'clk_time' is None")
+        return ""
+
+    # 3. Process time text (format as HH:MM, e.g., 21:00)
+    time_text = clk_time.strftime("%H:%M")
+
+    every = reminder["every"]
+    if every < 0:
+        raise ValueError(f"Value of 'every' must be >= 0, current value: {every}")
+    elif every == 0:
+        return time_text
+    unit = reminder["unit"]
+    custom = reminder["custom"]
+
+    # 2. Process frequency text (optimize singular/plural: no 's' for every=1, add 's' for every>1)
+    unit_text = unit.name.lower()
+    if every == 1:
+        frequency_text = f"every {unit_text}"
+    else:
+        frequency_text = f"every {every} {unit_text}s"
+
+    # 4. Process custom field by scenario to generate core description
+    if isinstance(custom, DayType):
+        # Scenario 1: custom is DayType (ED/WD/HD)
+        custom_text = custom.name.lower()
+        # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
+        if every == 1:
+            description = f"{custom_text} {time_text}"
+        else:
+            description = f"{custom_text} of {frequency_text} {time_text}"
+
+    else:
+        # Scenario 2: custom is list of weekday numbers (e.g., [1,3])
+        if unit == TimeUnit.WEEK:
+            # Validate number validity in list
+            invalid_days = [day for day in custom if day not in WEEKDAY_MAPPING]
+            if invalid_days:
+                raise ValueError(f"Weekday numbers must be between 1-7, invalid values: {invalid_days}")
+            # Convert to weekday names (use comma separator for multiple days, e.g., "Monday, Wednesday")
+            custom_names = [WEEKDAY_MAPPING[day] for day in custom]
+        custom_names = [str(num) for num in custom]
+        custom_text = ", ".join(custom_names)
+        # Combine description (e.g., "Monday of every 4 weeks 21:00")
+        description = f"{custom_text} of {frequency_text} {time_text}"
+
+    return description
+
 
 class PlanDataDict(TypedDict):
     """ _summary_

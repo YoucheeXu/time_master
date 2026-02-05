@@ -280,6 +280,7 @@ class TimeDatabase:
                 self._plan_dict[fid].children[pid] = plandata
 
         # pv(self._plan_dict)
+        return self._plan_dict
 
     def add_plan(self, **kwargs: Unpack[PlanDataDict]) -> int:
         """_summary_
