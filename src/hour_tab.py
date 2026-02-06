@@ -17,7 +17,8 @@ from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerC
 from src.schedule import Schedule
 from src.hour_type import HourTuple, HourDict
 from src.time_database_type import IconTuple
-from src.time_database_type import reminder2clkstr, time2str
+from src.time_database_type import TimeUnit, DayType, str_to_intenum
+from src.time_database_type import reminder2clkstr, time2str, str2time
 
 from src.time_database import TimeDatabase
 
@@ -1058,7 +1059,8 @@ class HourTab(Container):
         """
         return self._gui.get_control(idctrl)
 
-    def show_selclockdlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
+    def show_selclockdlg(self, owner: Container | None = None,
+            x: int = 0, y: int = 0, **kwargs: object):
         """_summary_
         Args:
             owner (type): _description_
@@ -1084,9 +1086,13 @@ class HourTab(Container):
         cmb_selminute = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelMinute"))
         sel_minute = cmb_selminute.get_val()
         pv(sel_minute)
-        clock = f"{sel_day} {int(sel_hour[:-1]):02}:{int(sel_minute[:-1]):02}"
-        # pv(clock)
-        _ = owner.process_message("changeClock", clock=clock, **kwargs)
+        hour = int(sel_hour[:-1])
+        minute = int(sel_minute[:-1])
+        # clk_time = datetime.time.fromisoformat(f"{hour:02}:{minute:02}:00")
+        clk_time = str2time(f"{hour:02}:{minute:02}")
+        day = str_to_intenum(DayType, sel_day)
+        _ = owner.process_message("changeClock", clk_time=clk_time,
+            custom=day, **kwargs)
         return True, ""
 
     def show_selscheduledlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
@@ -1179,15 +1185,6 @@ class HourTab(Container):
             val (type): _description_
         """
         match attrib:
-            case "clock":
-                val = cast(str, val)
-                sqlval = self._hoursdb.clock_app2sql(val)
-                name = cast(str, self._hoursdb.get_hourattrib(hid, "name"))
-                # self.set_alarm(iid, name, sqlval)
-                if val:
-                    self._schedule.add_event(sqlval, name)
-                    self._schedule.event_to_schedule()
-                self.update_hourctrl_attrib(hid, "clock", val)
             case "schedule":
                 val = cast(str, val)
                 sqlval = self._hoursdb.schedule_app2sql(val)
@@ -1214,7 +1211,11 @@ class HourTab(Container):
         elif idmsg.startswith("btnClock"):
             hid = int(idmsg[8:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_selclockdlg(self, x+20, y+20, id=hid)
+            # TODO: extactly eid
+            plan = self._hoursdb.get_plan(hid)
+            reminders = plan["reminders"]
+            eid = next(iter(reminders.keys()))
+            self.show_selclockdlg(self, x+20, y+20, hid=hid, eid=eid)
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_edithourdlg(self, x+20, y+20, father=-1, id=0, db=self._hoursdb)
@@ -1250,10 +1251,25 @@ class HourTab(Container):
                     self.modify_hour(hid, "rid", f"{grp}_{idx}")
                 case "changeClock":
                     # come from `SelClockDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelClockDlg`
-                    hid = cast(int, kwargs["id"])
-                    clock = cast(str, kwargs["clock"])
-                    clock = "" if clock=="选择定时提醒" else clock
-                    self.modify_hour(hid, "clock", clock)
+                    hid = cast(int, kwargs["hid"])
+                    eid = cast(int, kwargs["eid"])
+                    clk_time = cast(datetime.time, kwargs["clk_time"])
+                    custom = cast(DayType, kwargs["custom"])
+                    ## TODO: come from ?
+                    # clockstr = "" if clockstr=="选择定时提醒" else clockstr
+                    # TODO: add event
+                    # if clock:
+                        # name = self._hoursdb.get_plan(hid)["name"]
+                        # self._schedule.add_event(sqlval, name)
+                        # self._schedule.event_to_schedule()
+                    _ = self._hoursdb.modify_reminder(hid, eid, "clk_time", clk_time)
+                    _ = self._hoursdb.modify_reminder(hid, eid, "every", 1)
+                    _ = self._hoursdb.modify_reminder(hid, eid, "unit", TimeUnit.WEEK)
+                    _ = self._hoursdb.modify_reminder(hid, eid, "custom", custom)
+                    reminder = self._hoursdb.get_reminder(hid, eid)
+                    clockstr = reminder2clkstr(reminder)
+                    pv(clockstr)
+                    self.update_hourctrl_attrib(hid, "clock", clockstr)
                 case "changeSchedule":
                     # come from `SelScheduleDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
                     hid = cast(int, kwargs["id"])
@@ -1278,10 +1294,10 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     name =cast(str, kwargs["name"])
                     rid = cast(tuple[int, int], kwargs["rid"])
-                    clock = cast(str, kwargs["clock"])
+                    clockstr = cast(str, kwargs["clock"])
                     sums = cast(str, kwargs["sum"])
                     fid = cast(int, kwargs["fid"])
-                    self.create_hourctrl(hid, name, rid, clock, sums, fid)
+                    self.create_hourctrl(hid, name, rid, clockstr, sums, fid)
                 case "updateHour":  # come from `HourDetailDlg`
                     hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
@@ -1291,13 +1307,13 @@ class HourTab(Container):
                     name =cast(str, kwargs["name"])
                     fid = cast(int, kwargs["father"])
                     rid = cast(tuple[int, int], kwargs["rid"])
-                    clock = cast(str, kwargs["clock"])
+                    clockstr = cast(str, kwargs["clock"])
                     schedule = cast(str, kwargs["schedule"])
 
-                    clock_val = "" if clock == "选择定时提醒" else clock
+                    clock_val = "" if clockstr == "选择定时提醒" else clockstr
                     schedule_val = "" if schedule == "选择时间投入计划" else schedule
                     hid = self._hoursdb.add_hour(name, rid, clock_val, schedule_val, fid)
-                    self.create_hourctrl(hid, name, rid, clock, "0.0h", fid)
+                    self.create_hourctrl(hid, name, rid, clockstr, "0.0h", fid)
                 case "getImagePath": # come from `HourDetailDlg`
                     group = cast(int, kwargs["group"])
                     index = cast(int, kwargs["index"])

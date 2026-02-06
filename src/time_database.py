@@ -13,7 +13,6 @@ from collections.abc import Generator
 from pyutilities.logit import pv, po, pe
 from pyutilities.sqlite import SQLite
 
-from src.bidirectionaldict import BidirectionalDict
 from src.action_sys import ActTyp
 from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
@@ -69,12 +68,6 @@ class TimeDatabase:
         """
         self._database: SQLite = SQLite()
         self._plan_dict: dict[int, Plan] = {}
-
-        self._day_dict: BidirectionalDict[str, str] = \
-            BidirectionalDict[str, str]({"ED": "日", "WD": "工作日", "HD": "节假日"})
-        self._period_dict: BidirectionalDict[str, str] = \
-            BidirectionalDict[str, str]({"HR": "小时", "DY": "日", \
-                "WK": "周", "MH": "月", "SZ": "季节", "YR": "年"})
 
     def open(self, dbfile: str, req_ver: int = 0) -> tuple[int, str]:
         """_summary_
@@ -179,20 +172,6 @@ class TimeDatabase:
             return []
         else:
             return cast(list[str], literal_eval(tagstr))
-
-    def _str2time(self, timestr: str):
-        """_summary_
-
-        Args:
-            timestr (str): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        if timestr:
-            return datetime.datetime.strptime(timestr, "%H:%M").time()
-        else:
-            return None
 
     def _timestamp2datetime(self, timestamp: float):
         """_summary_

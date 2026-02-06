@@ -3,6 +3,7 @@
 import datetime
 from enum import IntEnum, auto
 from typing import Literal, NamedTuple, TypedDict
+from typing import TypeVar
 from dataclasses import dataclass, field
 
 from src.action_sys import ActTyp
@@ -29,6 +30,24 @@ class DayType(IntEnum):
     WORKDAY = auto()
     WEEKEND = auto()
     HOLIDAY = auto()
+
+T = TypeVar('T', bound=IntEnum)
+def str_to_intenum(enum_cls: type[T], name_str: str) -> T:
+    """
+    Convert an exact-matching string to the corresponding IntEnum instance (name-based).
+    Returns None if the string is not a valid IntEnum name (avoids KeyError).
+
+    Args:
+        enum_cls: Target IntEnum class (e.g., StatusEnum, ActTyp)
+        name_str: String matching the IntEnum's NAME (e.g., "ONGOING", "NOACTION")
+
+    Returns:
+        Corresponding IntEnum instance, or None if invalid name
+    """
+    # __members__ = {name: IntEnumInstance, ...} → direct name lookup
+    normalized_str = name_str.strip().upper()
+    return enum_cls.__members__[normalized_str]
+
 
 class GeoSqlTuple(NamedTuple):
     """_summary_
@@ -224,7 +243,7 @@ def reminder2clkstr(reminder: ReminderDataDict) -> str:
 
 
 def time2str(time: datetime.time | None):
-    """_summary_
+    """ convert datetime.time to string "%H:%M"
 
     Args:
         time (datetime.time | None): _description_
@@ -235,6 +254,21 @@ def time2str(time: datetime.time | None):
     if time is None:
         return ""
     return datetime.time.strftime(time, "%H:%M")
+
+
+def str2time(timestr: str):
+    """ convert string "%H:%M" to datetime.time
+
+    Args:
+        timestr (str): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if timestr:
+        return datetime.datetime.strptime(timestr, "%H:%M").time()
+    else:
+        return None
 
 class PlanDataDict(TypedDict):
     """ _summary_
