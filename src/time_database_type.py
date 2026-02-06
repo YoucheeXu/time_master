@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 import datetime
 from enum import IntEnum, auto
-from typing import Literal, NamedTuple, TypedDict
+from typing import Literal, NamedTuple, TypedDict, NotRequired
 from typing import TypeVar
 from dataclasses import dataclass, field
 
@@ -147,11 +147,17 @@ class ReminderDataDict(TypedDict):
     cycbgn_dtime: datetime.datetime | None
     cycend_dtime: datetime.datetime | None
 
+class ReminderDataOptionalDict(TypedDict, total=False):
+    clk_time: datetime.time | None
+    bgn_time: datetime.time | None
+    duration: int
+    every: int
+    unit: TimeUnit
+    custom: DayType | list[int]
+    cycbgn_dtime: datetime.datetime | None
+    cycend_dtime: datetime.datetime | None
+
 ReminderAttr = list(ReminderDataDict.__annotations__.keys())
-ReminderAttrType = Literal["clk_time", "bgn_time", "duration", "every", \
-    "unit", "custom", "cycbgn_dtime", "cycend_dtime"]
-ReminderValType = datetime.time | int | TimeUnit  | DayType | list[int] \
-    | datetime.datetime | None
 
 def default_reminder_data() -> ReminderDataDict:
     return {

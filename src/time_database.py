@@ -18,8 +18,9 @@ from src.time_database_type import generate_sqlite_fields
 from src.time_database_type import TimeUnit, DayType
 from src.time_database_type import StatusEnum
 from src.time_database_type import GeoSqlTuple, PlanSqlTuple
-from src.time_database_type import ReminderAttr, ReminderAttrType, ReminderValType
-from src.time_database_type import ReminderDataDict, default_reminder_data
+from src.time_database_type import ReminderAttr
+from src.time_database_type import ReminderDataDict, ReminderDataOptionalDict
+from src.time_database_type import default_reminder_data
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
 from src.time_database_type import PlanAttr, PlanAttrType, PlanValType
@@ -511,8 +512,8 @@ class TimeDatabase:
         sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
         _ = self._database.execute1(sql, (newval_sql, pid))
 
-    def modify_reminder(self, pid: int, eid: int, attrib: ReminderAttrType,
-            newval: ReminderValType):
+    def modify_reminder(self, pid: int, eid: int,
+            **kwargs: Unpack[ReminderDataOptionalDict]):
         """_summary_
 
         Args:
@@ -524,18 +525,22 @@ class TimeDatabase:
         plan = self.get_plan(pid)
         reminders = plan["reminders"]
         reminder = reminders[eid]
-        oldval = reminder[attrib]
-        reminder[attrib] = newval
+
+        po((f"Begin to upate '{eid}' reminders of #{pid} plan '{plan["name"]}':")
+            )
+        for key in ReminderAttr:
+            if key in kwargs:
+                po(f"from '{reminder[key]}' to '{kwargs[key]}'")
+                reminder[key] = kwargs[key]
 
         attr_sql = "reminders"
         newval_sql = serialize_reminder_collection(reminders)
         sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
         _ = self._database.execute1(sql, (newval_sql, pid))
 
-        po((f"update '{attrib}' of 'reminders' of #{pid} plan '{plan["name"]}' "
-            f"from '{oldval}' to '{newval}'"))
+        po("End to update.")
 
-        return True
+        return copy.deepcopy(reminder)
 
     # TODO: return copy version
     def get_reminder(self, pid: int, eid: int):

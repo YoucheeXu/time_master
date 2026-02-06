@@ -1262,11 +1262,14 @@ class HourTab(Container):
                         # name = self._hoursdb.get_plan(hid)["name"]
                         # self._schedule.add_event(sqlval, name)
                         # self._schedule.event_to_schedule()
-                    _ = self._hoursdb.modify_reminder(hid, eid, "clk_time", clk_time)
-                    _ = self._hoursdb.modify_reminder(hid, eid, "every", 1)
-                    _ = self._hoursdb.modify_reminder(hid, eid, "unit", TimeUnit.WEEK)
-                    _ = self._hoursdb.modify_reminder(hid, eid, "custom", custom)
-                    reminder = self._hoursdb.get_reminder(hid, eid)
+                    reminder = self._hoursdb.modify_reminder(hid, eid,
+                        clk_time=clk_time,
+                        every=1,
+                        unit=TimeUnit.WEEK,
+                        custom=custom,
+                        cycbgn_dtime=datetime.datetime.now(),
+                        cycend_dtime=None,
+                    )
                     clockstr = reminder2clkstr(reminder)
                     pv(clockstr)
                     self.update_hourctrl_attrib(hid, "clock", clockstr)
