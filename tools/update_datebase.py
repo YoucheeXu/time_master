@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 """
-    set PYTHONPATH=C:\\Projects\\time_master
-    uv run .\\tools\\update_datebase.py C:\\Projects\time_master\\data\\Youchee\\hours0.db
+    set PYTHONPATH=..\time_master
+    uv run .\\tools\\update_datebase.py .\\data\\Youchee\\hours0.db
 """
 import os
 import sys
@@ -19,6 +19,7 @@ from src.hour_type import HourSqlTuple, HourSqlRecord
 from src.time_database_type import IconTuple
 from src.time_database_type import TimeUnit, DayType, default_reminder_data
 from src.time_database_type import default_plan_data, default_record_data
+from src.time_database_type import str2time
 from src.time_database import TimeDatabase
 
 
@@ -281,7 +282,7 @@ def migrate_legacy_to_new(legacy_db_path: str, new_db_path: str):
             custom = generate_custom(clock_i1, clock_i2)
 
             reminder = default_reminder_data()
-            clk_time = _new_db._str2time(clk_timestr)
+            clk_time = str2time(clk_timestr)
             reminder["clk_time"] = clk_time
             reminder["bgn_time"] = clk_time
             reminder["duration"] = duration
