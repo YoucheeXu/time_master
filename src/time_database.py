@@ -546,6 +546,7 @@ class TimeDatabase:
         reminders = plan["reminders"]
         reminder = reminders[eid]
         oldval = reminder[attrib]
+        reminder[attrib] = newval
 
         attr_sql = "reminders"
         newval_sql = serialize_reminder_collection(reminders)
