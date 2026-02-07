@@ -342,10 +342,10 @@ class Plan:
 
     Attributes:
         data (PlanDataDict): Core plan metadata (name, status, reminders, etc.)
-        children (dict[int, PlanDataDict]): Nested child plans (key = child ID, value = child plan data)
+        children (dict[int, Plan]): Nested child plans (key = child ID, value = child plan data)
     """
     data: PlanDataDict = field(default_factory=default_plan_data)
-    children: dict[int, PlanDataDict] = field(default_factory=dict)
+    children: dict[int, "Plan"] = field(default_factory=dict)
 
 
 class RecordSqlTuple(NamedTuple):

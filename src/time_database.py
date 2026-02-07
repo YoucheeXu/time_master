@@ -221,13 +221,39 @@ class TimeDatabase:
         else:
             return custom
 
-    def read_plans(self):
-        """ _summary_
-        """
+    def _get_plan(self, despid: int, plandict: dict[int, Plan] | None = None):
+        if plandict is None:
+            plandict = self._plan_dict
+        def get_plan_recursive(despid: int, plandict: dict[int, Plan]) -> Plan | None:
+            for pid, plan in plandict.items():
+                if pid == despid:
+                    return plan
+                if plan.children:
+                    if ret := get_plan_recursive(despid, plan.children):
+                        return ret
+            return None
+        if plan := get_plan_recursive(despid, plandict):
+            return plan
+        else:
+            raise KeyError(f"no {despid} in self._plan_dict")
+
+    def construct_plan_dict(self):
         for _, plan in self._plan_dict.items():
             plan.children.clear()
         self._plan_dict.clear()
+        for pid, plandata in self._plandata_dict.items():
+            plan = Plan()
+            plan.data = plandata
+            fid = plandata['fid']
+            if fid == -1:
+                self._plan_dict[pid] = plan
+            else:
+                fplan = self._get_plan(fid)
+                fplan.children[pid] = plan
 
+    def read_plans(self):
+        """ _summary_
+        """
         for pid, name, note, tags, iid, fid, reminders, action, status, \
             location, sums in cast(Generator[PlanSqlTuple, None, None],
                 self._database.each("SELECT * FROM PLANS")):
@@ -247,14 +273,8 @@ class TimeDatabase:
                 "location": locate_at,
                 "sums": sums
             }
-            if fid == -1:
-                plan = Plan()
-                plan.data = plandata
-                self._plan_dict[pid] = plan
-            else:
-                if fid in self._plan_dict:
-                    self._plan_dict[fid].children[pid] = plandata
             self._plandata_dict[pid] = plandata
+        self.construct_plan_dict()
 
         # pv(self._plan_dict)
         return copy.deepcopy(self._plandata_dict)
@@ -326,7 +346,9 @@ class TimeDatabase:
             plan.data = plandata
             self._plan_dict[pid] = plan
         else:
-            self._plan_dict[fid].children[pid] = plandata
+            fplan = self._get_plan(fid)
+            fplan.children[pid].data = plandata
+            
         self._plandata_dict[pid] = plandata
 
         return pid
@@ -341,6 +363,7 @@ class TimeDatabase:
         pv(sql)
         _ = self._database.execute1(sql)
 
+    # TODO: very limit, only two level
     def _modify_plan_fid(self, pid: int, newfid: int):
         oldfid = -1
         plan = Plan()
@@ -349,10 +372,10 @@ class TimeDatabase:
                 oldfid = father.data["fid"]
                 plan = father
                 break
-            for cid, child, in father.children.items():
+            for cid, child in father.children.items():
                 if cid == pid:
-                    oldfid = child["fid"]
-                    plan.data = child
+                    oldfid = child.data["fid"]
+                    plan.data = child.data
                     break
         if oldfid == -1:
             if newfid == -1: # father -> father
@@ -360,15 +383,19 @@ class TimeDatabase:
                     "to fatherr")
                 # raise RuntimeWarning(errmsg)
                 po(warnmsg)
-                return False
+                return False, warnmsg
             elif len(plan.children) > 0:   # father with child-> child
-                raise RuntimeError((f"no support father #{pid} plan "
-                    f"with children degrade to #{newfid} plan's child"))
+                errmsg = (f"no support father #{pid} plan "
+                    f"with children degrade to #{newfid} plan's child")
+                po(errmsg)
+                return False, errmsg
             elif newfid == pid:   # father without child-> child
-                raise RuntimeError((f"no support father #{pid} plan "
-                    f"degrade to itself child"))
+                errmsg = (f"no support father #{pid} plan "
+                    f"degrade to itself child")
+                po(errmsg)
+                return False, errmsg
             else:
-                self._plan_dict[newfid].children[pid] = plan.data
+                self._plan_dict[newfid].children[pid].data = plan.data
                 del self._plan_dict[pid]
         elif newfid == -1:    # child -> father
             newplan = Plan()
@@ -376,15 +403,16 @@ class TimeDatabase:
             self._plan_dict[pid] = newplan
             del self._plan_dict[oldfid].children[pid]
         elif oldfid != newfid:    # one's child -> another's child
-            self._plan_dict[newfid].children[pid] = plan.data
+            self._plan_dict[newfid].children[pid].data = plan.data
             del self._plan_dict[oldfid].children[pid]
         else:   # one's child -> one's child
             warnmsg = (f"no support child #{pid} plan convert "
                 "its father to the same fatherr")
             po(warnmsg)
-            return False
+            return False, warnmsg
+
         plan.data["fid"] = newfid
-        return True
+        return True, ""
 
     def modify_plan(self, pid: int, **kwargs: Unpack[PlanDataOptionalDict]):
         """_summary_
@@ -425,8 +453,10 @@ class TimeDatabase:
                     newval_sql = self._icon2str(icon)
                 case "fid":
                     assert isinstance(newval, int)
-                    if not self._modify_plan_fid(pid, newval):
-                        return
+                    ret, msg = self._modify_plan_fid(pid, newval):
+                    if not ret:
+                        return ret, msg
+                    plandata[attrib] = newval
                     newval_sql = newval
                 case "action":
                     assert isinstance(newval, ActTyp)
