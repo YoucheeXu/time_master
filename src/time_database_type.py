@@ -302,12 +302,19 @@ class PlanDataDict(TypedDict):
     location: LocTuple | None
     sums: int
 
-PlanAttr = list(PlanDataDict.__annotations__.keys())
-PlanAttrType = Literal["name", "note", "tags", "iid", "fid", \
-    "reminders", "action", "status", "location", "sums"]
-PlanValType = str | list[str] | IconTuple \
-    | int | ActTyp | StatusEnum | LocTuple| None
+class PlanDataOptionalDict(TypedDict, total=False):
+    name: str
+    note: str
+    tags: list[str]
+    iid: IconTuple | None
+    fid: int
+    reminders: dict[int, ReminderDataDict]
+    action: ActTyp
+    status: StatusEnum
+    location: LocTuple | None
+    sums: int
 
+PlanAttr = list(PlanDataDict.__annotations__.keys())
 
 def default_plan_data() -> PlanDataDict:
     """ Independent factory function to return default PlanDataDict values.

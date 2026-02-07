@@ -23,8 +23,9 @@ from src.time_database_type import ReminderDataDict, ReminderDataOptionalDict
 from src.time_database_type import default_reminder_data
 from src.time_database_reminder import serialize_reminder_collection
 from src.time_database_reminder import deserialize_reminder_collection
-from src.time_database_type import PlanAttr, PlanAttrType, PlanValType
+from src.time_database_type import PlanAttr
 from src.time_database_type import PlanDataDict, default_plan_data
+from src.time_database_type import PlanDataOptionalDict
 from src.time_database_type import IconTuple, LocTuple, Plan
 from src.time_database_type import RecordSqlTuple, RecordDataDict
 from src.time_database_type import RecordAttr, default_record_data
@@ -340,15 +341,7 @@ class TimeDatabase:
         pv(sql)
         _ = self._database.execute1(sql)
 
-    def modify_plan(self, pid: int, attrib: PlanAttrType,
-            newval: PlanValType):
-        """_summary_
-
-        Args:
-            pid (int): _description_
-            attrib (str): _description_
-            newval (_type_): _description_
-        """
+    def _modify_plan_fid(self, pid: int, newfid: int):
         oldfid = -1
         plan = Plan()
         for fid, father in self._plan_dict.items():
@@ -361,84 +354,110 @@ class TimeDatabase:
                     oldfid = child["fid"]
                     plan.data = child
                     break
-        oldval = plan.data[attrib]
-        match attrib:
-            case "name":
-                assert isinstance(newval, str)
-                plan.data[attrib] = newval
-                newval_sql = newval
-            case "note":
-                assert isinstance(newval, str)
-                plan.data[attrib] = newval
-                newval_sql = newval
-            case "tags":
-                assert isinstance(newval, list)
-                plan.data[attrib] = newval
-                newval_sql = str(newval)
-            case "iid":
-                pe(type(newval))
-                assert isinstance(newval, IconTuple) or (newval is None)
-                plan.data[attrib] = newval
-                newval_sql = str(newval)
-            case "fid":
-                assert isinstance(newval, int)
-                newval_sql = newval
+        if oldfid == -1:
+            if newfid == -1: # father -> father
+                warnmsg = (f"no support father #{pid} plan convert "
+                    "to fatherr")
+                # raise RuntimeWarning(errmsg)
+                po(warnmsg)
+                return False
+            elif len(plan.children) > 0:   # father with child-> child
+                raise RuntimeError((f"no support father #{pid} plan "
+                    f"with children degrade to #{newfid} plan's child"))
+            elif newfid == pid:   # father without child-> child
+                raise RuntimeError((f"no support father #{pid} plan "
+                    f"degrade to itself child"))
+            else:
+                self._plan_dict[newfid].children[pid] = plan.data
+                del self._plan_dict[pid]
+        elif newfid == -1:    # child -> father
+            newplan = Plan()
+            newplan.data = plan.data
+            self._plan_dict[pid] = newplan
+            del self._plan_dict[oldfid].children[pid]
+        elif oldfid != newfid:    # one's child -> another's child
+            self._plan_dict[newfid].children[pid] = plan.data
+            del self._plan_dict[oldfid].children[pid]
+        else:   # one's child -> one's child
+            warnmsg = (f"no support child #{pid} plan convert "
+                "its father to the same fatherr")
+            po(warnmsg)
+            return False
+        plan.data["fid"] = newfid
+        return True
 
-                newfid = newval
-                if oldfid == -1:
-                    if newfid == -1: # father -> father
-                        warnmsg = (f"no support father #{pid} plan convert "
-                            "to fatherr")
-                        # raise RuntimeWarning(errmsg)
-                        po(warnmsg)
-                        return False
-                    elif len(plan.children) > 0:   # father with child-> child
-                        raise RuntimeError((f"no support father #{pid} plan "
-                            f"with children degrade to #{newfid} plan's child"))
-                    elif newfid == pid:   # father without child-> child
-                        raise RuntimeError((f"no support father #{pid} plan "
-                            f"degrade to itself child"))
-                    else:
-                        self._plan_dict[newfid].children[pid] = plan.data
-                        del self._plan_dict[pid]
-                elif newfid == -1:    # child -> father
-                    newplan = Plan()
-                    newplan.data = plan.data
-                    self._plan_dict[pid] = newplan
-                    del self._plan_dict[oldfid].children[pid]
-                elif oldfid != newfid:    # one's child -> another's child
-                    self._plan_dict[newfid].children[pid] = plan.data
-                    del self._plan_dict[oldfid].children[pid]
-                else:   # one's child -> one's child
-                    warnmsg = (f"no support child #{pid} plan convert "
-                        "its father to the same fatherr")
-                    po(warnmsg)
-                    return False
-                plan.data[attrib] = newval
-            case "action":
-                assert isinstance(newval, ActTyp)
-                plan.data[attrib] = newval
-                newval_sql = newval
-            case "status":
-                assert isinstance(newval, StatusEnum)
-                plan.data[attrib] = newval
-                newval_sql = newval
-            case "location":
-                assert isinstance(newval, LocTuple) or (newval is None)
-                plan.data[attrib] = newval
-                newval_sql = self._loc2geo(newval)
-            case "sums":
-                assert isinstance(newval, int)
-                plan.data[attrib] = newval
-                newval_sql = newval
-            case _:
-                raise KeyError(f"There is no {attrib} in Plan {pid}")
+    def modify_plan(self, pid: int, **kwargs: Unpack[PlanDataOptionalDict]):
+        """_summary_
 
-        sql = f"UPDATE PLANS SET {attrib} = ? WHERE pid = ?"
-        _ = self._database.execute1(sql, (newval_sql, pid))
+        Args:
+            pid (int): _description_
+            attrib (str): _description_
+            newval (_type_): _description_
+        """
+        plandata = self._plandata_dict[pid]
+        po(f"Begin to update #{pid} plan '{plandata["name"]}'")
+        attrib_list: list[str] = []
+        oldval_list = []
+        newval_sql_list = []
+        for key in PlanAttr:
+            attrib = key
+            attrib_list.append(attrib)
+            oldval_list.append(plandata[attrib])
+            newval = kwargs[key]
+            match attrib:
+                case "name":
+                    assert isinstance(newval, str)
+                    plandata[attrib] = newval
+                    newval_sql = newval
+                case "note":
+                    assert isinstance(newval, str)
+                    plandata[attrib] = newval
+                    newval_sql = newval
+                case "tags":
+                    assert isinstance(newval, list)
+                    tags = cast(list[str], newval)
+                    plandata[attrib] = tags
+                    newval_sql = str(tags)
+                case "iid":
+                    assert isinstance(newval, IconTuple) or (newval is None)
+                    icon = cast(IconTuple | None, newval)
+                    plandata[attrib] = icon
+                    newval_sql = self._icon2str(icon)
+                case "fid":
+                    assert isinstance(newval, int)
+                    if not self._modify_plan_fid(pid, newval):
+                        return
+                    newval_sql = newval
+                case "action":
+                    assert isinstance(newval, ActTyp)
+                    plandata[attrib] = newval
+                    newval_sql = newval
+                case "status":
+                    assert isinstance(newval, StatusEnum)
+                    plandata[attrib] = newval
+                    newval_sql = newval
+                case "location":
+                    assert isinstance(newval, LocTuple) or (newval is None)
+                    location = cast(LocTuple | None, newval)
+                    plandata[attrib] = location
+                    newval_sql = self._loc2geo(location)
+                case "sums":
+                    assert isinstance(newval, int)
+                    plandata[attrib] = newval
+                    newval_sql = newval
+                case _:
+                    raise KeyError(f"There is no {attrib} in Plan {pid}")
+            newval_sql_list.append(newval_sql)
+        set_clause = ", ".join([f"{att}=?" for att in attrib_list])
+        sql = f"UPDATE PLANS SET {set_clause} WHERE pid = ?"
+        pv(sql)
+        params = tuple(newval_sql_list) + (pid,)
+        pv(params)
+        _ = self._database.execute1(sql, params)
 
-        po((f"update '{attrib}' of #{pid} plan '{plan.data["name"]}' "
-            f"from '{oldval}' to '{newval}'"))
+        po((f"Update {attrib_list} of #{pid} plan '{plandata["name"]}' "
+            f"from {oldval_list} to {newval_sql_list}"
+        ))
 
         return True
 
@@ -512,7 +531,7 @@ class TimeDatabase:
         reminders = plandata["reminders"]
         reminder = reminders[eid]
 
-        po((f"Begin to upate '{eid}' reminders of #{pid} plan '{plandata["name"]}':")
+        po((f"Begin to update '{eid}' reminders of #{pid} plan '{plandata["name"]}':")
             )
         for key in ReminderAttr:
             if key in kwargs:
