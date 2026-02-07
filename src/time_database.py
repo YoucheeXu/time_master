@@ -446,27 +446,6 @@ class TimeDatabase:
         plantdata = self._plandata_dict[pid]
         return copy.deepcopy(plantdata)
 
-    # TODO: risk to modify plan
-    def get_plan(self, pid: int):
-        """_summary_
-
-        Args:
-            pid (int): _description_
-
-        Raises:
-            KeyError: _description_
-
-        Returns:
-            _type_: _description_
-        """
-        for fid, father in self._plan_dict.items():
-            if fid == pid:
-                return father.data
-            for cid, childdata, in father.children.items():
-                if cid == pid:
-                    return childdata
-        raise KeyError(f"There is no {pid} in self._plan_dict")
-
     def add_reminder(self, pid: int, **kwargs: Unpack[ReminderDataDict]) -> int:
         """_summary_
 
@@ -492,7 +471,7 @@ class TimeDatabase:
             if key in kwargs:
                 reminder[key] = kwargs[key]
 
-        reminders = self.get_plan(pid)["reminders"]
+        reminders = self._plandata_dict[pid]["reminders"]
         reminders[eid] = reminder
 
         attr_sql = "reminders"
@@ -511,7 +490,7 @@ class TimeDatabase:
         Args:
             eid (int): _description_
         """
-        reminders = self.get_plan(pid)["reminders"]
+        reminders = self._plandata_dict[pid]["reminders"]
         del reminders[eid]
 
         attr_sql = "reminders"
@@ -529,11 +508,11 @@ class TimeDatabase:
             attrib (str): _description_
             newval (_type_): _description_
         """
-        plan = self.get_plan(pid)
-        reminders = plan["reminders"]
+        plandata = self._plandata_dict[pid]
+        reminders = plandata["reminders"]
         reminder = reminders[eid]
 
-        po((f"Begin to upate '{eid}' reminders of #{pid} plan '{plan["name"]}':")
+        po((f"Begin to upate '{eid}' reminders of #{pid} plan '{plandata["name"]}':")
             )
         for key in ReminderAttr:
             if key in kwargs:
@@ -560,8 +539,8 @@ class TimeDatabase:
         Returns:
             _type_: _description_
         """
-        plan = self.get_plan(pid)
-        reminders = copy.deepcopy(plan["reminders"])
+        plandata = self._plandata_dict[pid]
+        reminders = copy.deepcopy(plandata["reminders"])
         return  reminders[eid]
 
     def add_record(self, **kwargs: Unpack[RecordDataDict]):

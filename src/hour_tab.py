@@ -45,7 +45,7 @@ class RecordHourDlg(DialogCtrl):
         Returns:
             _type_: _description_
         """
-        return db.get_plan(hid)
+        return db.get_plandata(hid)
 
     @override
     def _beforego(self, **kwargs: object):
@@ -1212,8 +1212,8 @@ class HourTab(Container):
             hid = int(idmsg[8:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             # TODO: extactly eid
-            plan = self._hoursdb.get_plan(hid)
-            reminders = plan["reminders"]
+            plandata = self._hoursdb.get_plandata(hid)
+            reminders = plandata["reminders"]
             eid = next(iter(reminders.keys()))
             self.show_selclockdlg(self, x+20, y+20, hid=hid, eid=eid)
         elif idmsg == "btnNewHour":
@@ -1236,7 +1236,7 @@ class HourTab(Container):
                     strt_dtime = cast(datetime.datetime, kwargs["strt_dtime"])
                     duration = cast(int, kwargs["duration"])
                     # po(kwargs)
-                    name = self._hoursdb.get_plan(hid)["name"]
+                    name = self._hoursdb.get_plandata(hid)["name"]
                     _ = self._hoursdb.add_record(pid=hid, name=name,
                         bgn_dtime=strt_dtime, duration=duration)
                 case "ChangeSum":   # come from RecordHourDlg
@@ -1259,7 +1259,7 @@ class HourTab(Container):
                     # clockstr = "" if clockstr=="选择定时提醒" else clockstr
                     # TODO: add event
                     # if clock:
-                        # name = self._hoursdb.get_plan(hid)["name"]
+                        # name = self._hoursdb.get_plandata(hid)["name"]
                         # self._schedule.add_event(sqlval, name)
                         # self._schedule.event_to_schedule()
                     reminder = self._hoursdb.modify_reminder(hid, eid,
