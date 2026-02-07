@@ -854,21 +854,13 @@ class HourTab(Container):
         """
         _ = self._open(dbpath)
         plans = self._hoursdb.read_plans()
-        for fid, father in plans.items():
-            fatherdata = father.data
-            reminder = list(fatherdata["reminders"].values())[0]
+        for pid, plandata in plans.items():
+            reminder = list(plandata["reminders"].values())[0]
             clkstr = reminder2clkstr(reminder)
-            iid = cast(IconTuple, fatherdata["iid"])
-            self.create_hourctrl(fid,
-                fatherdata["name"], iid,
-                clkstr,  fatherdata["sums"], -1)
-            for cid, childdata, in father.children.items():
-                reminder = list(childdata["reminders"].values())[0]
-                clkstr = reminder2clkstr(reminder)
-                iid = cast(IconTuple, childdata["iid"])
-                self.create_hourctrl(cid,
-                    childdata["name"], iid,
-                    clkstr, childdata["sums"], fid)                
+            iid = cast(IconTuple, plandata["iid"])
+            self.create_hourctrl(pid,
+                plandata["name"], iid,
+                clkstr, plandata["sums"], plandata['fid'])
 
     def update_hourctrl_attrib(self, uid: int, attrib: str, val: str | int):
         """_summary_
