@@ -61,14 +61,14 @@ class TimeDatabase:
     Attributes:
         _database (_type_): _description_
         _plan_dict (_type_): _description_
-        _day_dict (_type_): _description_
-        _period_dict (_type_): _description_
+        _plandata_dict (_type_): flatten version of `_plan_dict` with sharing `Plan` with `_plan_dict`
     """
     def __init__(self):
         """_summary_
         """
         self._database: SQLite = SQLite()
         self._plan_dict: dict[int, Plan] = {}
+        self._plandata_dict: dict[int, PlanDataDict] = {}
 
     def open(self, dbfile: str, req_ver: int = 0) -> tuple[int, str]:
         """_summary_
@@ -251,10 +251,12 @@ class TimeDatabase:
                 plan.data = plandata
                 self._plan_dict[pid] = plan
             else:
-                self._plan_dict[fid].children[pid] = plandata
+                if fid in self._plan_dict:
+                    self._plan_dict[fid].children[pid] = plandata
+            self._plandata_dict[pid] = plandata
 
         # pv(self._plan_dict)
-        return self._plan_dict
+        return copy.deepcopy(self._plandata_dict)
 
     def add_plan(self, **kwargs: Unpack[PlanDataDict]) -> int:
         """_summary_
@@ -324,6 +326,7 @@ class TimeDatabase:
             self._plan_dict[pid] = plan
         else:
             self._plan_dict[fid].children[pid] = plandata
+        self._plandata_dict[pid] = plandata
 
         return pid
 
@@ -438,6 +441,10 @@ class TimeDatabase:
             f"from '{oldval}' to '{newval}'"))
 
         return True
+
+    def get_plandata(self, pid: int):
+        plantdata = self._plandata_dict[pid]
+        return copy.deepcopy(plantdata)
 
     # TODO: risk to modify plan
     def get_plan(self, pid: int):
