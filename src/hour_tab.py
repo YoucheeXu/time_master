@@ -1235,7 +1235,7 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     sum_minutes= cast(int, kwargs["sum"])
                     self.update_hourctrl_attrib(hid, "sum", sum_minutes)
-                    _ = self._hoursdb.modify_plan(hid, "sums", sum_minutes)
+                    _ = self._hoursdb.modify_plan(hid, sums=sum_minutes)
                 case "changeItemImage": # come from <-`HourDetailDlg`<-`EditHourDlg`
                     hid = cast(int, kwargs["id"])
                     grp = cast(int, kwargs["group"])

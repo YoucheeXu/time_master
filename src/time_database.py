@@ -428,56 +428,57 @@ class TimeDatabase:
         oldval_list = []
         newval_sql_list = []
         for key in PlanAttr:
-            attrib = key
-            attrib_list.append(attrib)
-            oldval_list.append(plandata[attrib])
-            newval = kwargs[key]
-            match attrib:
-                case "name":
-                    assert isinstance(newval, str)
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case "note":
-                    assert isinstance(newval, str)
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case "tags":
-                    assert isinstance(newval, list)
-                    tags = cast(list[str], newval)
-                    plandata[attrib] = tags
-                    newval_sql = str(tags)
-                case "iid":
-                    assert isinstance(newval, IconTuple) or (newval is None)
-                    icon = cast(IconTuple | None, newval)
-                    plandata[attrib] = icon
-                    newval_sql = self._icon2str(icon)
-                case "fid":
-                    assert isinstance(newval, int)
-                    ret, msg = self._modify_plan_fid(pid, newval):
-                    if not ret:
-                        return ret, msg
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case "action":
-                    assert isinstance(newval, ActTyp)
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case "status":
-                    assert isinstance(newval, StatusEnum)
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case "location":
-                    assert isinstance(newval, LocTuple) or (newval is None)
-                    location = cast(LocTuple | None, newval)
-                    plandata[attrib] = location
-                    newval_sql = self._loc2geo(location)
-                case "sums":
-                    assert isinstance(newval, int)
-                    plandata[attrib] = newval
-                    newval_sql = newval
-                case _:
-                    raise KeyError(f"There is no {attrib} in Plan {pid}")
-            newval_sql_list.append(newval_sql)
+            if key in kwargs:
+                attrib = key
+                attrib_list.append(attrib)
+                oldval_list.append(plandata[attrib])
+                newval = kwargs[key]
+                match attrib:
+                    case "name":
+                        assert isinstance(newval, str)
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case "note":
+                        assert isinstance(newval, str)
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case "tags":
+                        assert isinstance(newval, list)
+                        tags = cast(list[str], newval)
+                        plandata[attrib] = tags
+                        newval_sql = str(tags)
+                    case "iid":
+                        assert isinstance(newval, IconTuple) or (newval is None)
+                        icon = cast(IconTuple | None, newval)
+                        plandata[attrib] = icon
+                        newval_sql = self._icon2str(icon)
+                    case "fid":
+                        assert isinstance(newval, int)
+                        ret, msg = self._modify_plan_fid(pid, newval)
+                        if not ret:
+                            return ret, msg
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case "action":
+                        assert isinstance(newval, ActTyp)
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case "status":
+                        assert isinstance(newval, StatusEnum)
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case "location":
+                        assert isinstance(newval, LocTuple) or (newval is None)
+                        location = cast(LocTuple | None, newval)
+                        plandata[attrib] = location
+                        newval_sql = self._loc2geo(location)
+                    case "sums":
+                        assert isinstance(newval, int)
+                        plandata[attrib] = newval
+                        newval_sql = newval
+                    case _:
+                        raise KeyError(f"There is no {attrib} in Plan {pid}")
+                newval_sql_list.append(newval_sql)
         set_clause = ", ".join([f"{att}=?" for att in attrib_list])
         sql = f"UPDATE PLANS SET {set_clause} WHERE pid = ?"
         pv(sql)
