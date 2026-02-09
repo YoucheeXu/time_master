@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import xml.etree.ElementTree as et
 from typing import cast, override
+from typing import NamedTuple
 
 from pyutilities.logit import po, pv, pe
 from pyutilities.winbasic import Widget, Container, Dialog
@@ -15,12 +16,22 @@ from pyutilities.matplot import MatPlotCtrl, LineData
 from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
 from src.schedule import Schedule
-from src.hour_type import HourTuple, HourDict
 from src.time_database_type import IconTuple
 from src.time_database_type import TimeUnit, DayType, str_to_intenum
-from src.time_database_type import reminder2clkstr, time2str, str2time
+from src.time_database_type import reminder2str, time2str, str2time
+from src.time_database_type import PlanDataDict, default_plan_data
+from src.time_database_type import ReminderDataDict, StatusEnum
 
 from src.time_database import TimeDatabase
+
+
+class HourTuple(NamedTuple):
+    hid: int
+    name: str
+    iid: IconTuple
+    fid: int
+    reminders: dict[int, ReminderDataDict]
+    sums: int
 
 
 class RecordHourDlg(DialogCtrl):
@@ -356,14 +367,13 @@ class HourDetailDlg(DialogCtrl):
         self._last_cid: int = 0
         self._children: dict[int, HourTuple] = {}
 
-        self._iid: int = 0
-        self._detail: HourDict = {"name": "", "rid": (0, 0), "clock": "",
-            "schedule": "", "sums": 0, "father": -1}
+        self._hid: int = 0
+        self._detail: PlanDataDict = default_plan_data()
         self._db: TimeDatabase | None = None
         self._firstday: datetime.date = datetime.date(2025,12,25)
         
 
-    def _update_hourdetail(self, attrib: str, val: str | float):
+    def _update_hourdetailctrl(self, attrib: str, val: str | float):
         """_summary_
 
         Args:
@@ -405,63 +415,64 @@ class HourDetailDlg(DialogCtrl):
             case _:
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
-    def _get_hourdetail(self, db: TimeDatabase, iid: int):
+    def _get_hourdetail(self, db: TimeDatabase, hid: int):
         """_summary_
 
         Args:
-            iid (int): _description_
+            hid (int): _description_
 
         Returns:
             _type_: _description_
         """
-        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
-            "sums": 0, "father": -1}
-        # owner = cast(Container, self._owner)
-        _ = db.get_hourdetail(iid, detail)
-        return detail
+        plandata = db.get_plandata(hid)
+        return plandata
 
-    def _plot_weekview(self, iid: int, detail: HourDict, db: TimeDatabase,
+    def _get_minutes_byday(self, hid: int, day: datetime.date):
+        assert self._db is not None
+        records = self._db.get_records(day, hid)
+        total_minutes = 0
+        for _, record in records.items():
+            total_minutes += record['duration']
+        return total_minutes
+
+    def _plot_weekview(self, hid: int, detail: PlanDataDict, db: TimeDatabase,
             firstday: datetime.date):
-        children = db.get_children(iid)
+        children = db.get_children(hid)
         week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
-        limit_ydata: list[float] = [0] * 7
+        target_ydata: list[float] = [0] * 7
 
-        schedule = detail["schedule"]   # schedule = 计划每日45m
-        if schedule:
-            per_typ = schedule[3]
-            unit = 1
-            match per_typ:
-                case "日":
-                    unit = 1
-                case "周":
-                    unit = 7
-                case "月":
-                    unit = 30
+        # TODO: add all reminder
+        reminder = list(self._detail["reminders"].values())[0]
+        # schedule = detail["schedule"]   # schedule = 计划每日45m
+        # if schedule:
+        # per_typ = schedule[3]
+        unit = 1
+        match reminder['unit']:
+            case TimeUnit.DAY:
+                unit = 1
+            case TimeUnit.WEEK:
+                unit = 7
+            case TimeUnit.MONTH:
+                unit = 30
+            case _:
+                unit = 360
+        pv(unit)
+
+        total_minutes = reminder['duration']
+        per_minutes = total_minutes / unit
+
+        custom = reminder['custom']
+        if isinstance(custom, DayType):
+            match custom:
+                case DayType.WORKDAY:
+                    target_ydata = [per_minutes, per_minutes, per_minutes, \
+                        per_minutes, per_minutes, 0, 0]
+                case DayType.WEEKEND:
+                    target_ydata = [0, 0, 0, 0, 0, per_minutes, per_minutes]
                 case _:
-                    unit = 360
-            pv(unit)
-            lastime = schedule[4:-1]
-            hour_pos = lastime.find("h")
-            total_minutes = 0
-            if hour_pos == -1:
-                total_minutes = int(lastime)
-            else:
-                total_minutes = int(lastime[:hour_pos])*60 + int(lastime[hour_pos + 1:])
-            per_minutes = total_minutes / unit
-            clock = detail["clock"]     # clock = 每工作日 21:00
-            if clock:
-                day_typ = clock[1:-6]
-                pv(day_typ)
-                match day_typ:
-                    case "工作日":
-                        limit_ydata = [per_minutes, per_minutes, per_minutes, \
-                            per_minutes, per_minutes, 0, 0]
-                    case "节假日":
-                        limit_ydata = [0, 0, 0, 0, 0, per_minutes, per_minutes]
-                    case _:
-                        limit_ydata = [per_minutes, per_minutes, per_minutes, \
-                            per_minutes, per_minutes, per_minutes, per_minutes]
+                    target_ydata = [per_minutes, per_minutes, per_minutes, \
+                        per_minutes, per_minutes, per_minutes, per_minutes]
 
         plt_weekview = cast(MatPlotCtrl, self.get_control("pltEveryDayHour"))
         plt_weekview.clear_canvas()
@@ -474,40 +485,54 @@ class HourDetailDlg(DialogCtrl):
             weekday = day.weekday()
             labels.append(f"{week_day[weekday]}\n{day.day}")
             xdata.append(i)
-            minutes = db.get_hoursbyday(iid, day) * 60
+            minutes = self._get_minutes_byday(hid, day)
             father_ydata.append(minutes)
             po(f"minutes of day {day} is {minutes}")
-            for sid in children.keys():
-                minutes = db.get_hoursbyday(sid, day) * 60
-                if children_ydata.get(sid) is None:
-                    children_ydata[sid] = [minutes]
+            for cid in children.keys():
+                minutes = self._get_minutes_byday(cid, day)
+                if children_ydata.get(cid) is None:
+                    children_ydata[cid] = [minutes]
                 else:
-                    children_ydata[sid].append(minutes)
+                    children_ydata[cid].append(minutes)
         plt_weekview.xdata = xdata
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
         _ = plt_weekview.add_line(father_yline)
         bottom = father_ydata
-        for sid, child_ydata in children_ydata.items():
+        for cid, child_ydata in children_ydata.items():
             child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom}, "bar")
             bottom = child_ydata
             _ = plt_weekview.add_line(child_yline)
-        limit_yline = LineData(limit_ydata, {"linestyle":"dotted","color":"red"})
+        limit_yline = LineData(target_ydata, {"linestyle":"dotted","color":"red"})
         _ = plt_weekview.add_line(limit_yline)
         plt_weekview.draw()
+
+    def _get_hours_last7days(self, hid: int):
+        assert self._db is not None
+        today = datetime.datetime.today()
+        last7day = today + datetime.timedelta(days=-7)
+        records = self._db.get_records(last7day, hid, today)
+        total_minutes = 0
+        for _, record in records.items():
+            total_minutes += record["duration"]
+        return total_minutes / 60.0
+
+    # TODO:
+    def _get_hours_milestone(self, hid: int):
+        return "∞"
 
     @override
     def _beforego(self, **kwargs: object):
         po(f"_hourdetaildlg_beforego: {kwargs}")
-        self._iid = cast(int, kwargs["id"])
+        self._hid = cast(int, kwargs["id"])
         self._db = cast(TimeDatabase, kwargs["db"])
 
-        self._detail = self._get_hourdetail(self._db, self._iid)
+        self._detail = self._get_hourdetail(self._db, self._hid)
         # po(f"{iid}: {detail}")
         # owner = cast(Container, self._owner)
 
         lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
-        fid = self._detail["father"]
+        fid = self._detail["fid"]
         if fid != -1:
             detail_father = self._get_hourdetail(self._db, fid)
             name_father = detail_father["name"]
@@ -516,51 +541,69 @@ class HourDetailDlg(DialogCtrl):
         else:
             lbl_father.hide()
 
-        rid = self._detail["rid"]
-        imagepath = self._get_imagepath(rid[0], rid[1])
+        icon = cast(IconTuple, self._detail["iid"])
+        imagepath = self._get_imagepath(icon.grpidx, icon.eleidx)
         img_item = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
         img_item.change_image(imagepath)
 
-        strt_date = self._db.get_hourstartdate(self._iid)
+        # TODO: children?
+        firstday = datetime.datetime.fromisoformat("2025-01-01T16:34:00")
+        end_date = firstday.date()
+        today = datetime.datetime.today().date()
+        total_days = 0
+        strt_date = today
+        records = self._db.get_records(firstday, self._hid, today)
+        for _, record in records.items():
+            bgn_dtime = cast(datetime.datetime, record['bgn_dtime'])
+            if bgn_dtime.date() != firstday.date():
+                total_days += 1
+            if bgn_dtime.date() < strt_date:
+                 strt_date = bgn_dtime.date()
+            if bgn_dtime.date() > end_date:
+                 end_date = bgn_dtime.date()
+
         lbl_item = cast(LabelCtrl, self.get_control("lblInfoHourDetail"))
         lbl_item.set_text(f"{self._detail["name"]}\n从{strt_date}开始")
-        self._update_hourdetail("sum", f"{self._detail["sums"]/ 60:.1f}")
-        total_days = self._db.get_hourtotaldays(self._iid)
-        self._update_hourdetail("TotalDays", total_days)
-        hours_everyweek = self._db.get_hourseveryweek(self._iid)
-        self._update_hourdetail("HoursEveryWeek", f"{hours_everyweek:.1f}")
-        hours_last7days = self._db.get_hourslast7days(self._iid)
-        self._update_hourdetail("HoursLast7Days", f"{hours_last7days:.1f}")
-        hours_2milestone = self._db.get_hours2milestone(self._iid)
-        self._update_hourdetail("RestHours2Milestone", hours_2milestone)
+        self._update_hourdetailctrl("sum", f"{self._detail["sums"]/ 60:.1f}")
+        self._update_hourdetailctrl("TotalDays", total_days)
+
+        total_weeks = (end_date - strt_date).days // 7
+        hours_everyweek = self._detail["sums"] / total_weeks /60
+        self._update_hourdetailctrl("HoursEveryWeek", f"{hours_everyweek:.1f}")
+        hours_last7days = self._get_hours_last7days(self._hid)
+        self._update_hourdetailctrl("HoursLast7Days", f"{hours_last7days:.1f}")
+        hours_2milestone = self._get_hours_milestone(self._hid)
+        self._update_hourdetailctrl("RestHours2Milestone", hours_2milestone)
+
+        # TODO: multi reminder
+        reminder = list(self._detail["reminders"].values())[0]
+        clkstr, schdulestr = reminder2str(reminder)
 
         lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockItemDetail"))
-        lbl_selclock['text'] = self._detail["clock"]
+        lbl_selclock['text'] = clkstr
         lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleItemDetail"))
-        lbl_selschedule['text'] = self._detail["schedule"]
+        lbl_selschedule['text'] = schdulestr
 
         parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
-        children = self._db.get_children(self._iid)
+        children = self._db.get_children(self._hid)
         idx = 0
-        for sid, child in children.items():
-            self._children[idx] = HourTuple(iid=sid, name=child["name"], rid=child["rid"],
-                clock=child["clock"], schedule=child["schedule"], sums=child["sums"],
-                father=child["father"])
-            self._create_childctrl(parent, idx, child["name"],
-                child["rid"], f"{child["sums"] / 60: .1f}")
+        for cid, child in children.items():
+            icon = cast(IconTuple, child.data["iid"])
+            self._children[idx] = HourTuple(hid=cid, name=child.data["name"],
+                iid=icon, fid=child.data["fid"],
+                reminders=child.data["reminders"], sums=child.data["sums"])
+            self._create_childctrl(parent, idx, child.data["name"],
+                icon, f"{child.data["sums"] / 60: .1f}")
             idx += 1
         pv(self._children)
         self._last_cid = len(self._children) - 1
         lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
         lbl_totalsubitems["text"] = f"共{idx}个子项目"
 
-        btn_prev = cast(ImageBtttonCtrl, self.get_control("btnPrevDayHour"))
-
-        today = datetime.datetime.today().date()
-
         self._firstday = today + datetime.timedelta(days=-today.weekday())
-        self._plot_weekview(self._iid, self._detail, self._db, self._firstday)
+        self._plot_weekview(self._hid, self._detail, self._db, self._firstday)
 
+        """
         thismonth = today.month
         for i in range(6):
             month = thismonth - i
@@ -572,6 +615,7 @@ class HourDetailDlg(DialogCtrl):
             year = thisyear - i
             hours = self._db.get_hoursbyyear(self._iid, year)
             po(f"hours of year {year} is {hours}")
+        """
 
     @override
     def _cancel(self, **kwargs: object):
@@ -650,17 +694,17 @@ class HourDetailDlg(DialogCtrl):
         _ = owner.process_message("updateHour", id=uid, attrib=attrib, val=val)
 
     def _create_childctrl(self, parent: Widget, uid: int, sub_item: str,
-            rid: tuple[int, int], sums: str):
+            iid: IconTuple, sums: str):
         """_summary_
 
         Args:
             parent (Widget): _description_
             uid (int): _description_
             sub_item (str): _description_
-            rid (tuple[int, int]): _description_
+            iid (tuple[int, int]): _description_
             sums (str): _description_
         """
-        imagepath = self._get_imagepath(rid[0], rid[1])
+        imagepath = self._get_imagepath(iid.grpidx, iid.eleidx)
 
         level = 2
         frm_child_xml = self._app.create_xml("Frame", {"id": f"frmSub{uid}"})
@@ -772,10 +816,10 @@ class HourDetailDlg(DialogCtrl):
                     self._update_hour(iid, "sum", sum_minutes)
                 case "btnPrevDayHour":
                     self._firstday -= datetime.timedelta(days=1)
-                    self._plot_weekview(self._iid, self._detail, db, self._firstday)
+                    self._plot_weekview(self._hid, self._detail, db, self._firstday)
                 case "btnNextDayHour":
                     self._firstday += datetime.timedelta(days=1)
-                    self._plot_weekview(self._iid, self._detail, db, self._firstday)
+                    self._plot_weekview(self._hid, self._detail, db, self._firstday)
                 case _:
                     return super().process_message(idmsg, **kwargs)
             return True 
@@ -856,7 +900,7 @@ class HourTab(Container):
         plans = self._hoursdb.read_plans()
         for pid, plandata in plans.items():
             reminder = list(plandata["reminders"].values())[0]
-            clkstr = reminder2clkstr(reminder)
+            clkstr, _ = reminder2str(reminder)
             iid = cast(IconTuple, plandata["iid"])
             self.create_hourctrl(pid,
                 plandata["name"], iid,
@@ -1262,7 +1306,7 @@ class HourTab(Container):
                         cycbgn_dtime=datetime.datetime.now(),
                         cycend_dtime=None,
                     )
-                    clockstr = reminder2clkstr(reminder)
+                    clockstr, _ = reminder2str(reminder)
                     pv(clockstr)
                     self.update_hourctrl_attrib(hid, "clock", clockstr)
                 case "changeSchedule":

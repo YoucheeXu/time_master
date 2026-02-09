@@ -347,6 +347,7 @@ class TimeDatabase:
             self._plan_dict[pid] = plan
         else:
             fplan = self._get_plan(fid)
+            fplan.children[pid] = Plan()
             fplan.children[pid].data = plandata
             
         self._plandata_dict[pid] = plandata
@@ -495,6 +496,10 @@ class TimeDatabase:
     def get_plandata(self, pid: int):
         plantdata = self._plandata_dict[pid]
         return copy.deepcopy(plantdata)
+
+    def get_children(self, pid: int):
+        plan = self._get_plan(pid)
+        return copy.deepcopy(plan.children)
 
     def add_reminder(self, pid: int, **kwargs: Unpack[ReminderDataDict]) -> int:
         """_summary_
@@ -692,7 +697,7 @@ class TimeDatabase:
         # Step 1: Dynamically build SQL query and parameters based on pid
         query_parts = [
             "SELECT * FROM RECORDS",
-            "WHERE date(bgn_timestamp, 'unixepoch', 'localtime') BETWEEN ? AND ?"
+            "WHERE date(bgn_dtime, 'unixepoch', 'localtime') BETWEEN ? AND ?"
         ]
         query_params = [start_date_iso, end_date_iso]
 
@@ -705,15 +710,16 @@ class TimeDatabase:
         query_sql = "\n    ".join(query_parts)
 
         # Step 2: Iterate over query results and build record dictionary
-        for recordtuple in cast(Generator[RecordSqlTuple, None, None],
+        for rid, pid, name, bgn_dtime, duration in \
+                cast(Generator[RecordSqlTuple, None, None],
                 self._database.each(query_sql, tuple(query_params))):
             record: RecordDataDict = {
                 "pid": pid,
-                "name": recordtuple.name,
-                "bgn_dtime": self._timestamp2datetime(recordtuple.bgn_dtime),
-                "duration": recordtuple.duration
+                "name": name,
+                "bgn_dtime": self._timestamp2datetime(bgn_dtime),
+                "duration": duration
             }
-            record_dict[recordtuple.rid] = record
+            record_dict[rid] = record
 
         return record_dict
 
