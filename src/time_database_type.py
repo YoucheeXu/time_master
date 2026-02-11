@@ -183,14 +183,15 @@ WEEKDAY_MAPPING = {
 }
 
 # TODO: very limit
-def reminder2clkstr(reminder: ReminderDataDict) -> str:
+def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
     """ Convert ReminderDataDict to a human-readable natural language description string
 
     Args:
         reminder: Dictionary conforming to ReminderDict type
 
     Returns:
-        Natural language description string (e.g., "Work day 21:00", "Monday of every 4 weeks 21:00")
+        Natural language clock string (e.g., "Work day 21:00", "Monday of every 4 weeks 21:00")
+        Natural language schedule string (e.g., "Work day 15m", "Monday of every 4 weeks 15m")
 
     Raises:
         ValueError: Raised when field values are invalid (e.g., every < 1, weekday numbers outside 1-7)
@@ -200,17 +201,18 @@ def reminder2clkstr(reminder: ReminderDataDict) -> str:
     clk_time = reminder["clk_time"]
 
     if clk_time is None:
-        # raise ValueError("Value of 'clk_time' is None")
-        return ""
+        time_text = ""
+    else:
+        # 3. Process time text (format as HH:MM, e.g., 21:00)
+        time_text = clk_time.strftime("%H:%M")
 
-    # 3. Process time text (format as HH:MM, e.g., 21:00)
-    time_text = clk_time.strftime("%H:%M")
-
+    duration = reminder["duration"]
     every = reminder["every"]
     if every < 0:
         raise ValueError(f"Value of 'every' must be >= 0, current value: {every}")
     elif every == 0:
-        return time_text
+        return time_text, f"{duration}m"
+
     unit = reminder["unit"]
     custom = reminder["custom"]
 
@@ -227,9 +229,11 @@ def reminder2clkstr(reminder: ReminderDataDict) -> str:
         custom_text = custom.name.lower()
         # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
         if every == 1:
-            description = f"{custom_text} {time_text}"
+            clkstr = f"{custom_text} {time_text}"
+            schedulestr = f"{custom_text} {duration}m"
         else:
-            description = f"{custom_text} of {frequency_text} {time_text}"
+            clkstr = f"{custom_text} of {frequency_text} {time_text}"
+            schedulestr = f"{custom_text} of {frequency_text} {duration}m"
 
     else:
         # Scenario 2: custom is list of weekday numbers (e.g., [1,3])
@@ -243,9 +247,10 @@ def reminder2clkstr(reminder: ReminderDataDict) -> str:
         custom_names = [str(num) for num in custom]
         custom_text = ", ".join(custom_names)
         # Combine description (e.g., "Monday of every 4 weeks 21:00")
-        description = f"{custom_text} of {frequency_text} {time_text}"
+        clkstr = f"{custom_text} of {frequency_text} {time_text}"
+        schedulestr = f"{custom_text} of {frequency_text} {duration}m"
 
-    return description
+    return clkstr, schedulestr
 
 
 def time2str(time: datetime.time | None):
