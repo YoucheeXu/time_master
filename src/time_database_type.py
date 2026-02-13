@@ -233,11 +233,11 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
         custom_text = custom.name.lower()
         # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
         if every == 1:
-            clkstr = f"{custom_text} {time_text}"
-            schedulestr = f"{custom_text} {duration}m"
+            clk_str = f"{custom_text} {time_text}" if time_text else ""
+            schedule_str = f"{custom_text} {duration}m"
         else:
-            clkstr = f"{custom_text} of {frequency_text} {time_text}"
-            schedulestr = f"{custom_text} of {frequency_text} {duration}m"
+            clk_str = f"{custom_text} of {frequency_text} {time_text}" if time_text else ""
+            schedule_str = f"{custom_text} of {frequency_text} {duration}m"
 
     else:
         # Scenario 2: custom is list of weekday numbers (e.g., [1,3])
@@ -251,10 +251,10 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
         custom_names = [str(num) for num in custom]
         custom_text = ", ".join(custom_names)
         # Combine description (e.g., "Monday of every 4 weeks 21:00")
-        clkstr = f"{custom_text} of {frequency_text} {time_text}"
-        schedulestr = f"{custom_text} of {frequency_text} {duration}m"
+        clk_str = f"{custom_text} of {frequency_text} {time_text}" if time_text else ""
+        schedule_str = f"{custom_text} of {frequency_text} {duration}m"
 
-    return clkstr, schedulestr
+    return clk_str, schedule_str
 
 def _parse_frequency(text: str) -> tuple[int, TimeUnit]:
     """Parse frequency text (e.g., "every 4 weeks") into (every, unit).
