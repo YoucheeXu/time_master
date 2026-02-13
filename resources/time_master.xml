@@ -33,7 +33,7 @@
 		<Combobox id="cmbSelMinute" text="SelMinute" default="0" options="{'values':['0分','5分','10分','15分','20分','25分','30分','35分','40分','45分','50分','55分'],'state':'readonly','width':17}" layout="pack" pack="{'side':'right'}"/>
 	</Dialog>
 	<Dialog id="dlgSelSchedule" text="时间投入计划" Width="400" Height="120">
-		<Combobox id="cmbSelUnit" default="0" options="{'values':['每日','每周'],'state':'readonly','width':20}" layout="pack" pack="{'side':'left'}"/>
+		<Combobox id="cmbSelUnit" default="0" options="{'values':['Every day','Every week'],'state':'readonly','width':20}" layout="pack" pack="{'side':'left'}"/>
 		<Combobox id="cmbSelVal" default="0" options="{'values':['5m','10m','15m','30m','45m','1h','1h30m','2h','3h','4h','5h','6h','7h','14h','21h','28h'],'state':'readonly','width':20}" layout="pack" pack="{'side':'right'}"/>
 		<!-- <Button id="btnSelSchedule" text="Confirm" options="{'width':20}" layout="grid" grid="{'row':1,'column':1}"/> -->
 	</Dialog>
