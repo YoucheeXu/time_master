@@ -16,11 +16,11 @@ from pyutilities.matplot import MatPlotCtrl, LineData
 from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
 from src.schedule import Schedule
-from src.time_database_type import IconTuple
+from src.time_database_type import IconTuple, str2reminder
 from src.time_database_type import TimeUnit, DayType, str_to_intenum
 from src.time_database_type import reminder2str, time2str, str2time
 from src.time_database_type import PlanDataDict, default_plan_data
-from src.time_database_type import ReminderDataDict, StatusEnum
+from src.time_database_type import ReminderDataDict, default_reminder_data
 
 from src.time_database import TimeDatabase
 
@@ -197,19 +197,10 @@ class EditHourDlg(DialogCtrl):
         """
         super().__init__(app, dlg_cfg)
         self._old_fid: int = -1
-        # self._old_clock: str = ""
-        # self._old_schedule: str = ""
-        self._old_reminder: ReminderDataDict = {
-            "clk_time": None,
-            "bgn_time": None,
-            "duration": 0,
-            "every": 0,
-            "unit": TimeUnit.WEEK,
-            "custom": DayType.WORKDAY,
-            "cycbgn_dtime": None,
-            "cycend_dtime": None,
-        }
+        self._old_clock: str = ""
+        self._old_schedule: str = ""
         self._old_iid: IconTuple = IconTuple(0, 0)
+        self._eid: int = 0
 
     @override
     def _beforego(self, **kwargs: object):
@@ -241,15 +232,16 @@ class EditHourDlg(DialogCtrl):
             ent_name.set_val(detail["name"])
             ent_name.disable()
 
-            reminder = list(detail["reminders"].values())[0]
+            eid = list(detail["reminders"].keys())[0]
+            reminder = detail["reminders"][eid]
+            self._eid = eid
             clkstr, schdulestr = reminder2str(reminder)
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
+            self._old_clock = lbl_selclock['text']
             lbl_selclock['text'] = clkstr if clkstr else "选择定时提醒"
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
+            self._old_schedule = lbl_selschedule['text']
             lbl_selschedule['text'] = schdulestr if schdulestr else "选择时间投入计划"
-            # self._old_clock = lbl_selclock['text']
-            # self._old_schedule = lbl_selschedule['text']
-            self._old_reminder = reminder
 
             icon = detail["iid"] if detail["iid"] is not None else IconTuple(0, 0)
             self._old_iid = icon
@@ -274,16 +266,24 @@ class EditHourDlg(DialogCtrl):
         hid = cast(int, kwargs["id"])
         if hid != 0:    # edit item
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
-            clock = cast(str, lbl_selclock['text'])
-            pv(clock)
-            # if clock != self._old_clock:
-            #     _ = owner.process_message("changeClock", id=hid, clock=clock)
-
+            clk_str = cast(str, lbl_selclock['text'])
+            pv(clk_str)
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
-            schedule = cast(str, lbl_selschedule['text'])
-            pv(schedule)
-            # if schedule != self._old_schedule:
-            #     _ = owner.process_message("changeSchedule", id=hid, schedule=schedule)
+            schedule_str = cast(str, lbl_selschedule['text'])
+            pv(schedule_str)
+
+            if clk_str != self._old_clock:
+                reminder = str2reminder(clk_str, schedule_str)
+                clk_time = reminder["clk_time"]
+                custom = reminder["custom"]
+                _ = owner.process_message("changeClock", id=hid, eid=self._eid,
+                    clk_time=clk_time, custom=custom, clk_str=clk_str)
+
+            if schedule_str != self._old_schedule:
+                _ = owner.process_message("changeSchedule", id=hid, schedule=schedule_str)
+
+            # reminder = str2reminder(clock_str, schedule_str)
+            # _ = owner.process_message("changeReminder", id=hid, eid=eid, reminder=reminder)
 
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
@@ -298,17 +298,17 @@ class EditHourDlg(DialogCtrl):
             if len(name) == 0:
                 return False, "Name should not be empty"
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
-            clock  = cast(str, lbl_selclock['text'])
-            clock_val = "" if clock == "选择定时提醒" else clock
+            clk_str  = cast(str, lbl_selclock['text'])
+            clock_val = "" if clk_str == "选择定时提醒" else clk_str
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
-            schedule = cast(str, lbl_selschedule['text'])
-            schedule_val = "" if schedule == "选择时间投入计划" else schedule
+            schedule_str = cast(str, lbl_selschedule['text'])
+            schedule_val = "" if schedule_str == "选择时间投入计划" else schedule_str
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
             rid = lst_itemimage.get_selected()
             if fid == -1:
                 _ = owner.process_message("newHour",
-                    name=name, father=fid, rid=rid, clock=clock, schedule=schedule)
+                    name=name, father=fid, rid=rid, clock=clk_str, schedule=schedule_str)
             else:
                 _ = owner.process_message("createChild", name=name, rid=rid,
                     clock=clock_val, schedule=schedule_val, father=fid)
@@ -338,9 +338,20 @@ class EditHourDlg(DialogCtrl):
                     return owner.process_message("showSelClockDlg", owner=self,
                         pos=(x+20,y+20), options=kwargs)
                 case "changeClock": # come from `SelClockDlg`
-                    clock = cast(str, kwargs["clock"])
                     lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
-                    lbl_selclock['text'] = clock
+                    # clk_time = cast(datetime.time | None, kwargs["clk_time"])
+                    # if clk_time is None:
+                    #     lbl_selclock['text'] = ""
+                    # else:
+                    #     custom = cast(DayType, kwargs["custom"])
+                    #     reminder = default_reminder_data()
+                    #     reminder["clk_time"] = clk_time
+                    #     reminder["custom"] = custom
+                    #     reminder["unit"] = TimeUnit.WEEK
+                    #     reminder["every"] = 1
+                    #     clk_str, _ = reminder2str(reminder)
+                    clk_str = cast(str, kwargs["clk_str"])
+                    lbl_selclock['text'] = clk_str
                 case "lblSelScheduleEditHour":
                     pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
@@ -761,16 +772,16 @@ class HourDetailDlg(DialogCtrl):
     def process_message(self, idmsg: str, **kwargs: object):
         if self.alive:
             kwargs.update(self._extral_msg)
-            iid = cast(int, kwargs["id"])
+            hid = cast(int, kwargs["id"])
             db = cast(TimeDatabase, kwargs["db"])
             owner = cast(Dialog, self.owner)
             match idmsg:
                 case "btnImageHourDetail":
-                    detail = self._get_hourdetail(db, iid)
+                    detail = self._get_hourdetail(db, hid)
                     fid = detail["fid"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        fid=fid, id=iid, db=db)
+                        fid=fid, id=hid, db=db)
                 case "changeItemImage": # come from `EditHourDlg`
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
@@ -779,28 +790,40 @@ class HourDetailDlg(DialogCtrl):
                     # pv(imagepath)
                     imagebutton.change_image(imagepath)
                     _ = owner.process_message("changeItemImage",
-                        id=iid, group=grp, index=idx)
+                        id=hid, group=grp, index=idx)
                 case "changeClock": # come from `EditHourDlg`
-                    clock = cast(str, kwargs["clock"])
+                    clk_str = cast(str, kwargs["clk_str"])
                     lbl_selclock = cast(LabelCtrl,
                         self.get_control("lblSelClockItemDetail"))
-                    lbl_selclock['text'] = clock
-                    self._update_hour(iid, "clock", clock)
-                    _ = owner.process_message("changeClock", id=iid, clock=clock)
+                    lbl_selclock['text'] = clk_str
+                    # self._update_hour(hid, "clock", clk_str)
+                    _ = owner.process_message("changeClock", **kwargs)
                 case "changeSchedule":  # come from `EditHourDlg`
                     schedule = cast(str, kwargs["schedule"])
                     lbl_selschedule = cast(LabelCtrl,
                         self.get_control("lblSelScheduleItemDetail"))
                     lbl_selschedule['text'] = schedule
                     _ = owner.process_message("changeSchedule",
-                        id=iid, schedule=schedule)
+                        id=hid, schedule=schedule)
+                # case "changeReminder":  # come from `EditHourDlg`
+                #     eid = cast(int, kwargs["eid"])
+                #     reminder = cast(ReminderDataDict, kwargs["reminder"])
+                #     clock_str, schedule_str = reminder2str(reminder)
+                #     lbl_selclock = cast(LabelCtrl,
+                #         self.get_control("lblSelClockItemDetail"))
+                #     lbl_selclock['text'] = clock_str
+                #     lbl_selschedule = cast(LabelCtrl,
+                #         self.get_control("lblSelScheduleItemDetail"))
+                #     lbl_selschedule['text'] = schedule_str
+                #     _ = owner.process_message("changeReminder",
+                #         id=hid, eid=eid, reminder=reminder)
                 case "deleteItem":  # come from `EditHourDlg`
-                    _ = owner.process_message("deleteItem", id=iid)
+                    _ = owner.process_message("deleteItem", id=hid)
                     self.destroy()
                 case "btnAddChild":
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        father=iid, id=0, db=db)
+                        father=hid, id=0, db=db)
                 case "createChild":  # come from `EditHourDlg`
                     parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
                     cid = len(self._children)
@@ -816,16 +839,16 @@ class HourDetailDlg(DialogCtrl):
                     lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
                 case "btnRecordHourDetail":
-                    detail = self._get_hourdetail(db, iid)
+                    detail = self._get_hourdetail(db, hid)
                     fid = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self.show_recordhourdlg(self, x+20, y+20,
-                        father=fid, id=iid, db=db)
+                        father=fid, id=hid, db=db)
                 case "ChangeSum":   # come from `RecordHourDlg`
                     sum_minutes= cast(float, kwargs["sum"])
                     lbl_sum = cast(LabelCtrl, self.get_control("lblSumHourDetail"))
                     lbl_sum.set_text(f"{float(sum_minutes)/60:.1f}\nhours")
-                    self._update_hour(iid, "sum", sum_minutes)
+                    self._update_hour(hid, "sum", sum_minutes)
                 case "btnPrevDayHour":
                     self._firstday -= datetime.timedelta(days=1)
                     self._plot_weekview(self._hid, self._detail, db, self._firstday)
@@ -1139,8 +1162,9 @@ class HourTab(Container):
         # clk_time = datetime.time.fromisoformat(f"{hour:02}:{minute:02}:00")
         clk_time = str2time(f"{hour:02}:{minute:02}")
         day = str_to_intenum(DayType, sel_day)
+        clk_str = f"{sel_day} {hour:02}:{minute:02}"
         _ = owner.process_message("changeClock", clk_time=clk_time,
-            custom=day, **kwargs)
+            custom=day, clk_str=clk_str, **kwargs)
         return True, ""
 
     def show_selscheduledlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
@@ -1235,11 +1259,6 @@ class HourTab(Container):
         match attrib:
             case "schedule":
                 val = cast(str, val)
-                sqlval = self._hoursdb.schedule_app2sql(val)
-            case _:
-                raise ValueError(f"unsupport to modify {attrib}")
-        po(f"modify {hid}'s {attrib} to {sqlval}")
-        self._hoursdb.modify_hourattr(hid, attrib, sqlval)
 
     @override
     def process_message(self, idmsg: str, **kwargs: object):
@@ -1258,7 +1277,7 @@ class HourTab(Container):
             plandata = self._hoursdb.get_plandata(hid)
             reminders = plandata["reminders"]
             eid = next(iter(reminders.keys()))
-            self.show_selclockdlg(self, x+20, y+20, hid=hid, eid=eid)
+            self.show_selclockdlg(self, x+20, y+20, id=hid, eid=eid)
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_edithourdlg(self, x+20, y+20, father=-1, id=0, db=self._hoursdb)
@@ -1297,7 +1316,7 @@ class HourTab(Container):
                     _ = self._hoursdb.modify_plan(hid, iid=icon)
                 case "changeClock":
                     # come from `SelClockDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelClockDlg`
-                    hid = cast(int, kwargs["hid"])
+                    hid = cast(int, kwargs["id"])
                     eid = cast(int, kwargs["eid"])
                     clk_time = cast(datetime.time, kwargs["clk_time"])
                     custom = cast(DayType, kwargs["custom"])
@@ -1316,9 +1335,9 @@ class HourTab(Container):
                         cycbgn_dtime=datetime.datetime.now(),
                         cycend_dtime=None,
                     )
-                    clockstr, _ = reminder2str(reminder)
-                    pv(clockstr)
-                    self.update_hourctrl_attrib(hid, "clock", clockstr)
+                    clk_str, _ = reminder2str(reminder)
+                    pv(clk_str)
+                    self.update_hourctrl_attrib(hid, "clock", clk_str)
                 case "changeSchedule":
                     # come from `SelScheduleDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
                     hid = cast(int, kwargs["id"])
@@ -1343,10 +1362,10 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     name =cast(str, kwargs["name"])
                     rid = cast(tuple[int, int], kwargs["rid"])
-                    clockstr = cast(str, kwargs["clock"])
+                    clk_str = cast(str, kwargs["clock"])
                     sums = cast(str, kwargs["sum"])
                     fid = cast(int, kwargs["fid"])
-                    self.create_hourctrl(hid, name, rid, clockstr, sums, fid)
+                    self.create_hourctrl(hid, name, rid, clk_str, sums, fid)
                 case "updateHour":  # come from `HourDetailDlg`
                     hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
@@ -1356,13 +1375,13 @@ class HourTab(Container):
                     name =cast(str, kwargs["name"])
                     fid = cast(int, kwargs["father"])
                     rid = cast(tuple[int, int], kwargs["rid"])
-                    clockstr = cast(str, kwargs["clock"])
+                    clk_str = cast(str, kwargs["clock"])
                     schedule = cast(str, kwargs["schedule"])
 
-                    clock_val = "" if clockstr == "选择定时提醒" else clockstr
+                    clock_val = "" if clk_str == "选择定时提醒" else clk_str
                     schedule_val = "" if schedule == "选择时间投入计划" else schedule
                     hid = self._hoursdb.add_hour(name, rid, clock_val, schedule_val, fid)
-                    self.create_hourctrl(hid, name, rid, clockstr, "0.0h", fid)
+                    self.create_hourctrl(hid, name, rid, clk_str, "0.0h", fid)
                 case "getImagePath": # come from `HourDetailDlg`
                     group = cast(int, kwargs["group"])
                     index = cast(int, kwargs["index"])

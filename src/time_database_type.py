@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+import re
 import datetime
 from enum import IntEnum, auto
 from typing import Literal, NamedTuple, TypedDict, NotRequired
 from typing import TypeVar
 from dataclasses import dataclass, field
+import warnings
 
 from src.action_sys import ActTyp
 
@@ -181,6 +183,8 @@ WEEKDAY_MAPPING = {
     6: "Saturday",
     7: "Sunday"
 }
+# Reverse mapping for parsing (name → number)
+WEEKDAY_NAME_TO_NUM = {v.lower(): k for k, v in WEEKDAY_MAPPING.items()}
 
 # TODO: very limit
 def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
@@ -190,8 +194,8 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
         reminder: Dictionary conforming to ReminderDict type
 
     Returns:
-        Natural language clock string (e.g., "Work day 21:00", "Monday of every 4 weeks 21:00")
-        Natural language schedule string (e.g., "Work day 15m", "Monday of every 4 weeks 15m")
+        Natural language clock string (e.g., "Workday 21:00", "Monday of every 4 weeks 21:00")
+        Natural language schedule string (e.g., "Workday 15m", "Monday of every 4 weeks 15m")
 
     Raises:
         ValueError: Raised when field values are invalid (e.g., every < 1, weekday numbers outside 1-7)
@@ -252,6 +256,263 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
 
     return clkstr, schedulestr
 
+def _parse_frequency(text: str) -> tuple[int, TimeUnit]:
+    """Parse frequency text (e.g., "every 4 weeks") into (every, unit).
+
+    Args:
+        text: Frequency substring (e.g., "every 4 weeks", "every day")
+
+    Returns:
+        Tuple of (every: int, unit: TimeUnit)
+
+    Raises:
+        ValueError: If unit is unrecognized or every is negative
+    """
+    # Regex to match: "every [number] [unit]" or "every [unit]" (implies every=1)
+    freq_pattern = re.compile(r"every\s+(?:(\d+)\s+)?(\w+)", re.IGNORECASE)
+    match = freq_pattern.search(text.lower())
+
+    if not match:
+        # Default to every=1, unit=DAY (for simple formats like "workday 21:00")
+        return 1, TimeUnit.DAY
+
+    every_str, unit_str = match.groups()
+    every = int(every_str) if every_str else 1
+
+    # Validate every (matches reminder2str's every ≥0 rule)
+    if every < 0:
+        raise ValueError(f"Value of 'every' must be >= 0, current value: {every}")
+
+    # Map unit text to enum (handle singular/plural)
+    unit_str_upper = unit_str.upper()
+    # if unit_str_upper not in UNIT_TEXT_TO_ENUM:
+    #     raise ValueError(f"Unrecognized unit '{unit_str}' (allowed: minute/hour/day/week)")
+    unit = TimeUnit[unit_str_upper]
+
+    return every, unit
+
+def _parse_custom(custom: str, every: int, unit: TimeUnit) -> DayType | list[int]:
+    """Parse custom text (day type/weekdays) into DayType or list of weekday numbers.
+
+    Args:
+        text: Custom substring (e.g., "workday", "Monday", "Monday, Wednesday")
+        every: Parsed every value (from _parse_frequency)
+        unit: Parsed unit (from _parse_frequency)
+
+    Returns:
+        DayType (for workday/weekend) or List[int] (weekday numbers 1-7)
+
+    Raises:
+        ValueError: If weekday numbers are invalid (not 1-7) or custom text unrecognized
+        TypeError: If custom type is not supported
+    """
+    if every >= 1:
+        custom_upper = custom.upper().strip()
+        # Case 1: Custom is DayType
+        if not isinstance(custom, list):
+            return DayType[custom_upper]
+
+        # Case 2: Custom is weekday names (e.g., "Monday", "Monday, Wednesday")
+        if unit == TimeUnit.WEEK:
+            # Split comma-separated weekdays (e.g., "Monday, Wednesday" → ["monday", "wednesday"])
+            weekday_names = [name.strip() for name in custom_upper.split(",")]
+            weekday_nums: list[int] = []
+
+            for name in weekday_names:
+                if name not in WEEKDAY_NAME_TO_NUM:
+                    raise ValueError(f"Unrecognized weekday '{name}' (allowed: {list(WEEKDAY_NAME_TO_NUM.keys())})")
+                num = WEEKDAY_NAME_TO_NUM[name]
+                # Validate weekday number (matches reminder2str's 1-7 rule)
+                if num not in WEEKDAY_MAPPING:
+                    raise ValueError(f"Weekday numbers must be between 1-7, invalid value: {num}")
+                weekday_nums.append(num)
+
+            return weekday_nums
+        else:
+            return [int(x) for x in custom_upper.split(',')]
+    else:
+        return []
+
+def _parse_duration(text: str) -> int:
+    """Parse duration string (Xm) into integer minutes.
+
+    Args:
+        text: Duration substring (e.g., "15m", "30m")
+
+    Returns:
+        Integer duration in minutes
+
+    Raises:
+        ValueError: If duration format is invalid (not Xm) or negative
+    """
+    duration_pattern = re.compile(r"(\d+)m", re.IGNORECASE)
+    match = duration_pattern.search(text.lower())
+
+    if not match:
+        raise ValueError(f"Invalid duration format '{text}' (expected Xm, e.g., 15m)")
+
+    duration = int(match.group(1))
+    if duration < 0:
+        raise ValueError(f"Duration must be non-negative, current value: {duration}")
+
+    return duration
+
+def str2reminder(clock_str: str, schedule_str: str) -> ReminderDataDict:
+    """Parse natural language clock/plan messages into ReminderDataDict (reverse of reminder2str).
+
+    Exact reverse of reminder2str: handles all formats generated by the original function,
+    including simple (e.g., "workday 21:00") and complex (e.g., "Monday of every 4 weeks 21:00")
+    messages, with validation matching reminder2str's error rules.
+
+    Args:
+        clock_str: Natural language clock string (output of reminder2str's first return value).
+            Examples:
+            - Simple: "workday 21:00", "weekend 09:15"
+            - Complex: "Monday of every 4 weeks 21:00", "Tuesday, Wednesday of every 2 days 14:30"
+            - Edge case (every=0): "21:00"
+        schedule_str: Natural language schedule string (output of reminder2str's second return value).
+            Examples:
+            - Simple: "workday 15m", "weekend 30m"
+            - Complex: "Monday of every 4 weeks 15m", "Tuesday of every 1 hour 5m"
+            - Edge case (every=0): "15m"
+
+    Returns:
+        ReminderDataDict with all required fields:
+            - clk_time: datetime object (time part from clock_str, None if empty)
+            - bgn_time: None (default, can be extended to match your schema)
+            - duration: int (minutes parsed from schedule_str)
+            - every: int (frequency count, 0 for edge case, ≥1 otherwise)
+            - unit: TimeUnit
+            - custom: DayType or list[int] (weekday numbers 1-7, month numbers 1-31, ...)
+            - cycbgn_dtime: None (default, can be extended)
+            - cycend_dtime: None (default, can be extended)
+
+    Raises:
+        ValueError:
+            - Invalid time format (not HH:MM) in clock_str
+            - Invalid duration format (not Xm) in schedule_str
+            - Negative every/duration values (violates reminder2str's validation)
+            - Invalid weekday numbers (not 1-7) or unrecognized units
+        TypeError:
+            - Unsupported custom type (not workday/weekend/weekday names)
+            - Non-string inputs for clock_msg/plan_msg
+
+    Examples:
+        >>> # Simple case (workday, every=1)
+        >>> clock_msg = "workday 21:00"
+        >>> plan_msg = "workday 15m"
+        >>> parse_reminder_message(clock_msg, plan_msg)
+        {
+            "clk_time": datetime.time(13, 21),
+            "bgn_time": None,
+            "duration": 15,
+            "every": 1,
+            "unit": TimeUnit.DAY,
+            "custom": DayType.WORKDAY,
+            "cycbgn_dtime": None,
+            "cycend_dtime": None
+        }
+
+        >>> # Complex case (weekday frequency)
+        >>> clock_msg = "Monday of every 4 weeks 21:00"
+        >>> plan_msg = "Monday of every 4 weeks 15m"
+        >>> parse_reminder_message(clock_msg, plan_msg)
+        {
+            "clk_time": datetime.time(13, 21),
+            "bgn_time": None,
+            "duration": 15,
+            "every": 4,
+            "unit": TimeUnit.WEEK,
+            "custom": [1],
+            "cycbgn_dtime": None,
+            "cycend_dtime": None
+        }
+
+        >>> # Edge case (every=0)
+        >>> clock_msg = "21:00"
+        >>> plan_msg = "15m"
+        >>> parse_reminder_message(clock_msg, plan_msg)
+        {
+            "clk_time": datetime.time(13, 21),
+            "bgn_time": None,
+            "duration": 15,
+            "every": 0,
+            "unit": TimeUnit.MINUTE,  # Default for every=0
+            "custom": DayType.WORKDAY, # Default for every=0
+            "cycbgn_dtime": None,
+            "cycend_dtime": None
+        }
+    """
+    # ------------------------------
+    # Step 1: Input Validation (Type Check)
+    # ------------------------------
+    # if not isinstance(clock_str, str) or not isinstance(schedule_str, str):
+    #     raise TypeError("clock_msg and plan_msg must be strings")
+    clock_str_clean = clock_str.strip()
+    schedule_str_clean = schedule_str.strip()
+
+    # ------------------------------
+    # Step 2: Handle Edge Case (every=0)
+    # ------------------------------
+    # Check if messages are just time/duration (no frequency/custom)
+    # TODO?
+    if not any(word in clock_str_clean.lower() for word in ["workday", "weekend", "every", "monday", "tuesday"]):
+        every = 0
+        unit = TimeUnit.HOUR  # Default for every=0
+        custom = DayType.WORKDAY  # Default for every=0
+        clk_time = str2time(clock_str_clean)
+        duration = _parse_duration(schedule_str_clean)
+    else:
+        # ------------------------------
+        # Step 3: Parse Common Components (Shared by clock/schedule string)
+        # ------------------------------
+        # Extract frequency (every + unit) from either message (they are symmetric)
+        every, unit = _parse_frequency(clock_str_clean if clock_str_clean else schedule_str_clean)
+
+        # Extract custom text (day type/weekdays) - remove frequency/time/duration parts
+        # Regex to remove "of every X unit" and time/duration
+        custom_pattern = re.compile(r"\s* of every .+?\s* | \d{1,2}:\d{1,2} | \d+m", re.IGNORECASE | re.DOTALL | re.VERBOSE)
+        custom_text_clock = custom_pattern.sub("", clock_str_clean).strip()
+        custom_text_schedule = custom_pattern.sub("", schedule_str_clean).strip()
+
+        # Custom text should be identical in clock/schedule string (validate symmetry)
+        if custom_text_clock != custom_text_schedule:
+            warnings.warn(f"Custom text mismatch: clock='{custom_text_clock}', schedule='{custom_text_schedule}' - using clock text")
+        custom_text = custom_text_clock or custom_text_schedule
+
+        # Parse custom (DayType or weekday numbers)
+        custom = _parse_custom(custom_text, every, unit)
+
+        # ------------------------------
+        # Step 4: Parse Clock-Specific (Time) and Schedule-Specific (Duration)
+        # ------------------------------
+        result_serach = re.search(r"\d{1,2}:\d{1,2}", clock_str_clean)
+        clk_time = str2time(result_serach.group() if result_serach else "")
+        duration = _parse_duration(schedule_str_clean)
+
+    # ------------------------------
+    # Step 5: Construct ReminderDataDict
+    # ------------------------------
+    reminder_data: ReminderDataDict = {
+        "clk_time": clk_time,
+        "bgn_time": clk_time,  # Default
+        "duration": duration,
+        "every": every,
+        "unit": unit,
+        "custom": custom,
+        "cycbgn_dtime": None,  # Default
+        "cycend_dtime": None   # Default
+    }
+
+    # Final validation (matches reminder2str's rules)
+    if reminder_data["every"] < 0:
+        raise ValueError(f"Value of 'every' must be >= 0, current value: {reminder_data['every']}")
+    if isinstance(reminder_data["custom"], list):
+        invalid_days = [day for day in reminder_data["custom"] if day not in WEEKDAY_MAPPING]
+        if invalid_days:
+            raise ValueError(f"Weekday numbers must be between 1-7, invalid values: {invalid_days}")
+
+    return reminder_data
 
 def time2str(time: datetime.time | None):
     """ convert datetime.time to string "%H:%M"
@@ -413,7 +674,7 @@ def generate_sqlite_fields(tuple_class: type[NamedTuple],
         # Filter fields (remove excluded ones)
         filtered_fields = [f for f in all_fields if f not in exclude_fields]
     else:
-        
+
         filtered_fields = all_fields
 
     # Generate safe strings (field names = static, no injection risk)
