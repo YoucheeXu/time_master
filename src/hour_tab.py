@@ -214,7 +214,7 @@ class EditHourDlg(DialogCtrl):
     @override
     def _beforego(self, **kwargs: object):
         po(f"_edithourdlg_beforego: {kwargs}")
-        fid = cast(int, kwargs["father"])
+        fid = cast(int, kwargs["fid"])
         self._old_fid = fid
         hid = cast(int, kwargs["id"])
         db = cast(TimeDatabase, kwargs["db"])
@@ -270,27 +270,27 @@ class EditHourDlg(DialogCtrl):
     def _confirm(self, **kwargs: object):
         po(f"_edithourdlg_confirm: {kwargs}")
         owner = cast(Dialog, self.owner)
-        father = cast(int, kwargs["father"])
-        iid = cast(int, kwargs["id"])
-        if iid != 0:    # edit item
+        fid = cast(int, kwargs["fid"])
+        hid = cast(int, kwargs["id"])
+        if hid != 0:    # edit item
             lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
             clock = cast(str, lbl_selclock['text'])
             pv(clock)
-            if clock != self._old_clock:
-                _ = owner.process_message("changeClock", id=iid, clock=clock)
+            # if clock != self._old_clock:
+            #     _ = owner.process_message("changeClock", id=hid, clock=clock)
 
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
             schedule = cast(str, lbl_selschedule['text'])
             pv(schedule)
-            if schedule != self._old_schedule:
-                _ = owner.process_message("changeSchedule", id=iid, schedule=schedule)
+            # if schedule != self._old_schedule:
+            #     _ = owner.process_message("changeSchedule", id=hid, schedule=schedule)
 
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
             grp, idx = lst_itemimage.get_selected()
-            if (grp, idx) != self._old_iid:
+            if IconTuple(grp, idx) != self._old_iid:
                 _ = owner.process_message("changeItemImage",
-                    id=iid, group=grp, index=idx)
+                    id=hid, group=grp, index=idx)
         else:   # New item
             ent_name = cast(EntryCtrl, self.get_control("txtItemEditHour"))
             name = ent_name.get_val()
@@ -306,12 +306,12 @@ class EditHourDlg(DialogCtrl):
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
             rid = lst_itemimage.get_selected()
-            if father == -1:
+            if fid == -1:
                 _ = owner.process_message("newHour",
-                    name=name, father=father, rid=rid, clock=clock, schedule=schedule)
+                    name=name, father=fid, rid=rid, clock=clock, schedule=schedule)
             else:
                 _ = owner.process_message("createChild", name=name, rid=rid,
-                    clock=clock_val, schedule=schedule_val, father=father)
+                    clock=clock_val, schedule=schedule_val, father=fid)
         return True, ""
 
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
@@ -767,10 +767,10 @@ class HourDetailDlg(DialogCtrl):
             match idmsg:
                 case "btnImageHourDetail":
                     detail = self._get_hourdetail(db, iid)
-                    father = detail["fid"]
+                    fid = detail["fid"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        father=father, id=iid, db=db)
+                        fid=fid, id=iid, db=db)
                 case "changeItemImage": # come from `EditHourDlg`
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
@@ -810,17 +810,17 @@ class HourDetailDlg(DialogCtrl):
 
                     clock_val = cast(str, kwargs["clock"]) 
                     schedule_val = cast(str, kwargs["schedule"])
-                    father = cast(int, kwargs["father"])
+                    fid = cast(int, kwargs["father"])
                     self._children[cid] = HourTuple(iid=0, name=name, rid=rid,
-                        clock=clock_val, schedule=schedule_val, sums=0, father=father)
+                        clock=clock_val, schedule=schedule_val, sums=0, father=fid)
                     lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
                 case "btnRecordHourDetail":
                     detail = self._get_hourdetail(db, iid)
-                    father = detail["father"]
+                    fid = detail["father"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self.show_recordhourdlg(self, x+20, y+20,
-                        father=father, id=iid, db=db)
+                        father=fid, id=iid, db=db)
                 case "ChangeSum":   # come from `RecordHourDlg`
                     sum_minutes= cast(float, kwargs["sum"])
                     lbl_sum = cast(LabelCtrl, self.get_control("lblSumHourDetail"))
@@ -1236,11 +1236,6 @@ class HourTab(Container):
             case "schedule":
                 val = cast(str, val)
                 sqlval = self._hoursdb.schedule_app2sql(val)
-            case "rid":
-                grp, idx = cast(tuple[int, int], val)
-                sqlval = f"{grp}_{idx}"
-                imagepath = self._get_imagepath(grp, idx)
-                self.update_hourctrl_attrib(hid, "image", imagepath)
             case _:
                 raise ValueError(f"unsupport to modify {attrib}")
         po(f"modify {hid}'s {attrib} to {sqlval}")
@@ -1296,7 +1291,10 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     grp = cast(int, kwargs["group"])
                     idx = cast(int, kwargs["index"])
-                    self.modify_hour(hid, "rid", f"{grp}_{idx}")
+                    imagepath = self._get_imagepath(grp, idx)
+                    self.update_hourctrl_attrib(hid, "image", imagepath)
+                    icon = IconTuple(grp, idx)
+                    _ = self._hoursdb.modify_plan(hid, iid=icon)
                 case "changeClock":
                     # come from `SelClockDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelClockDlg`
                     hid = cast(int, kwargs["hid"])
