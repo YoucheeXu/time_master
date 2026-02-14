@@ -1283,20 +1283,6 @@ class HourTab(Container):
         dlg = EditHourDlg(self._gui, dlg_cfg)
         dlg.do_show(owner, x, y, **kwargs)
 
-    def _get_hourdetail(self, iid: int):
-        """_summary_
-
-        Args:
-            iid (int): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        detail: HourDict = {"name": "", "rid": (0, 0), "clock": "", "schedule": "",
-            "sums": 0, "father": -1}
-        self._hoursdb.get_hourdetail(iid, detail)
-        return detail
-
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         if idmsg.startswith("btnItem"):
@@ -1402,14 +1388,6 @@ class HourTab(Container):
                         self._gui.delete_control(f"lblSum{hid}")
 
                         self._hoursdb.del_hour(hid)
-                case "createHourCtrl":  # come from `TimeDatabase`<-`TimeMasterApp`
-                    hid = cast(int, kwargs["id"])
-                    name =cast(str, kwargs["name"])
-                    iid = cast(tuple[int, int], kwargs["rid"])
-                    clk_str = cast(str, kwargs["clock"])
-                    sums = cast(str, kwargs["sum"])
-                    fid = cast(int, kwargs["fid"])
-                    self.create_hourctrl(hid, name, iid, clk_str, sums, fid)
                 case "updateHour":  # come from `HourDetailDlg`
                     hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
