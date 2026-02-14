@@ -314,13 +314,14 @@ class EditHourDlg(DialogCtrl):
             schedule_val = "" if schedule_str == "选择时间投入计划" else schedule_str
             lst_itemimage = cast(PicsListviewCtrl,
                 self.get_control("lstImageEditHour"))
-            rid = lst_itemimage.get_selected()
+            iid = lst_itemimage.get_selected()
+            icon = IconTuple(*iid)
             if fid == -1:
                 _ = owner.process_message("newHour",
-                    name=name, father=fid, rid=rid, clock=clk_str, schedule=schedule_str)
+                    name=name, fid=fid, iid=icon, clock_str=clk_str, schedule_str=schedule_str)
             else:
-                _ = owner.process_message("createChild", name=name, rid=rid,
-                    clock=clock_val, schedule=schedule_val, father=fid)
+                _ = owner.process_message("createChild", name=name, iid=icon,
+                    clock_str=clock_val, schedule_str=schedule_val, fid=fid)
         return True, ""
 
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
@@ -670,12 +671,11 @@ class HourDetailDlg(DialogCtrl):
         for idx, child in self._children.items():
             if idx > self._last_cid:
                 name =      child.name
-                rid =       child.rid
-                clock =     child.clock
-                schedule =  child.schedule
-                father = cast(int, kwargs["id"])
+                iid =       child.iid
+                reminders = child.reminders
+                fid = cast(int, kwargs["id"])
                 _ = owner.process_message("newHour",
-                    name=name, father=father, rid=rid, clock=clock, schedule=schedule)
+                    name=name, fid=fid, iid=iid, reminders=reminders)
             self._delete_childctrl(idx)
         self._children.clear()
         return True, ""
@@ -838,19 +838,21 @@ class HourDetailDlg(DialogCtrl):
                 case "btnAddChild":
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
-                        father=hid, id=0, db=db)
+                        fid=hid, id=0, db=db)
                 case "createChild":  # come from `EditHourDlg`
                     parent = cast(FrameCtrl, self.get_control("frmSubItmes"))
                     cid = len(self._children)
                     name =cast(str, kwargs["name"])
-                    rid =cast(tuple[int, int], kwargs["rid"])
-                    self._create_childctrl(parent, cid, name, rid, "0.0")
+                    iid =cast(IconTuple, kwargs["iid"])
+                    self._create_childctrl(parent, cid, name, iid, "0.0")
 
-                    clock_val = cast(str, kwargs["clock"]) 
-                    schedule_val = cast(str, kwargs["schedule"])
-                    fid = cast(int, kwargs["father"])
-                    self._children[cid] = HourTuple(iid=0, name=name, rid=rid,
-                        clock=clock_val, schedule=schedule_val, sums=0, father=fid)
+                    clock_val = cast(str, kwargs["clock_str"]) 
+                    schedule_val = cast(str, kwargs["schedule_str"])
+                    reminder = str2reminder(clock_val, schedule_val)
+                    reminders = {0: reminder}
+                    fid = cast(int, kwargs["fid"])
+                    self._children[cid] = HourTuple(0, name, iid, fid,
+                        reminders, 0)
                     lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
                 case "btnRecordHourDetail":
@@ -1052,7 +1054,7 @@ class HourTab(Container):
             item (str): _description_
             iid (IconTuple): _description_
             clock (str): _description_
-            sums (int): _description_
+            sums (int): _description_, in minutes
             fid (int, optional): _description_. Defaults to -1.
         """
         imagepath = self._get_imagepath(iid.grpidx, iid.eleidx)
@@ -1383,7 +1385,6 @@ class HourTab(Container):
                         duration=duration,
                         cycbgn_dtime=datetime.datetime.now(),
                     )
-
                 case "deleteItem":  # come from <-`HourDetailDlg`<-`EditHourDlg`
                     hid = cast(int, kwargs["id"])
                     detail = self._get_hourdetail(hid)
@@ -1401,11 +1402,11 @@ class HourTab(Container):
                 case "createHourCtrl":  # come from `TimeDatabase`<-`TimeMasterApp`
                     hid = cast(int, kwargs["id"])
                     name =cast(str, kwargs["name"])
-                    rid = cast(tuple[int, int], kwargs["rid"])
+                    iid = cast(tuple[int, int], kwargs["rid"])
                     clk_str = cast(str, kwargs["clock"])
                     sums = cast(str, kwargs["sum"])
                     fid = cast(int, kwargs["fid"])
-                    self.create_hourctrl(hid, name, rid, clk_str, sums, fid)
+                    self.create_hourctrl(hid, name, iid, clk_str, sums, fid)
                 case "updateHour":  # come from `HourDetailDlg`
                     hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
@@ -1413,15 +1414,20 @@ class HourTab(Container):
                     self.update_hourctrl_attrib(hid, attr, val)
                 case "newHour": # come from `EditHourDlg` or <-`EditHourDlg`<-`HourDetailDlg`
                     name =cast(str, kwargs["name"])
-                    fid = cast(int, kwargs["father"])
-                    rid = cast(tuple[int, int], kwargs["rid"])
-                    clk_str = cast(str, kwargs["clock"])
-                    schedule_str = cast(str, kwargs["schedule"])
+                    fid = cast(int, kwargs["fid"])
+                    iid = cast(IconTuple, kwargs["iid"])
+                    reminders = cast(dict[int, ReminderDataDict], kwargs["reminders"])
 
-                    clock_val = "" if clk_str == "选择定时提醒" else clk_str
-                    schedule_val = "" if schedule_str == "选择时间投入计划" else schedule_str
-                    hid = self._hoursdb.add_hour(name, rid, clock_val, schedule_val, fid)
-                    self.create_hourctrl(hid, name, rid, clk_str, "0.0h", fid)
+                    clk_str = ""
+                    plandata = default_plan_data()
+                    plandata["fid"] = fid
+                    plandata["iid"] = iid
+                    plandata["name"] = name
+                    hid = self._hoursdb.add_plan(**plandata)
+                    for _, reminder in reminders.items():
+                        _ = self._hoursdb.add_reminder(hid, **reminder)
+                        clk_str, _ = reminder2str(reminder)
+                    self.create_hourctrl(hid, name, iid, clk_str, 0, fid)
                 case "getImagePath": # come from `HourDetailDlg`
                     group = cast(int, kwargs["group"])
                     index = cast(int, kwargs["index"])

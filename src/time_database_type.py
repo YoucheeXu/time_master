@@ -345,15 +345,18 @@ def _parse_duration(text: str) -> int:
     Raises:
         ValueError: If duration format is invalid (not Xm) or negative
     """
-    duration_pattern = re.compile(r"(\d+)m", re.IGNORECASE)
-    match = duration_pattern.search(text.lower())
+    if text:
+        duration_pattern = re.compile(r"(\d+)m", re.IGNORECASE)
+        match = duration_pattern.search(text.lower())
 
-    if not match:
-        raise ValueError(f"Invalid duration format '{text}' (expected Xm, e.g., 15m)")
+        if not match:
+            raise ValueError(f"Invalid duration format '{text}' (expected Xm, e.g., 15m)")
 
-    duration = int(match.group(1))
-    if duration < 0:
-        raise ValueError(f"Duration must be non-negative, current value: {duration}")
+        duration = int(match.group(1))
+        if duration < 0:
+            raise ValueError(f"Duration must be non-negative, current value: {duration}")
+    else:
+        duration = 0
 
     return duration
 
