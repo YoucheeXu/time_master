@@ -317,8 +317,11 @@ class EditHourDlg(DialogCtrl):
             iid = lst_itemimage.get_selected()
             icon = IconTuple(*iid)
             if fid == -1:
+                reminder = str2reminder(clock_val, schedule_val)
+                reminders = {0: reminder}
                 _ = owner.process_message("newHour",
-                    name=name, fid=fid, iid=icon, clock_str=clk_str, schedule_str=schedule_str)
+                    name=name, fid=fid, iid=icon,
+                    clock_str=clk_str, schedule_str=schedule_str,reminders=reminders)
             else:
                 _ = owner.process_message("createChild", name=name, iid=icon,
                     clock_str=clock_val, schedule_str=schedule_val, fid=fid)
@@ -846,7 +849,7 @@ class HourDetailDlg(DialogCtrl):
                     iid =cast(IconTuple, kwargs["iid"])
                     self._create_childctrl(parent, cid, name, iid, "0.0")
 
-                    clock_val = cast(str, kwargs["clock_str"]) 
+                    clock_val = cast(str, kwargs["clock_str"])
                     schedule_val = cast(str, kwargs["schedule_str"])
                     reminder = str2reminder(clock_val, schedule_val)
                     reminders = {0: reminder}
@@ -1314,7 +1317,7 @@ class HourTab(Container):
             self.show_selclockdlg(self, x+20, y+20, id=hid, eid=eid)
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
-            self.show_edithourdlg(self, x+20, y+20, father=-1, id=0, db=self._hoursdb)
+            self.show_edithourdlg(self, x+20, y+20, fid=-1, id=0, db=self._hoursdb)
         else:
             match idmsg:
                 case "showSelClockDlg": # come from `EditHourDlg` or <-`HourDetailDlg`<-`EditHourDlg`
