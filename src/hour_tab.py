@@ -1376,18 +1376,24 @@ class HourTab(Container):
                     )
                 case "deleteItem":  # come from <-`HourDetailDlg`<-`EditHourDlg`
                     hid = cast(int, kwargs["id"])
-                    detail = self._get_hourdetail(hid)
-                    id_father = detail["father"]
-                    if id_father == -1:
-                        self._gui.delete_control(f"frmGroup{hid}")
-                    else:
-                        self._gui.delete_control(f"frmItem{hid}")
-                        self._gui.delete_control(f"btnItem{hid}")
-                        self._gui.delete_control(f"lblItem{hid}")
-                        self._gui.delete_control(f"btnClock{hid}")
-                        self._gui.delete_control(f"lblSum{hid}")
+                    detail = self._hoursdb.get_plandata(hid)
 
-                        self._hoursdb.del_hour(hid)
+                    children = self._hoursdb.get_children(hid)
+                    if len(children) > 0:
+                        return False, f"Couldn't delete {detail['name']} wtih children"
+
+                    self._gui.delete_control(f"frmItem{hid}")
+                    self._gui.delete_control(f"btnItem{hid}")
+                    self._gui.delete_control(f"lblItem{hid}")
+                    self._gui.delete_control(f"btnClock{hid}")
+                    self._gui.delete_control(f"lblSum{hid}")
+                    fid = detail["fid"]
+                    if fid == -1:
+                        self._gui.delete_control(f"frmGroup{hid}")
+
+                    self._hoursdb.del_plan(hid)
+
+                    return True, f"Success to delete {detail['name']}"
                 case "updateHour":  # come from `HourDetailDlg`
                     hid = cast(int, kwargs["id"])
                     attr = cast(str, kwargs["attrib"])
