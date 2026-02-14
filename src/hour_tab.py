@@ -860,10 +860,10 @@ class HourDetailDlg(DialogCtrl):
                     lbl_totalsubitems["text"] = f"共{len(self._children)}个子项目"
                 case "btnRecordHourDetail":
                     detail = self._get_hourdetail(db, hid)
-                    fid = detail["father"]
+                    fid = detail["fid"]
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self.show_recordhourdlg(self, x+20, y+20,
-                        father=fid, id=hid, db=db)
+                        fid=fid, id=hid, db=db)
                 case "ChangeSum":   # come from `RecordHourDlg`
                     sum_minutes= cast(float, kwargs["sum"])
                     lbl_sum = cast(LabelCtrl, self.get_control("lblSumHourDetail"))
