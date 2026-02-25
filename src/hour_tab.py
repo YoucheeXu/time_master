@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 from __future__ import annotations
+import math
 import datetime
 import xml.etree.ElementTree as et
 import re
@@ -610,7 +611,8 @@ class HourDetailDlg(DialogCtrl):
         self._update_hourdetailctrl("sum", f"{self._detail["sums"]/ 60:.1f}")
         self._update_hourdetailctrl("TotalDays", total_days)
 
-        total_weeks = (end_date - strt_date).days // 7
+        total_weeks = math.ceil(((end_date - strt_date).days + 1)/7)
+        pv(total_weeks)
         hours_everyweek = self._detail["sums"] / total_weeks /60
         self._update_hourdetailctrl("HoursEveryWeek", f"{hours_everyweek:.1f}")
         hours_last7days = self._get_hours_last7days(self._hid)
