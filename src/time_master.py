@@ -51,7 +51,7 @@ class TimeMasterApp(Container):
         else:
             self._tabhour.open_hours(hoursdbpath)
 
-        self._schedule.event_to_schedule()
+        self._schedule.event_to_agenda()
 
     def _process_gui_message(self, idmsg: str, **kwargs: object):
         return self.process_message(idmsg, **kwargs)
@@ -84,7 +84,7 @@ class TimeMasterApp(Container):
         """
         # asyncio.run(self._schedule.exec_schedule())
         # self._gui.go()
-        r1 = Thread(target=self._schedule.exec_schedule)
+        r1 = Thread(target=self._schedule.exec)
         # r2 = Thread(target=self._gui.go)
         r1.daemon = True
         r1.start()
