@@ -17,6 +17,7 @@ from pyutilities.matplot import MatPlotCtrl, LineData
 # from pyutilities.calendarctrl import CalendarCtrl
 from pyutilities.scrollpickerctrl import DateScrollPickerCtrl, TimeScrollPickerCtrl
 
+from src.action_sys import ActTyp
 from src.schedule import Schedule
 from src.time_database_type import IconTuple, str2reminder
 from src.time_database_type import TimeUnit, DayType, str_to_intenum
@@ -52,7 +53,7 @@ class RecordHourDlg(DialogCtrl):
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
         """_summary_
 
-        Args:
+        Args:P
             iid (int): _description_
 
         Returns:
@@ -956,12 +957,17 @@ class HourTab(Container):
         _ = self._open(dbpath)
         plans = self._hoursdb.read_plans()
         for pid, plandata in plans.items():
+            name = plandata["name"]
             reminder = list(plandata["reminders"].values())[0]
             clkstr, _ = reminder2str(reminder)
             iid = cast(IconTuple, plandata["iid"])
             self.create_hourctrl(pid,
-                plandata["name"], iid,
+                name, iid,
                 clkstr, plandata["sums"], plandata['fid'])
+            for eid, reminderdata in plandata["reminders"].items():
+                if clock_time := reminderdata["clk_time"]:
+                    self._schedule.add_event(eid, name, clock_time, reminderdata["every"], reminderdata["unit"],
+                        reminderdata["custom"], reminderdata["cycend_dtime"], ActTyp.LOCK_SCREEN)
 
     def update_hourctrl_attrib(self, uid: int, attrib: str, val: str | int):
         """_summary_
