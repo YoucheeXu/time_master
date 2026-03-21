@@ -402,7 +402,8 @@ class Schedule:
                 self._actionsys.exec_action(ActTyp.SPEECH_TEXT,
                     f'北京时间{now.hour}点{now.minute}分{now.second}秒')
                 self._actionsys.exec_action(ActTyp.SPEECH_TEXT, event)
-                self._actionsys.exec_action(agenda.action)
+                if agenda.action != ActTyp.PLAY_MP3:
+                    self._actionsys.exec_action(agenda.action)
             else:
                 po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
 
