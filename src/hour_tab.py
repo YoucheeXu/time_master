@@ -875,8 +875,14 @@ class HourDetailDlg(DialogCtrl):
                 case "btnPrevDayHour":
                     self._firstday -= datetime.timedelta(days=1)
                     self._plot_weekview(self._hid, self._detail, db, self._firstday)
+                case "btnPrevWeekHour":
+                    self._firstday -= datetime.timedelta(days=7)
+                    self._plot_weekview(self._hid, self._detail, db, self._firstday)
                 case "btnNextDayHour":
                     self._firstday += datetime.timedelta(days=1)
+                    self._plot_weekview(self._hid, self._detail, db, self._firstday)
+                case "btnNextWeekHour":
+                    self._firstday += datetime.timedelta(days=7)
                     self._plot_weekview(self._hid, self._detail, db, self._firstday)
                 case _:
                     return super().process_message(idmsg, **kwargs)
