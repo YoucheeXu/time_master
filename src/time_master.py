@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 import os
+import json
 from threading import Thread
 import tkinter.filedialog as tkFileDialog
-from typing import override
+from typing import override, cast
 
 from pyutilities.logit import pv, po, pe
 from pyutilities.winbasic import Container
@@ -39,19 +40,34 @@ class TimeMasterApp(Container):
 
         self._tabhour: HourTab = HourTab(self._gui, self._schedule)
 
-    def open_user(self, usrpath: str):
+    def open_user(self, usr_path: str):
         """_summary_
 
         Args:
             usrpath (str): _description_
         """
-        hoursdbpath = os.path.join(usrpath, "hours.db")
+        hoursdbpath = os.path.join(usr_path, "hours.db")
         if not os.path.isfile(hoursdbpath):
             self._tabhour.new_hours(hoursdbpath)
         else:
             self._tabhour.open_hours(hoursdbpath)
 
         self._schedule.event_to_agenda()
+
+    def open(self, cfg_file: str):
+        """_summary_
+
+        Args:
+            cfg_file (str): _description_
+        """
+        with open(cfg_file, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            last_user = cast(str, cfg["LastUser"])
+            for usr_cfg in cfg["Users"]:
+                if usr_cfg["Name"] == last_user:
+                    user_path = os.path.join(self._app_path, cast(str, usr_cfg["Data"]))
+                    self.open_user(user_path)
+                    break
 
     def _process_gui_message(self, idmsg: str, **kwargs: object):
         return self.process_message(idmsg, **kwargs)

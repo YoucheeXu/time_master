@@ -1,0 +1,12 @@
+{
+	"common": {
+		"ver": "0.1.0.0"
+	},
+	"LastUser": "Youchee",
+	"Users":[
+		{
+			"Name": "Youchee",
+			"Data": "data/Youchee"
+		}
+	]
+}

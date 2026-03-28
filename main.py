@@ -16,8 +16,8 @@ def main():
     proj_path = os.path.abspath(os.path.join(file_path, "."))
     xml_file = os.path.join(proj_path, 'resources', 'time_master.xml')
     app = TimeMasterApp(proj_path, xml_file)
-    usr_path = os.path.join(proj_path, "data", "Youchee")
-    app.open_user(usr_path)
+    cfg_file = os.path.join(proj_path, "TimeMaster.json")
+    app.open(cfg_file)
     app.run()
     app.close()
 
