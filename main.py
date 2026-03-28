@@ -8,9 +8,11 @@ from src.time_master import TimeMasterApp
 
 
 def main():
-    file_path = os.path.dirname(os.path.abspath(__file__))
     if getattr(sys, 'frozen', False):
         file_path = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(file_path, "public")
     proj_path = os.path.abspath(os.path.join(file_path, "."))
     xml_file = os.path.join(proj_path, 'resources', 'time_master.xml')
     app = TimeMasterApp(proj_path, xml_file)
