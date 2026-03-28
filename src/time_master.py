@@ -36,7 +36,8 @@ class TimeMasterApp(Container):
         self._gui.filter_message(self._process_gui_message)
 
         bell_path = os.path.join(self._app_path, "resources", "bell.mp3")
-        self._schedule: Schedule = Schedule(bell_path)
+        wather_mp3 = os.path.join(self._app_path, "resources", "water-drop-close-sonorous.mp3")
+        self._schedule: Schedule = Schedule(bell_path, wather_mp3)
 
         self._tabhour: HourTab = HourTab(self._gui, self._schedule)
 

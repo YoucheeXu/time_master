@@ -6,6 +6,7 @@
 """
 import os
 import sys
+from threading import activeCount
 import time
 import math
 import datetime
@@ -54,13 +55,15 @@ class Schedule:
         _agenda_list (list[Agenda]): _description_
         _actionsys (ActionSys): _description_
     """
-    def __init__(self, alarm_mp3: str):
+    def __init__(self, alarm_mp3: str, dripping_water_mp3: str):
         """_summary_
 
         Args:
             alarm_mp3 (str): _description_
+            dripping_water_mp3 (str): _description_
         """
         self._alarm_mp3: str = alarm_mp3
+        self._dripping_water_mp3: str = dripping_water_mp3
         self._tolerance_sec: int = 30
         self._today: datetime.datetime = datetime.datetime.today()
         self._event_dict: dict[int, Event] = {}
@@ -397,27 +400,31 @@ class Schedule:
             now = datetime.datetime.now().time()
 
             if self._compare_time(clock, now) == 0:
-                po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d} Time to do {event}")
-                self._actionsys.exec_action(ActTyp.PLAY_MP3, self._alarm_mp3)
-                self._actionsys.exec_action(ActTyp.SPEECH_TEXT,
-                    f'北京时间{now.hour}点{now.minute}分{now.second}秒')
-                self._actionsys.exec_action(ActTyp.SPEECH_TEXT, event)
-                if agenda.action != ActTyp.PLAY_MP3:
-                    self._actionsys.exec_action(agenda.action)
+                po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}, It's time to do {event}")
+
+                if agenda.action == ActTyp.DRIPPING_WATER:
+                    self._actionsys.exec_action(ActTyp.PLAY_MP3, self._dripping_water_mp3)
+                else:
+                    self._actionsys.exec_action(ActTyp.PLAY_MP3, self._alarm_mp3)
+                    self._actionsys.exec_action(ActTyp.SPEECH_TEXT,
+                        f'北京时间{now.hour}点{now.minute}分{now.second}秒')
+                    self._actionsys.exec_action(ActTyp.SPEECH_TEXT, event)
+                    if agenda.action != ActTyp.PLAY_MP3:
+                        self._actionsys.exec_action(agenda.action)
             else:
                 po(f"{now.hour:0=2d}:{now.minute:0=2d}:{now.second:0=2d}")
 
 
-def main(alarm_mp3: str):
+def main(alarm_mp3: str, dripping_water_mp3: str):
 
-    schedule = Schedule(alarm_mp3)
+    schedule = Schedule(alarm_mp3, dripping_water_mp3)
 
     # now = datetime.datetime.now().time()
     # strtstamp = datetime.datetime.now().timestamp()
     # tomorrow = schedule.sleep_to_nextday(today)
     # print(f"tomorrow = {tomorrow}")
-    schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR)
-    schedule.add_event(2, "Cooking", datetime.time(11, 00), ActTyp.LOCK_SCREEN)
+    schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR, DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
+    schedule.add_event(2, "Cooking", datetime.time(11, 00))
     schedule.event_to_agenda()
     schedule.add_agenda("Lunch", datetime.time(12, 00), ActTyp.LOCK_SCREEN)
     # schedule.add_agenda("Nap", datetime.time(12, 30), ActTyp.LOCK_SCREEN)
@@ -436,10 +443,8 @@ def main(alarm_mp3: str):
 
 
 if __name__ == "__main__":
-    proj_path = os.path.dirname(os.path.abspath(__file__))
-    if getattr(sys, 'frozen', False):
-        print("script is packaged!")
-        proj_path = os.path.dirname(os.path.abspath(sys.executable))
-    proj_path = os.path.join(proj_path, "..")
+    file_path = os.path.dirname(os.path.abspath(__file__))
+    proj_path = os.path.abspath(os.path.join(file_path, "..", "public"))
     alarm_mp3 = os.path.join(proj_path, "resources", "bell.mp3")
-    main(alarm_mp3)
+    wather_mp3 = os.path.join(proj_path, "resources", "water-drop-close-sonorous.mp3")
+    main(alarm_mp3, wather_mp3)

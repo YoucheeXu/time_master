@@ -20,6 +20,7 @@ class SysTyp(IntEnum):
 class ActTyp(IntEnum):
     SPEECH_TEXT = auto()
     PLAY_MP3 = auto()
+    DRIPPING_WATER = auto()
     LOCK_SCREEN = auto()
     SHUTDOWN = auto()
     NOACTION = auto()
