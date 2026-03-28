@@ -10,7 +10,12 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=["unittest", 'email',
+		'setuptools' 'babel',
+        'pyinstaller',
+        'pytest', 'pytest-cov', 'pytest-mock',
+        'QtAgg', 'Qt5Agg', 'Gtk4Agg', 'Gtk3Agg', 'WxAgg'
+    ],
     noarchive=False,
     optimize=0,
 )
