@@ -5,8 +5,6 @@
     uv run .\\src\\schedule.py
 """
 import os
-import sys
-from threading import activeCount
 import time
 import math
 import datetime
