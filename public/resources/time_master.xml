@@ -24,8 +24,8 @@
 			</Frame>
 			<ScrollableFrame id="frmHourMain" Width="400" Height="500" layout="pack" pack="{'side':'top','expand':True,'fill':'both'}" options="{'bg':'white'}"/>
 		</Tab>
-		<Tab id="tabCalendar" text="Calendar">
-		</Tab>
+		<Tab id="tabTodo" text="Todo"/>
+		<Tab id="tabCalendar" text="Calendar"/>
 	</Notebook>
 	<Dialog id="dlgSelClock" text="选择定时提醒" Width="400" Height="120">
 		<Combobox id="cmbSelDay" default="0" options="{'values':['Everyday','Workday','Holiday'],'state':'readonly','width':16}" layout="pack" pack="{'side':'left'}"/>
@@ -78,12 +78,12 @@
         <Frame id="frmSubItmes" layout="pack" pack="{'pady':4}"/>
 		<Notebook id="ntbStatisticsHour" layout="pack" pack="{'expand':1,'fill':'both'}">
         	<Tab id="tabEveryDayHour" text="每日投入">
-				<ImageButton id="btnPrevDayHour" image="left-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':0}"/>
-        		<ImageButton id="btnPrevWeekHour" image="previous.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':1,'column':0}"/>
-                <MatPlot id="pltEveryDayHour" text="" size="(440,220)" xLabel="" yLabel="" layout="grid" grid="{'row':0,'column':1,'rowspan':2}"/>
-                <ImageButton id="btnNextDayHour" image="right-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':2}"/>
-                <ImageButton id="btnNextWeekHour" image="next.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':1,'column':2}"/>
-        		<Label id="lblDaySum" text="今日共投入0小时" options="{'width':20}" layout="grid" grid="{'row':2,'column':0,'columnspan':3}"/>
+        		<ImageButton id="btnPrevWeekHour" image="previous.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':0}"/>
+        		<ImageButton id="btnPrevDayHour" image="left-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':1}"/>
+                <MatPlot id="pltEveryDayHour" text="" size="(360,200)" xLabel="" yLabel="" layout="grid" grid="{'row':0,'column':2}"/>
+                <ImageButton id="btnNextDayHour" image="right-arrow.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':3}"/>
+                <ImageButton id="btnNextWeekHour" image="next.png" options="{'height':24, 'width':24}" layout="grid" grid="{'row':0,'column':4}"/>
+        		<Label id="lblDaySum" text="今日共投入0小时" options="{'width':20}" layout="grid" grid="{'row':1,'column':0, 'columnspan':5}"/>
 			</Tab>
 			<Tab id="tabEveryWeekHour" text="每周投入">
 				<Label id="lblWeekSum" text="本周共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>
@@ -114,4 +114,38 @@
 		<PicsListview id="lstImageEditHour" num_column="7" pic_size="40" layout="pack" pack="{'pady':4}"/>
 		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
     </CustomDialog>
+    <CustomDialog id="dlgEditTodo" text="Todo Details" Width="450" Height="600">
+    	<Style text="BW.TLabel" options="{'background':'white'}"/>
+    	<Frame id="frmInfoEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x'}" options="{'bg':'white'}">
+    		<Entry id="txtNameEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
+    		<Entry id="txtNoteEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
+    	</Frame>
+    	<Frame id="frmReminderEditTodo" layout="pack" pack="{'pady':4,'expand':1,'fill':'x'}">
+    		<Frame id="frmDateEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
+    			<ImagePanel id="imgDateEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2}"/>
+    			<Label id="lblDateEditTodo" text="日期" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+    			<Label id="lblSelDateEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w'}"/>
+    			<SlideSwitch id="slsDateEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4}"/>
+    			<Calendar id="cadDateEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':3,'column':0,'columnspan':3, 'pady':4}"/>
+    		</Frame>
+    		<Frame id="frmTimeEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
+    			<ImagePanel id="imgTimeEditTodo" image="VaadinAlarm.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2}"/>
+    			<Label id="lblTimeEditTodo" text="时间" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+    			<Label id="lblSelTimeEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w'}"/>
+    			<SlideSwitch id="slsTimeEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4}"/>
+    			<TimeScrollPicker id="tspTimeEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':3,'column':0,'columnspan':3, 'pady':4}"/>
+    		</Frame>
+    	</Frame>
+		<Frame id="frmRepeatEditTodo" layout="pack" pack="{'padx':4,'pady':4,'expand':1,'fill':'x'}" options="{'bg':'white'}">
+    		<Frame id="frmCycleEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
+    			<ImagePanel id="imgCycleEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0}"/>
+    			<Label id="lblCycleEditTodo" text="重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+    			<Label id="lblSelCycleEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
+    		</Frame>
+    		<Frame id="frmEndEditTodo" layout="pack" pack="{'pady':2}">
+    			<Label id="lblEndEditTodo" text="结束重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+    			<Label id="lblSelEndEditTodo" text="永不" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
+    		</Frame>
+    	</Frame>
+	</CustomDialog>
 </Window>

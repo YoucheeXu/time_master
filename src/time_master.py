@@ -15,6 +15,7 @@ from pygui.tkwin import tkWin
 from src.schedule import Schedule
 # from src.time_database_type import TimeUnit, DayType
 from src.hour_tab import HourTab
+from src.todo_tab import TodoTab
 
 
 class TimeMasterApp(Container):
@@ -43,6 +44,7 @@ class TimeMasterApp(Container):
         self._schedule: Schedule = Schedule(bell_path, wather_mp3)
 
         self._tab_hour: HourTab = HourTab(self._gui, self._schedule)
+        self._tab_todo: TodoTab = TodoTab(self._gui, self._schedule)
 
     def open_user(self, usr_path: str):
         """_summary_
@@ -55,6 +57,12 @@ class TimeMasterApp(Container):
             self._tab_hour.new_hours(hours_db_path)
         else:
             self._tab_hour.open_hours(hours_db_path)
+
+        todo_db_path = os.path.join(usr_path, "todos.db")
+        if not os.path.isfile(todo_db_path):
+            self._tab_todo.new_todos(todo_db_path)
+        else:
+            self._tab_todo.open_todos(todo_db_path)
 
         # self._schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR,
             # DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
