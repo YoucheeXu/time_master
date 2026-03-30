@@ -2,15 +2,18 @@
 # -*- coding: UTF-8 -*-
 import os
 import json
+# import datetime
 from threading import Thread
 import tkinter.filedialog as tkFileDialog
 from typing import override, cast
 
 from pyutilities.logit import pv, po, pe
-from pyutilities.winbasic import Container
-from pyutilities.tkwin import tkWin
+from pygui.winbasic import Container
+from pygui.tkwin import tkWin
 
+# from src.action_sys import ActTyp
 from src.schedule import Schedule
+# from src.time_database_type import TimeUnit, DayType
 from src.hour_tab import HourTab
 
 
@@ -39,7 +42,7 @@ class TimeMasterApp(Container):
         wather_mp3 = os.path.join(self._app_path, "resources", "water-drop-close-sonorous.mp3")
         self._schedule: Schedule = Schedule(bell_path, wather_mp3)
 
-        self._tabhour: HourTab = HourTab(self._gui, self._schedule)
+        self._tab_hour: HourTab = HourTab(self._gui, self._schedule)
 
     def open_user(self, usr_path: str):
         """_summary_
@@ -47,11 +50,14 @@ class TimeMasterApp(Container):
         Args:
             usrpath (str): _description_
         """
-        hoursdbpath = os.path.join(usr_path, "hours.db")
-        if not os.path.isfile(hoursdbpath):
-            self._tabhour.new_hours(hoursdbpath)
+        hours_db_path = os.path.join(usr_path, "hours.db")
+        if not os.path.isfile(hours_db_path):
+            self._tab_hour.new_hours(hours_db_path)
         else:
-            self._tabhour.open_hours(hoursdbpath)
+            self._tab_hour.open_hours(hours_db_path)
+
+        # self._schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR,
+            # DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
 
         self._schedule.event_to_agenda()
 
@@ -114,5 +120,5 @@ class TimeMasterApp(Container):
     def close(self):
         """_summary_
         """
-        _ = self._tabhour.close()
+        _ = self._tab_hour.close()
         print("App exit!")
