@@ -24,7 +24,31 @@
 			</Frame>
 			<ScrollableFrame id="frmHourMain" Width="400" Height="500" layout="pack" pack="{'side':'top','expand':True,'fill':'both'}" options="{'bg':'white'}"/>
 		</Tab>
-		<Tab id="tabTodo" text="Todo"/>
+		<Tab id="tabTodo" text="Todo">
+			<Frame id="frmMainTodo" layout="pack" pack="{'side':'top','expand':True,'fill':'both'}">
+				<Style text="BW.TLabel" options="{'background':'white'}"/>
+				<Frame id="frmTodayTodo" options="{'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'nsew','padx':8,'pady':8}">
+					<Label id="lblTitleToday" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Today" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
+					<Label id="lblNumberToday" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="7" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
+				</Frame>
+				<Frame id="frmPlanedTodo" options="{'bg':'white'}" layout="grid" grid="{'row':0,'column':1,'sticky':'nsew','padx':(4,12),'pady':8}">
+					<Label id="lblTitlePlaned" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Planed" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
+					<Label id="lblNumberPlaned" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="15" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
+				</Frame>
+				<Frame id="frmAllTodo" options="{'bg':'white'}" layout="grid" grid="{'row':1,'column':0,'sticky':'nsew','padx':8,'pady':8}">
+					<Label id="lblTitleAll" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="All" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
+					<Label id="lblNumberAll" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="174" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
+				</Frame>
+				<Frame id="frmFnshdTodo" options="{'bg':'white'}" layout="grid" grid="{'row':1,'column':1,'sticky':'nsew','padx':(4,12),'pady':8}">
+					<Label id="lblTitleFnshd" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Finished" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
+					<Label id="lblNumberFnshd" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="15" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
+				</Frame>
+				<Frame id="frmShoppingTodo" options="{'bg':'white'}" layout="grid" grid="{'row':2,'column':0,'sticky':'nsew','padx':8,'pady':8}">
+					<Label id="lblTitleShopping" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Shopping List" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
+					<Label id="lblNumberShopping" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="15" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
+				</Frame>
+			</Frame>
+		</Tab>
 		<Tab id="tabCalendar" text="Calendar"/>
 	</Notebook>
 	<Dialog id="dlgSelClock" text="选择定时提醒" Width="400" Height="120">
@@ -140,11 +164,11 @@
     		<Frame id="frmCycleEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
     			<ImagePanel id="imgCycleEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0}"/>
     			<Label id="lblCycleEditTodo" text="重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelCycleEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
+    			<Label id="lblSelCycleEditTodo" text="永不 >" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
     		</Frame>
     		<Frame id="frmEndEditTodo" layout="pack" pack="{'pady':2}">
     			<Label id="lblEndEditTodo" text="结束重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelEndEditTodo" text="永不" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
+    			<Label id="lblSelEndEditTodo" text="永不 >" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
     		</Frame>
     	</Frame>
 	</CustomDialog>

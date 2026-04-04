@@ -604,6 +604,9 @@ class EditTodoDialog(DialogCtrl):
         time_scrollerpicker_ctrl = cast(TimeScrollPickerCtrl, self.get_control("tspTimeEditTodo"))
         time_scrollerpicker_ctrl.hide()
 
+        # frm = cast(FrameCtrl, self.get_control(idctrl="frmEndEditTodo"))
+        # frm.hide()
+
     @override
     def _confirm(self, **kwargs: object):
         entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
@@ -692,25 +695,62 @@ class EditTodoDialog(DialogCtrl):
         return super().process_message(idmsg, **kwargs)
 
 
-class TodoTab(Container):
-    """_summary_
+class BaseTodoPage(tk.Frame):
+    """Base class for all Todo pages (shared UI structure).
 
-    Attributes:
-        _gui (_type_): _description_
-        _schedule (_type_): _description_
-        _todo_db (_type_): _description_
+    This class provides a reusable UI template for all four todo pages, including
+    a title bar with a back button to TodoTab and a content frame for page-specific
+    widgets. All concrete pages inherit from this class.
+
+    Args:
+        parent: Parent widget (root window or container frame)
+        controller: Main application instance for frame navigation
+        page_title: Display title for the page's title bar
     """
-    def __init__(self, owner: Container, schedule: Schedule) -> None:
-        """_summary_
+    def __init__(self, parent: tk.Frame, owner: Container, page_title: str) -> None:
+        self._page_title: str = page_title
+        super().__init__(parent)
+        self._owner: Container = owner
 
-        Args:
-            owner (_type_): _description_
-            schedule (_type_): _description_
+        # -------------------------- Title Bar (Consistent for All Pages) -------------------------
+        # Create title bar frame with background color
+        self._title_bar: tk.Frame = tk.Frame(self, bg="#2c3e50", height=50)
+        self._title_bar.pack(fill=tk.X, padx=2, pady=2)
+        _ = self._title_bar.pack_propagate(False)  # Fix height
+
+        # Back Button (returns to TodoTab)
+        self._back_btn: ttk.Button = ttk.Button(
+            self._title_bar,
+            text="← Back to Todo Tab",
+            command=self._back_to_todo_tab
+        )
+        self._back_btn.pack(side=tk.LEFT, padx=10, pady=8)
+
+        # Page Title Label
+        self._title_label: tk.Label = tk.Label(
+            self._title_bar,
+            text=self._page_title,
+            fg="white",
+            bg="#2c3e50",
+            font=("Arial", 14, "bold")
+        )
+        self._title_label.pack(side=tk.LEFT, padx=20)
+
+        # -------------------------- Page Content Frame (Page-Specific Widgets Go Here) -----------
+        self.content_frame: tk.Frame = tk.Frame(self, bg="#ecf0f1")
+        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+    def _back_to_todo_tab(self) -> None:
+        """Navigate back to the main TodoTab frame.
+
+        Triggers the main app's frame switching method to display TodoTab.
         """
-        super().__init__()
-        # self._parent: tk.Misc = parent
-        self._gui: tkWin = cast(tkWin, owner)
-        self._schedule: Schedule = schedule
+        _ = self._owner.process_message("ShowPage", page="MainTodo")
+
+
+class TodayTodoPage(BaseTodoPage):
+    def __init__(self, parent: tk.Frame, owner: Container):
+        super().__init__(parent, owner, "Today")
 
         self._todos: list[TodoDict] = []
         self._edit_mode: bool = False
@@ -742,55 +782,11 @@ class TodoTab(Container):
         self.setup_ui()
 
         # Render todo list (delayed)
-        # _ = self._parent.after(100, self.render_todo_list)
-        _ = self._gui.win.after(100, self.render_todo_list)
+        # _ = self._gui.win.after(100, self.render_todo_list)
 
         # Bind global events
-        # _ = self._parent.bind("<Configure>", self.on_window_resize)
-        _ = self._gui.win.bind("<Configure>", self.on_window_resize)
-        # _ = self._parent.bind("<Button-1>", self.on_global_click)
-        _ = self._gui.win.bind("<Button-1>", self.on_global_click)
-
-        self._todos_db: TimeDatabase = TimeDatabase()
-
-    def _open(self, db_path: str):
-        """_summary_
-        Args:
-            db_path (type): _description_
-        """
-        return self._todos_db.open(db_path)
-
-    def new_todos(self, db_path: str):
-        """_summary_
-        Args:
-            db_path (type): _description_
-        """
-        _ = self._open(db_path)
-
-    def open_todos(self, db_path: str):
-        """_summary_
-        Args:
-            db_path (type): _description_
-        """
-        _ = self._open(db_path)
-        plans = self._todos_db.read_plans()
-        for pid, plandata in plans.items():
-            eid = 0
-            reminderdata = None
-            if len(plandata["reminders"].keys()) > 0:
-                eid = list(plandata["reminders"].keys())[0]
-                reminderdata = plandata["reminders"][eid]
-                if clock_time := reminderdata["clk_time"]:
-                    self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
-                        reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
-                        ActTyp.LOCK_SCREEN)
-            todo: TodoDict = {
-                **plandata,
-                "tid": pid,
-                "reminder_id": eid,
-                "reminder": reminderdata
-            }
-            self._todos.append(todo)
+        # _ = self._gui.win.bind("<Configure>", self.on_window_resize)
+        # _ = self._gui.win.bind("<Button-1>", self.on_global_click)
 
     def on_window_resize(self, event: tk.Event) -> None:
         # if event.widget == self._parent:
@@ -867,9 +863,7 @@ class TodoTab(Container):
         self.setup_add_todo()
 
     def setup_navbar(self) -> None:
-        tab_todo = cast(tkControl, self._gui.get_control("tabTodo")).control
-        # navbar = tk.Frame(self._parent, bg=COLORS["card"], height=50)
-        navbar = tk.Frame(tab_todo, bg=COLORS["card"], height=50)
+        navbar = tk.Frame(self.content_frame, bg=COLORS["card"], height=50)
         navbar.pack(fill="x", padx=0, pady=0)
 
         # Title
@@ -887,9 +881,7 @@ class TodoTab(Container):
         self._edit_btn.place(relx=0.9, rely=0.5, anchor="center")
 
     def setup_stats_bar(self) -> None:
-        tab_todo = cast(tkControl, self._gui.get_control("tabTodo")).control
-        # stats_frame = tk.Frame(self._parent, bg=COLORS["background"], height=40)
-        stats_frame = tk.Frame(tab_todo, bg=COLORS["background"], height=40)
+        stats_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=40)
         stats_frame.pack(fill="x", padx=20, pady=10)
 
         self._stats_label = tk.Label(
@@ -904,10 +896,9 @@ class TodoTab(Container):
         return f"Completed {completed} / Total {total}"
 
     def setup_todo_list(self) -> None:
-        tab_todo = cast(tkControl, self._gui.get_control("tabTodo")).control
         # List container
         # list_frame = tk.Frame(self._parent, bg=COLORS["background"])
-        list_frame = tk.Frame(tab_todo, bg=COLORS["background"])
+        list_frame = tk.Frame(self.content_frame, bg=COLORS["background"])
         list_frame.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Scrollbar
@@ -951,9 +942,8 @@ class TodoTab(Container):
         return title_frame
 
     def setup_add_todo(self) -> None:
-        tab_todo = cast(tkControl, self._gui.get_control("tabTodo")).control
         # add_frame = tk.Frame(self._parent, bg=COLORS["background"], height=60)
-        add_frame = tk.Frame(tab_todo, bg=COLORS["background"], height=60)
+        add_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=60)
         add_frame.pack(fill="x", padx=15, pady=10)
 
         # Input field
@@ -1120,12 +1110,6 @@ class TodoTab(Container):
         self.render_todo_list()
         self.update_stats()
 
-    def open_todo_detail_dlg(self, x: int, y: int, **kwargs: object) -> None:
-        dlg_id = "dlgEditTodo"
-        dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
-        editodo_dlg = EditTodoDialog(self._gui,dlg_cfg)
-        editodo_dlg.do_show(self, x, y, **kwargs)
-
     def update_todo_detail(self, updated_data: TodoDict) -> None:
         # Update todo in list
         for idx, todo in enumerate(self._todos):
@@ -1256,10 +1240,95 @@ class TodoTab(Container):
             self._drag_placeholder.destroy()
             self._drag_placeholder = None
 
+
+class TodoTab(Container):
+    """_summary_
+
+    Attributes:
+        _gui (_type_): _description_
+        _schedule (_type_): _description_
+        _todo_db (_type_): _description_
+    """
+    def __init__(self, owner: Container, schedule: Schedule) -> None:
+        """_summary_
+
+        Args:
+            owner (_type_): _description_
+            schedule (_type_): _description_
+        """
+        super().__init__()
+        # self._parent: tk.Misc = parent
+        self._gui: tkWin = cast(tkWin, owner)
+        self._gui.filter_message(self.process_message)
+        self._schedule: Schedule = schedule
+
+        self._todos_db: TimeDatabase = TimeDatabase()
+        self._todos: list[TodoDict] = []
+
+        self._pages: dict[str, tk.Frame] = {}
+
+        parent = cast(tk.Frame, cast(tkControl, self._gui.get_control("tabTodo")).control)
+        self._pages["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
+        self._pages["TodayTodo"] = TodayTodoPage(parent, self)
+
+        for name, frame in self._pages.items():
+            _ = frame.bind("<Button-1>", lambda e: self._pages[name].tkraise)
+
+        self._pages["MainTodo"].tkraise()
+
+    def _open(self, db_path: str):
+        """_summary_
+        Args:
+            db_path (type): _description_
+        """
+        return self._todos_db.open(db_path)
+
+    def new_todos(self, db_path: str):
+        """_summary_
+        Args:
+            db_path (type): _description_
+        """
+        _ = self._open(db_path)
+
+    def open_todos(self, db_path: str):
+        """_summary_
+        Args:
+            db_path (type): _description_
+        """
+        _ = self._open(db_path)
+        plans = self._todos_db.read_plans()
+        for pid, plandata in plans.items():
+            eid = 0
+            reminderdata = None
+            if len(plandata["reminders"].keys()) > 0:
+                eid = list(plandata["reminders"].keys())[0]
+                reminderdata = plandata["reminders"][eid]
+                if clock_time := reminderdata["clk_time"]:
+                    self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
+                        reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
+                        ActTyp.LOCK_SCREEN)
+            todo: TodoDict = {
+                **plandata,
+                "tid": pid,
+                "reminder_id": eid,
+                "reminder": reminderdata
+            }
+            self._todos.append(todo)
+
+    def open_todo_detail_dlg(self, x: int, y: int, **kwargs: object) -> None:
+        dlg_id = "dlgEditTodo"
+        dlg_cfg = self._gui.get_customctrlcfg(dlg_id)
+        editodo_dlg = EditTodoDialog(self._gui, dlg_cfg)
+        editodo_dlg.do_show(self, x, y, **kwargs)
+
     @override
     def process_message(self, idmsg: str, **kwargs: object):
-        match idmsg:
-            case _:
-                pass
         pv(idmsg)
+        match idmsg:
+            case "ShowPage":
+                page_name = cast(str, kwargs["page"])
+                page = self._pages[page_name]
+                page.tkraise()
+            case _:
+                print(f"undeal message {idmsg}")
         return True
