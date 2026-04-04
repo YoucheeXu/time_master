@@ -1439,7 +1439,7 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     self.delete_fatherctrl(hid)
                 case _:
-                    pass
+                    return None
             return True
 
     def close(self):
