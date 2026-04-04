@@ -25,7 +25,7 @@
 			<ScrollableFrame id="frmHourMain" Width="400" Height="500" layout="pack" pack="{'side':'top','expand':True,'fill':'both'}" options="{'bg':'white'}"/>
 		</Tab>
 		<Tab id="tabTodo" text="Todo">
-			<Frame id="frmMainTodo" layout="pack" pack="{'side':'top','expand':True,'fill':'both'}">
+			<Frame id="frmMainTodo" layout="grid" grid="{'row':0,'column':0,'sticky':'nsew'}">
 				<Style text="BW.TLabel" options="{'background':'white'}"/>
 				<Frame id="frmTodayTodo" options="{'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'nsew','padx':8,'pady':8}">
 					<Label id="lblTitleToday" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Today" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>

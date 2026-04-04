@@ -897,7 +897,6 @@ class TodayTodoPage(BaseTodoPage):
 
     def setup_todo_list(self) -> None:
         # List container
-        # list_frame = tk.Frame(self._parent, bg=COLORS["background"])
         list_frame = tk.Frame(self.content_frame, bg=COLORS["background"])
         list_frame.pack(fill="both", expand=True, padx=0, pady=0)
 
@@ -942,7 +941,6 @@ class TodayTodoPage(BaseTodoPage):
         return title_frame
 
     def setup_add_todo(self) -> None:
-        # add_frame = tk.Frame(self._parent, bg=COLORS["background"], height=60)
         add_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=60)
         add_frame.pack(fill="x", padx=15, pady=10)
 
@@ -1268,11 +1266,16 @@ class TodoTab(Container):
         self._pages: dict[str, tk.Frame] = {}
 
         parent = cast(tk.Frame, cast(tkControl, self._gui.get_control("tabTodo")).control)
-        self._pages["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
         self._pages["TodayTodo"] = TodayTodoPage(parent, self)
+        self._pages["PlannedTodo"] = PlannedTodoPage(parent, self)
 
-        for name, frame in self._pages.items():
-            _ = frame.bind("<Button-1>", lambda e: self._pages[name].tkraise)
+        for _, frame in self._pages.items():
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self._pages["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
+
+        frame = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmTodayTodo")).control)
+        _ = frame.bind("<Button-1>", lambda e: self._show_page("TodayTodo"))
 
         self._pages["MainTodo"].tkraise()
 
@@ -1321,14 +1324,21 @@ class TodoTab(Container):
         editodo_dlg = EditTodoDialog(self._gui, dlg_cfg)
         editodo_dlg.do_show(self, x, y, **kwargs)
 
+    def _show_page(self, page_name: str):
+        page = self._pages[page_name]
+        page.tkraise()
+
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         pv(idmsg)
         match idmsg:
             case "ShowPage":
                 page_name = cast(str, kwargs["page"])
-                page = self._pages[page_name]
-                page.tkraise()
+                self._show_page(page_name)
+            case "lblTitleToday":
+                self._show_page("TodayTodo")
+            case "lblNumberToday":
+                self._show_page("TodayTodo")
             case _:
                 print(f"undeal message {idmsg}")
         return True
