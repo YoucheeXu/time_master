@@ -142,10 +142,10 @@ class RoundCheckbutton:
 # --------------------------
 class TodoItem:
     def __init__(
-        self, parent: tk.Frame, todo_dict: TodoDict, app: "TodoTab",
+        self, parent: tk.Frame, todo_dict: TodoDict, owner: Container,
             show_divider: bool = True) -> None:
         self._parent: tk.Frame = parent
-        self._app: TodoTab = app
+        self._owner: Container = owner
         self._show_divider: bool = show_divider
         self._todo_dict: TodoDict = todo_dict
 
@@ -209,7 +209,7 @@ class TodoItem:
             self._btn_container, text="Delete", font=FONT_CONFIG["small"], bg=COLORS["background"],
             fg=COLORS["danger"], borderwidth=0, width=4, command=self.delete
         )
-        if self._app._edit_mode:
+        if self._owner._edit_mode:
             self._edit_delete_btn.pack(side="top", padx=2, pady=2)
         else:
             self._edit_delete_btn.pack_forget()
@@ -242,81 +242,81 @@ class TodoItem:
         _ = self._text_container.bind("<Button-1>", self._on_text_click)
 
     def _on_press(self, event: tk.Event) -> None:
-        if self._app._edit_mode or self._app._editing_todo_id:
+        if self._owner._edit_mode or self._owner._editing_todo_id:
             return
         if event.widget in [self._text_container, self._more_btn] or isinstance(event.widget, tk.Canvas):
             return
 
-        self._app._dragging = True
-        self._app._drag_start_x = event.x_root
-        self._app._drag_start_y = event.y_root
-        self._app._current_dragged_item = self._wrapper
-        self._app._original_todo_id = self._todo_dict["tid"]
-        self._app._current_offset_x = 0
-        self._app._current_offset_y = 0
+        self._owner._dragging = True
+        self._owner._drag_start_x = event.x_root
+        self._owner._drag_start_y = event.y_root
+        self._owner._current_dragged_item = self._wrapper
+        self._owner._original_todo_id = self._todo_dict["tid"]
+        self._owner._current_offset_x = 0
+        self._owner._current_offset_y = 0
         self._wrapper.lift()
-        self._app._drag_type = None
+        self._owner._drag_type = None
 
     def _on_drag(self, event: tk.Event) -> None:
-        if not self._app._dragging or self._app._current_dragged_item != self._wrapper:
+        if not self._owner._dragging or self._owner._current_dragged_item != self._wrapper:
             return
 
-        dx: int = event.x_root - self._app._drag_start_x
-        dy: int = event.y_root - self._app._drag_start_y
+        dx: int = event.x_root - self._owner._drag_start_x
+        dy: int = event.y_root - self._owner._drag_start_y
 
         # Determine drag type (delete/sort)
-        if self._app._drag_type is None:
+        if self._owner._drag_type is None:
             if abs(dx) > SWIPE_CONFIG["drag_threshold"]:
-                self._app._drag_type = "delete"
+                self._owner._drag_type = "delete"
                 _ = self._wrapper.config(bg=COLORS["danger_bg"])
             elif abs(dy) > SWIPE_CONFIG["drag_threshold"]:
-                self._app._drag_type = "sort"
+                self._owner._drag_type = "sort"
                 _ = self._content_frame.config(
                     bg=COLORS["drag_active"], relief="solid", bd=1,
                     highlightbackground=COLORS["drag_border"], highlightthickness=1
                 )
-                self._app._create_drag_placeholder(self._wrapper)
+                self._owner._create_drag_placeholder(self._wrapper)
 
         # Handle swipe delete
-        if self._app._drag_type == "delete":
+        if self._owner._drag_type == "delete":
             self._handle_swipe_delete(dx)
         # Handle drag sort
-        elif self._app._drag_type == "sort":
+        elif self._owner._drag_type == "sort":
             self._handle_drag_sort(dy)
 
     def _on_release(self, event: tk.Event) -> None:
-        if not self._app._dragging or self._app._current_dragged_item != self._wrapper:
-            self._app._reset_drag_state()
+        if not self._owner._dragging or self._owner._current_dragged_item != self._wrapper:
+            self._owner._reset_drag_state()
             return
 
-        if self._app._drag_type == "delete":
-            if self._app._current_offset_x <= SWIPE_CONFIG["delete_threshold"]:
+        if self._owner._drag_type == "delete":
+            if self._owner._current_offset_x <= SWIPE_CONFIG["delete_threshold"]:
                 self.delete()
             else:
                 self._animate_swipe_back()
-        elif self._app._drag_type == "sort":
+        elif self._owner._drag_type == "sort":
             _ = self._content_frame.config(
                 bg=COLORS["background"], relief="flat", bd=0, highlightthickness=0
             )
-            self._app._finalize_drag_sort()
+            self._owner._finalize_drag_sort()
 
-        self._app._reset_drag_state()
+        self._owner._reset_drag_state()
 
     def _on_leave(self, event: tk.Event) -> None:
-        if self._app._dragging and self._app._current_dragged_item == self._wrapper:
-            if self._app._drag_type == "sort":
+        if self._owner._dragging and self._owner._current_dragged_item == self._wrapper:
+            if self._owner._drag_type == "sort":
                 _ = self._content_frame.config(
                     bg=COLORS["background"], relief="flat", bd=0, highlightthickness=0
                 )
-            self._app._reset_drag_state()
-            if self._app._drag_type == "delete" and self._app._current_offset_x > SWIPE_CONFIG["delete_threshold"]:
+            self._owner._reset_drag_state()
+            if self._owner._drag_type == "delete" and self._owner._current_offset_x > SWIPE_CONFIG["delete_threshold"]:
                 self._animate_swipe_back()
 
     def _on_text_click(self, event: tk.Event) -> str:
-        if self._app._edit_mode or self._app._editing_todo_id:
+        if self._owner._edit_mode or self._owner._editing_todo_id:
             return "break"
 
-        self._app._reset_drag_state()
+        self._owner._reset_drag_state()
         self._switch_to_edit_mode()
         return "break"
 
@@ -326,10 +326,10 @@ class TodoItem:
             offset_x = 0
         elif offset_x < SWIPE_CONFIG["max_swipe_distance"]:
             self.delete()
-            self._app._reset_drag_state()
+            self._owner._reset_drag_state()
             return
 
-        self._app._current_offset_x = offset_x
+        self._owner._current_offset_x = offset_x
         self._content_frame.place(x=offset_x, y=0, width=400)
 
         # Show/hide delete button
@@ -347,11 +347,11 @@ class TodoItem:
             self._is_delete_btn_visible = False
 
     def _handle_drag_sort(self, dy: int) -> None:
-        self._app._current_offset_y = dy
+        self._owner._current_offset_y = dy
         self._wrapper.place(y=self._wrapper.winfo_y() + dy)
 
         # Find nearest todo item
-        todo_items: list[tk.Frame] = [w for w in self._app._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        todo_items: list[tk.Frame] = [w for w in self._owner._todo_container.winfo_children() if hasattr(w, "todo_id")]
         current_y: int = self._wrapper.winfo_y() + SWIPE_CONFIG["placeholder_height"] // 2
 
         nearest_index: int = -1
@@ -367,9 +367,9 @@ class TodoItem:
                 min_distance = distance
                 nearest_index = idx
 
-        if nearest_index != -1 and nearest_index != self._app._last_nearest_index:
-            self._app._move_drag_placeholder(nearest_index)
-            self._app._last_nearest_index = nearest_index
+        if nearest_index != -1 and nearest_index != self._owner._last_nearest_index:
+            self._owner._move_drag_placeholder(nearest_index)
+            self._owner._last_nearest_index = nearest_index
 
     def _animate_swipe_back(self) -> None:
         current_x: int = int(float(self._content_frame.place_info()["x"]))
@@ -417,17 +417,17 @@ class TodoItem:
 
     def _switch_to_edit_mode(self) -> None:
         # Cancel other edits
-        if self._app._editing_todo_id and self._app._editing_todo_id != self._todo_dict["iid"]:
-            self._app.cancel_edit()
+        if self._owner._editing_todo_id and self._owner._editing_todo_id != self._todo_dict["iid"]:
+            self._owner.cancel_edit()
 
-        if self._app._editing_todo_id == self._todo_dict["iid"]:
+        if self._owner._editing_todo_id == self._todo_dict["iid"]:
             return
 
         # Clear text container
         for widget in self._text_container.winfo_children():
             widget.destroy()
 
-        self._app._editing_todo_id = self._todo_dict["tid"]
+        self._owner._editing_todo_id = self._todo_dict["tid"]
 
         # Create edit entry
         original_width: int = int((400 - 100) / 8)
@@ -442,7 +442,7 @@ class TodoItem:
         self._edit_entry.insert(0, self._todo_dict["name"])
         self._edit_entry.select_range(0, tk.END)
         self._edit_entry.focus_force()
-        self._app._current_edit_entry = self._edit_entry
+        self._owner._current_edit_entry = self._edit_entry
 
         # Bind save/cancel
         _ = self._edit_entry.bind("<Return>", lambda e: self._save_edit())
@@ -462,16 +462,16 @@ class TodoItem:
         # self._app.save_todos()
 
         # Exit edit mode
-        self._app._editing_todo_id = None
-        self._app._current_edit_entry = None
+        self._owner._editing_todo_id = None
+        self._owner._current_edit_entry = None
 
         # Refresh display
         self._update_text_display()
-        self._app.update_stats()
+        self._owner.update_stats()
 
     def cancel_edit(self) -> None:
-        self._app._editing_todo_id = None
-        self._app._current_edit_entry = None
+        self._owner._editing_todo_id = None
+        self._owner._current_edit_entry = None
         self._update_text_display()
 
     def _update_text_display(self) -> None:
@@ -508,8 +508,8 @@ class TodoItem:
             note_label.pack_forget()
 
         # Reminder info
-        reminder_info: str = self._app.format_reminder_info(self._todo_dict)
-        is_expired: bool = self._app.is_reminder_expired(self._todo_dict)
+        reminder_info: str = self._owner.format_reminder_info(self._todo_dict)
+        is_expired: bool = self._owner.is_reminder_expired(self._todo_dict)
         reminder_color: str = COLORS["danger"] if is_expired else COLORS["secondary_text"]
 
         reminder_label: tk.Label = tk.Label(
@@ -526,7 +526,7 @@ class TodoItem:
 
     # Public Methods
     def toggle_completed(self) -> None:
-        if self._app._editing_todo_id == self._todo_dict["tid"]:
+        if self._owner._editing_todo_id == self._todo_dict["tid"]:
             self.cancel_edit()
         if self._todo_dict["status"] == StatusEnum.COMPLETED:
            self._todo_dict["status"] = StatusEnum.ONGOING
@@ -535,26 +535,27 @@ class TodoItem:
         self._checkbox.set_checked(self._todo_dict["status"] == StatusEnum.COMPLETED)
         # self._app.save_todos()
         self._update_text_display()
-        self._app.update_stats()
+        self._owner.update_stats()
 
     def delete(self) -> None:
-        if self._app._editing_todo_id == self._todo_dict["tid"]:
-            self._app._editing_todo_id = None
-            self._app._current_edit_entry = None
+        if self._owner._editing_todo_id == self._todo_dict["tid"]:
+            self._owner._editing_todo_id = None
+            self._owner._current_edit_entry = None
 
         # Confirm deletion in edit mode
-        if self._app._edit_mode and not messagebox.askyesno("Confirmation", "Are you sure to delete this todo?"):
+        if self._owner._edit_mode and not messagebox.askyesno("Confirmation", "Are you sure to delete this todo?"):
             return
 
-        self._app.delete_todo_by_id(self._todo_dict["tid"])
+        self._owner.delete_todo_by_id(self._todo_dict["tid"])
 
     def open_detail(self, x: int, y: int) -> None:
-        if self._app._editing_todo_id:
-            self._app.cancel_edit()
-        self._app.open_todo_detail_dlg(x, y, todo_dict=self._todo_dict)
+        if self._owner._editing_todo_id:
+            self._owner.cancel_edit()
+        _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo_dict=self._todo_dict)
+        pv(self._todo_dict)
 
     def update_edit_mode(self) -> None:
-        if self._app._edit_mode:
+        if self._owner._edit_mode:
             self._edit_delete_btn.pack(side="top", padx=2, pady=2)
         else:
             self._edit_delete_btn.pack_forget()
@@ -1252,6 +1253,12 @@ class TodayTodoPage(BaseTodoPage):
             self._drag_placeholder.destroy()
             self._drag_placeholder = None
 
+    @override
+    def process_message(self, idmsg: str, **kwargs: object):
+        assert self._owner is not None
+        match idmsg:
+            case _:
+                return self._owner.process_message(idmsg, **kwargs)
 
 class TodoTab(Container):
     """_summary_
@@ -1354,6 +1361,10 @@ class TodoTab(Container):
                 self._show_page("TodayTodo")
             case "lblNumberToday":
                 self._show_page("TodayTodo")
+            case "OpenEditTodoDlg":
+                # todo_dict = cast(TodoDict, kwargs['todo_dict'])
+                x, y = cast(tuple[int, int], kwargs['mousepos'])
+                self.open_todo_detail_dlg(x, y, **kwargs)
             case _:
                 print(f"undeal message {idmsg}")
         return True

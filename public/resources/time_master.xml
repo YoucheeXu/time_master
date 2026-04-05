@@ -139,7 +139,7 @@
 		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
     </CustomDialog>
     <CustomDialog id="dlgEditTodo" text="Todo Details" Width="450" Height="600">
-    	<Style text="BW.TLabel" options="{'background':'white'}"/>
+    	<!-- <Style text="BW.TLabel" options="{'background':'white'}"/> -->
     	<Frame id="frmInfoEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x'}" options="{'bg':'white'}">
     		<Entry id="txtNameEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
     		<Entry id="txtNoteEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
