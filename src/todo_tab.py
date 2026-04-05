@@ -695,7 +695,7 @@ class EditTodoDialog(DialogCtrl):
         return super().process_message(idmsg, **kwargs)
 
 
-class BaseTodoPage(tk.Frame):
+class BaseTodoPage(Container):
     """Base class for all Todo pages (shared UI structure).
 
     This class provides a reusable UI template for all four todo pages, including
@@ -709,22 +709,24 @@ class BaseTodoPage(tk.Frame):
     """
     def __init__(self, parent: tk.Frame, owner: Container, page_title: str) -> None:
         self._page_title: str = page_title
-        super().__init__(parent)
-        self._owner: Container = owner
+        super().__init__()
+        self._owner = owner
+
+        self._main_frame: tk.Frame = tk.Frame(parent)
 
         # -------------------------- Grid Layout (Key to Fill Remaining Space) -------------------------
         # Row 0: Fixed nav bar (weight=0)
         # Row 0: Fixed title bar (weight=0)
         # Row 1: Content frame fills ALL remaining space (weight=1)
         # Column 0: Full width fill (weight=1)
-        _ = self.grid_rowconfigure(0, weight=0)
-        _ = self.grid_rowconfigure(1, weight=0)
-        _ = self.grid_rowconfigure(2, weight=1)
-        _ = self.grid_columnconfigure(0, weight=1)
+        _ = self._main_frame.grid_rowconfigure(0, weight=0)
+        _ = self._main_frame.grid_rowconfigure(1, weight=0)
+        _ = self._main_frame.grid_rowconfigure(2, weight=1)
+        _ = self._main_frame.grid_columnconfigure(0, weight=1)
 
         # -------------------------- Title Bar (Consistent for All Pages, Fixed Height) -------------------------
         # Create title bar frame with background color
-        nav_bar = tk.Frame(self, bg="#2c3e50", height=50)
+        nav_bar = tk.Frame(self._main_frame, bg="#2c3e50", height=50)
         # Place title bar in row 0, full width
         nav_bar.grid(row=0, column=0, sticky="nsew", padx=2)
         _ = nav_bar.pack_propagate(False)  # Fix height
@@ -737,7 +739,7 @@ class BaseTodoPage(tk.Frame):
         )
         back_btn.pack(side=tk.LEFT, padx=10, pady=8)
 
-        title_bar = tk.Frame(self, bg="white", height=50)
+        title_bar = tk.Frame(self._main_frame, bg="white", height=50)
         title_bar.grid(row=1, column=0, sticky="nsew", padx=2)
         _ = title_bar.pack_propagate(False)  # Fix height
 
@@ -760,14 +762,19 @@ class BaseTodoPage(tk.Frame):
         self._edit_btn.place(relx=0.9, rely=0.5, anchor="center")
 
         # -------------------------- Page Content Frame (FILLS ALL REMAINING SPACE) -----------
-        self.content_frame: tk.Frame = tk.Frame(self, bg="#ecf0f1")
+        self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
         self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
+
+    @property
+    def frame(self):
+        return self._main_frame
 
     def _back_to_todo_tab(self) -> None:
         """Navigate back to the main TodoTab frame.
 
         Triggers the main app's frame switching method to display TodoTab.
         """
+        assert self._owner is not None
         _ = self._owner.process_message("ShowPage", page="MainTodo")
 
     def _toggle_edit_mode(self):
@@ -1273,7 +1280,7 @@ class TodoTab(Container):
         self._pages: dict[str, tk.Frame] = {}
 
         parent = cast(tk.Frame, cast(tkControl, self._gui.get_control("tabTodo")).control)
-        self._pages["TodayTodo"] = TodayTodoPage(parent, self)
+        self._pages["TodayTodo"] = TodayTodoPage(parent, self).frame
         # self._pages["PlannedTodo"] = PlannedTodoPage(parent, self)
 
         for _, frame in self._pages.items():
