@@ -138,38 +138,40 @@
 		<PicsListview id="lstImageEditHour" num_column="7" pic_size="40" layout="pack" pack="{'pady':4}"/>
 		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
     </CustomDialog>
-    <CustomDialog id="dlgEditTodo" text="Todo Details" Width="450" Height="600">
-    	<!-- <Style text="BW.TLabel" options="{'background':'white'}"/> -->
-    	<Frame id="frmInfoEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x'}" options="{'bg':'white'}">
-    		<Entry id="txtNameEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
-    		<Entry id="txtNoteEditTodo" text="" options="{'width':20}" layout="pack" pack="{}"/>
-    	</Frame>
-    	<Frame id="frmReminderEditTodo" layout="pack" pack="{'pady':4,'expand':1,'fill':'x'}">
-    		<Frame id="frmDateEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
-    			<ImagePanel id="imgDateEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2}"/>
-    			<Label id="lblDateEditTodo" text="日期" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelDateEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w'}"/>
-    			<SlideSwitch id="slsDateEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4}"/>
-    			<Calendar id="cadDateEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':3,'column':0,'columnspan':3, 'pady':4}"/>
-    		</Frame>
-    		<Frame id="frmTimeEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
-    			<ImagePanel id="imgTimeEditTodo" image="VaadinAlarm.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2}"/>
-    			<Label id="lblTimeEditTodo" text="时间" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelTimeEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w'}"/>
-    			<SlideSwitch id="slsTimeEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4}"/>
-    			<TimeScrollPicker id="tspTimeEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':3,'column':0,'columnspan':3, 'pady':4}"/>
-    		</Frame>
-    	</Frame>
-		<Frame id="frmRepeatEditTodo" layout="pack" pack="{'padx':4,'pady':4,'expand':1,'fill':'x'}" options="{'bg':'white'}">
-    		<Frame id="frmCycleEditTodo" layout="pack" pack="{'pady':2}" options="{'bg':'white'}">
-    			<ImagePanel id="imgCycleEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0}"/>
-    			<Label id="lblCycleEditTodo" text="重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelCycleEditTodo" text="永不 >" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
-    		</Frame>
-    		<Frame id="frmEndEditTodo" layout="pack" pack="{'pady':2}">
-    			<Label id="lblEndEditTodo" text="结束重复" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
-    			<Label id="lblSelEndEditTodo" text="永不 >" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w'}"/>
-    		</Frame>
-    	</Frame>
+    <CustomDialog id="dlgEditTodo" text="Todo Details" Width="400" Height="600">
+		<Frame id="frmInfoEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+			<Entry id="txtNameEditTodo" text="" layout="pack" pack="{'fill':'x','padx':4,'pady':2}"/>
+			<Entry id="txtNoteEditTodo" text="" layout="pack" pack="{'fill':'x','padx':4,'pady':2}"/>
+		</Frame>
+		<Frame id="frmReminderEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+			<Frame id="frmDateEditTodo" layout="pack" pack="{'pady':2,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+				<ImagePanel id="imgDateEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2,'padx':4,'pady':2}"/>
+				<Label id="lblDateEditTodo" text="日期" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<Label id="lblSelDateEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<SlideSwitch id="slsDateEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4,'pady':2}"/>
+				<Calendar id="cadDateEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':2,'column':0,'columnspan':3, 'pady':4,'padx':4}"/>
+			</Frame>
+			<Frame id="frmTimeEditTodo" layout="pack" pack="{'pady':2,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+				<ImagePanel id="imgTimeEditTodo" image="VaadinAlarm.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'rowspan':2,'padx':4,'pady':2}"/>
+				<Label id="lblTimeEditTodo" text="时间" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<Label id="lblSelTimeEditTodo" text="" clickable="true" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<SlideSwitch id="slsTimeEditTodo" text="" options="{'width':50,'height':25}" layout="grid" grid="{'row':0,'column':2,'rowspan':2,'sticky':'w','padx':4,'pady':2}"/>
+				<TimeScrollPicker id="tspTimeEditTodo" options="{'width':186,'height':150}" layout="grid" grid="{'row':2,'column':0,'columnspan':3, 'pady':4,'padx':4}"/>
+			</Frame>
+		</Frame>
+		<Frame id="frmRepeatEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+			<Frame id="frmCycleEditTodo" layout="pack" pack="{'pady':2,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
+				<ImagePanel id="imgCycleEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'padx':4,'pady':2}"/>
+				<Label id="lblCycleEditTodo" text="Repeat" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<Label id="lblSelCycleEditTodo" text="None" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e','padx':4,'pady':2}"/>
+			</Frame>
+			<Frame id="frmEndEditTodo" 
+				layout="pack" 
+				pack="{'pady':2,'expand':1,'fill':'x','anchor':'w'}" 
+				options="{'bg':'white'}">
+				<Label id="lblEndEditTodo" text="End of Repeat" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
+				<Label id="lblSelEndEditTodo" text="Never" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w','padx':(56,4),'pady':2}"/>
+			</Frame>
+		</Frame>
 	</CustomDialog>
 </Window>
