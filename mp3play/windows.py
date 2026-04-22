@@ -57,7 +57,8 @@ class AudioClip:
 		start_ms = 0 if not start_ms else start_ms
 		end_ms = self.milliseconds() if not end_ms else end_ms
 		# err, buf = self._mci.directsend('play %s from %d to %d' %(self._alias, start_ms, end_ms))
-		_ = self._mci.directsend('play %s repeat' %self._alias)
+		# _ = self._mci.directsend('play %s repeat' %self._alias)
+		_ = self._mci.directsend('play %s' %self._alias)
 
 	def isplaying(self):
 		return self._mode() == 'playing'
