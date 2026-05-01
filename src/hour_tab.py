@@ -935,9 +935,13 @@ class HourTab(Container):
 
         self._selclock_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgSelClock"))
         self._selclock_dlg.register_eventhandler("confirm", self._selclockdlg_confirm)
+        self._selclock_dlg.register_eventhandler("beforego", self._undeal_message)
+        self._selclock_dlg.register_eventhandler("cancel", self._undeal_message)
 
         self._selschedule_dlg: DialogCtrl = cast(DialogCtrl, self.get_control("dlgSelSchedule"))
         self._selschedule_dlg.register_eventhandler("confirm", self._selscheduledlg_confirm)
+        self._selschedule_dlg.register_eventhandler("beforego", self._undeal_message)
+        self._selschedule_dlg.register_eventhandler("cancel", self._undeal_message)
 
         self._hoursdb: TimeDatabase = TimeDatabase()
 
@@ -1174,6 +1178,9 @@ class HourTab(Container):
             kwargs (type): _description_
         """
         self._selclock_dlg.do_show(owner, x, y, **kwargs)
+
+    def _undeal_message(self, **_: object):
+        pass
 
     def _selclockdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
         """_summary_
