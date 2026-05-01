@@ -250,19 +250,16 @@ class Schedule:
         return clock_list
 
     def agendas_on_date(self, date: datetime.date):
-        agenda_list: list[Agenda] = []
-        if date == datetime.date.today():
-            return self._today_agenda_list
-        for _, event in self._event_dict.items():
+        agenda_dict: dict[int, Agenda] = {}
+        for eid, event in self._event_dict.items():
             if event.unit != TimeUnit.HOUR:
                 if self._event_on_date(event, date):
-                    agenda_list.append(Agenda(event.name, event.clock, event.action))
+                    agenda_dict[eid]=Agenda(event.name, event.clock, event.action)
             else:
                 clock_list = self.clocks_on_date(event, date)
                 for clock in clock_list:
-                    agenda_list.append(Agenda(event.name, clock, event.action))
-        agenda_list = self.sort_agenda(agenda_list)
-        return agenda_list
+                    agenda_dict[eid] = Agenda(event.name, clock, event.action)
+        return agenda_dict
 
     def event_to_agenda(self):
         self.clear_agenda()
@@ -422,7 +419,6 @@ def main(alarm_mp3: str, dripping_water_mp3: str):
     # tomorrow = schedule.sleep_to_nextday(today)
     # print(f"tomorrow = {tomorrow}")
     schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR, DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
-    schedule.add_event(2, "Cooking", datetime.time(11, 00))
     schedule.event_to_agenda()
     schedule.add_agenda("Lunch", datetime.time(12, 00), ActTyp.LOCK_SCREEN)
     # schedule.add_agenda("Nap", datetime.time(12, 30), ActTyp.LOCK_SCREEN)
@@ -434,8 +430,8 @@ def main(alarm_mp3: str, dripping_water_mp3: str):
     # schedule.add_agenda("Exercise", datetime.time(22, 00), ActTyp.LOCK_SCREEN)
     schedule.add_agenda("Sleep", datetime.time(23, 00), ActTyp.LOCK_SCREEN)
     date = datetime.date.today()
-    agenda_list = schedule.agendas_on_date(date)
-    agenda_list = schedule.sort_agenda(agenda_list)
+    agenda_dict = schedule.agendas_on_date(date)
+    agenda_list = schedule.sort_agenda(list(agenda_dict.values()))
     pv(agenda_list)
     schedule.exec()
 
