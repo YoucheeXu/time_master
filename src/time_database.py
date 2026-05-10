@@ -501,7 +501,7 @@ class TimeDatabase:
         plan = self._get_plan(pid)
         return copy.deepcopy(plan.children)
 
-    def add_reminder(self, pid: int, **kwargs: Unpack[ReminderDataDict]) -> int:
+    def add_reminder(self, pid: int, eid: int | None = None, **kwargs: Unpack[ReminderDataDict]) -> int:
         """_summary_
 
         Args:
@@ -520,7 +520,8 @@ class TimeDatabase:
         Returns:
             int: id of new reminder
         """
-        eid = uuid.uuid4().int
+        if eid is None:
+            eid = uuid.uuid4().int
         reminder = default_reminder_data()
         for key in ReminderAttr:
             if key in kwargs:

@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 import datetime
 import uuid
+import abc
 import xml.etree.ElementTree as et
 # from functools import partial
 from typing import Literal
@@ -12,7 +13,7 @@ from tkinter import ttk, messagebox
 from pyutilities.logit import po, pv, pe
 from pygui.winbasic import Widget, Container, Dialog, WinBasic
 from pygui.tkcontrol import tkControl
-from pygui.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
+from pygui.tkwin import T, LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pygui.tkwin import FrameCtrl
 from pygui.tkwin import DialogCtrl, tkWin
 from pygui.tkcalendar import CalendarCtrl
@@ -98,7 +99,7 @@ class ReminderGroups(TypedDict):
 class TodoDict(PlanDataDict):
     tid: int
     reminder_id: int
-    reminder: ReminderDataDict | None
+    reminder: ReminderDataDict
 
 # --------------------------
 # Custom Round Checkbutton
@@ -696,7 +697,7 @@ class EditTodoDialog(DialogCtrl):
         return super().process_message(idmsg, **kwargs)
 
 
-class BaseTodoPage(Container):
+class BaseTodoPage(Container, metaclass=abc.ABCMeta):
     """Base class for all Todo pages (shared UI structure).
 
     This class provides a reusable UI template for all four todo pages, including
@@ -710,8 +711,7 @@ class BaseTodoPage(Container):
     """
     def __init__(self, parent: tk.Frame, owner: Container, page_title: str) -> None:
         self._page_title: str = page_title
-        super().__init__()
-        self._owner = owner
+        super().__init__(owner)
 
         self._main_frame: tk.Frame = tk.Frame(parent)
 
@@ -766,6 +766,8 @@ class BaseTodoPage(Container):
         self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
         self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
 
+        self._todos: list[TodoDict] = []
+
     @property
     def frame(self):
         return self._main_frame
@@ -778,6 +780,19 @@ class BaseTodoPage(Container):
         assert self._owner is not None
         _ = self._owner.process_message("ShowPage", page="MainTodo")
 
+    @property
+    def todos(self):
+        return self._todos
+
+    @todos.setter
+    def todos(self, val: list[TodoDict]):
+        self._todos = val
+        pv(self._todos)
+
+    @abc.abstractmethod
+    def refresh_todos(self):
+        pass
+
     def _toggle_edit_mode(self):
         pass
 
@@ -786,7 +801,6 @@ class TodayTodoPage(BaseTodoPage):
     def __init__(self, parent: tk.Frame, owner: Container):
         super().__init__(parent, owner, "Today")
 
-        self._todos: list[TodoDict] = []
         self._edit_mode: bool = False
         self._editing_todo_id: int | None = None
         self._current_edit_entry: tk.Entry | None = None
@@ -1024,6 +1038,11 @@ class TodayTodoPage(BaseTodoPage):
         if self._canvas:
             _ = self._canvas.configure(scrollregion=self._canvas.bbox("all"))
 
+    @override
+    def refresh_todos(self):
+        self.render_todo_list()
+        self.update_stats()
+
     def is_reminder_expired(self, todo_dict: TodoDict) -> bool:
         if todo_dict["reminder_id"] <= 0:
             return False
@@ -1089,13 +1108,30 @@ class TodayTodoPage(BaseTodoPage):
         # Create new todo
         plandata = default_plan_data()
         plandata['name'] = text
-        # hid = self._todos_db.add_plan(**plandata)
-        hid = int(uuid.uuid4())
+        # eid = uuid.uuid4().int
+        eid = 0
+        today = datetime.datetime.today()
+        reminderdata: ReminderDataDict = {
+            "clk_time": None,
+            "bgn_time": None,  # Default
+            "duration": 0,
+            "every": 0,
+            "unit": TimeUnit.WEEK,
+            "custom": DayType.EVERYDAY,
+            "cycbgn_dtime": today,  # Default
+            "cycend_dtime": None   # Default
+        }
+        plandata["reminders"][eid] = reminderdata
+
+        # hid = int(uuid.uuid4())
+        assert self._owner is not None
+        hid = cast(int, self._owner.process_message("NewTodo", plan=plandata, reminder=reminderdata))
+
         new_todo: TodoDict = {
             **plandata,
             # "iid": str(uuid.uuid4()),
             "tid": hid,
-            "reminder_id": -1,
+            "reminder_id": 0,
             "reminder": None,
             # "created_at": datetime.now().timestamp(),
         }
@@ -1283,31 +1319,34 @@ class TodoTab(Container):
 
         self._todos_db: TimeDatabase = TimeDatabase()
         self._todos: list[TodoDict] = []
+        self._eids: list[int] = []
 
-        self._pages: dict[str, tk.Frame] = {}
+        self._pages: dict[str, BaseTodoPage] = {}
+        self._pages_frame: dict[str, tk.Frame] = {}
 
         parent = cast(tk.Frame, cast(tkControl, self._gui.get_control("tabTodo")).control)
-        self._pages["TodayTodo"] = TodayTodoPage(parent, self).frame
+        self._pages["TodayTodo"] = TodayTodoPage(parent, self)
+        self._pages_frame["TodayTodo"] = self._pages["TodayTodo"].frame
         # self._pages["PlannedTodo"] = PlannedTodoPage(parent, self)
 
-        for _, frame in self._pages.items():
+        for _, frame in self._pages_frame.items():
             frame.grid(row=0, column=0, sticky="nsew")
         _ = parent.grid_rowconfigure(0, weight=1)
         _ = parent.grid_columnconfigure(0, weight=1)
 
-        self._pages["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
+        self._pages_frame["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
 
         frame = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmTodayTodo")).control)
         _ = frame.bind("<Button-1>", lambda e: self._show_page("TodayTodo"))
 
-        self._pages["MainTodo"].tkraise()
+        self._pages_frame["MainTodo"].tkraise()
 
     def _open(self, db_path: str):
         """_summary_
         Args:
             db_path (type): _description_
         """
-        return self._todos_db.open(db_path)
+        _ =  self._todos_db.open(db_path)
 
     def new_todos(self, db_path: str):
         """_summary_
@@ -1322,24 +1361,42 @@ class TodoTab(Container):
             db_path (type): _description_
         """
         _ = self._open(db_path)
+
         plans = self._todos_db.read_plans()
         for pid, plandata in plans.items():
-            eid = 0
-            reminderdata = None
-            if len(plandata["reminders"].keys()) > 0:
-                eid = list(plandata["reminders"].keys())[0]
+            eids = list(plandata["reminders"].keys())
+            if len(eids) > 0:
+                eid = eids[0]
                 reminderdata = plandata["reminders"][eid]
                 if clock_time := reminderdata["clk_time"]:
                     self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
                         reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
                         ActTyp.LOCK_SCREEN)
-            todo: TodoDict = {
-                **plandata,
-                "tid": pid,
-                "reminder_id": eid,
-                "reminder": reminderdata
-            }
-            self._todos.append(todo)
+                todo: TodoDict = {
+                    **plandata,
+                    "tid": pid,
+                    "reminder_id": eid,
+                    "reminder": reminderdata
+                }
+                self._todos.append(todo)
+
+        # Get today todo
+        today_todo: list[TodoDict] = []
+        today = datetime.date.today()
+        today_agenda = self._schedule.agendas_on_date(today)
+        for todo in self._todos:
+            eid = todo["reminder_id"]
+            pv(eid)
+            if eid == 0:
+                reminderdata = todo["reminder"]
+                cycbgn_dtime = reminderdata["cycbgn_dtime"]
+                assert cycbgn_dtime is not None
+                if cycbgn_dtime.date() == today:
+                    today_todo.append(todo)
+            else:
+                if eid in today_agenda:
+                    today_todo.append(todo)
+        self._pages["TodayTodo"].todos = today_todo
 
     def open_todo_detail_dlg(self, x: int, y: int, **kwargs: object) -> None:
         dlg_id = "dlgEditTodo"
@@ -1348,8 +1405,11 @@ class TodoTab(Container):
         editodo_dlg.do_show(self, x, y, **kwargs)
 
     def _show_page(self, page_name: str):
-        page = self._pages[page_name]
-        page.tkraise()
+        if page_name in self._pages:
+            page = self._pages[page_name]
+            page.refresh_todos()
+        frame = self._pages_frame[page_name]
+        frame.tkraise()
 
     @override
     def process_message(self, idmsg: str, **kwargs: object):
@@ -1365,6 +1425,20 @@ class TodoTab(Container):
                 # todo_dict = cast(TodoDict, kwargs['todo_dict'])
                 x, y = cast(tuple[int, int], kwargs['mousepos'])
                 self.open_todo_detail_dlg(x, y, **kwargs)
+            case "NewTodo":
+                plandata: PlanDataDict = cast(PlanDataDict, kwargs["plan"])
+                reminderdata: ReminderDataDict = cast(ReminderDataDict, kwargs["reminder"])
+                tid = self._todos_db.add_plan(**plandata)
+                _ = self._todos_db.add_reminder(tid, 0, **reminderdata)
+                todo: TodoDict = {
+                    **plandata,
+                    "tid": tid,
+                    "reminder_id": 0,
+                    "reminder": reminderdata,
+                    # "created_at": datetime.now().timestamp(),
+                }
+                self._todos.append(todo)
+                return tid
             case _:
                 print(f"undeal message {idmsg}")
         return True
