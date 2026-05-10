@@ -1132,7 +1132,7 @@ class TodayTodoPage(BaseTodoPage):
             # "iid": str(uuid.uuid4()),
             "tid": hid,
             "reminder_id": 0,
-            "reminder": None,
+            "reminder": reminderdata,
             # "created_at": datetime.now().timestamp(),
         }
 
