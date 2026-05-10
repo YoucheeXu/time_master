@@ -8,8 +8,8 @@ import tkinter.filedialog as tkFileDialog
 from typing import override, cast
 
 from pyutilities.logit import pv, po, pe
-from pygui.winbasic import Container
-from pygui.tkwin import tkWin
+from pygui_simple.winbasic import Container
+from pygui_simple.tkwin import tkWin
 
 # from src.action_sys import ActTyp
 from src.schedule import Schedule
@@ -19,7 +19,7 @@ from src.todo_tab import TodoTab
 
 
 class TimeMasterApp(Container):
-    """_summary_
+    """_summary_uv 
 
     Attributes:
         _gui (_type_): _description_

@@ -11,13 +11,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from pyutilities.logit import po, pv, pe
-from pygui.winbasic import Widget, Container, Dialog, WinBasic
-from pygui.tkcontrol import tkControl
-from pygui.tkwin import T, LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
-from pygui.tkwin import FrameCtrl
-from pygui.tkwin import DialogCtrl, tkWin
-from pygui.tkcalendar import CalendarCtrl
-from pygui.tkscrollpicker import TimeScrollPickerCtrl
+from pygui_simple.winbasic import Widget, Container, Dialog, WinBasic
+from pygui_simple.tkcontrol import tkControl
+from pygui_simple.tkwin import T, LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
+from pygui_simple.tkwin import FrameCtrl
+from pygui_simple.tkwin import DialogCtrl, tkWin
+from pygui_simple.tkcalendar import CalendarCtrl
+from pygui_simple.tkscrollpicker import TimeScrollPickerCtrl
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule

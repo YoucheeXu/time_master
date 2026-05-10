@@ -9,13 +9,13 @@ from typing import cast, override
 from typing import NamedTuple
 
 from pyutilities.logit import po, pv, pe
-from pygui.winbasic import Widget, Container, Dialog
-from pygui.tkwin import tkWin
-from pygui.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
-from pygui.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
-from pygui.tkmatplot import MatPlotCtrl, LineData
+from pygui_simple.winbasic import Widget, Container, Dialog
+from pygui_simple.tkwin import tkWin
+from pygui_simple.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
+from pygui_simple.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
+from pygui_simple.tkmatplot import MatPlotCtrl, LineData
 # from pygui.tkcalendar import CalendarCtrl
-from pygui.tkscrollpicker import DateScrollPickerDialog, TimeScrollPickerDialog
+from pygui_simple.tkscrollpicker import DateScrollPickerDialog, TimeScrollPickerDialog
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule
