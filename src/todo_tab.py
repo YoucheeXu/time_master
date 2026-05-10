@@ -99,7 +99,7 @@ class ReminderGroups(TypedDict):
 class TodoDict(PlanDataDict):
     tid: int
     reminder_id: int
-    reminder: ReminderDataDict
+    reminder: ReminderDataDict | None
 
 # --------------------------
 # Custom Round Checkbutton
@@ -1389,6 +1389,7 @@ class TodoTab(Container):
             pv(eid)
             if eid == 0:
                 reminderdata = todo["reminder"]
+                assert reminderdata is not None
                 cycbgn_dtime = reminderdata["cycbgn_dtime"]
                 assert cycbgn_dtime is not None
                 if cycbgn_dtime.date() == today:
