@@ -163,7 +163,7 @@
 			<Frame id="frmCycleEditTodo" layout="pack" pack="{'pady':2,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">
 				<ImagePanel id="imgCycleEditTodo" image="calendar.png" options="{'width':40,'height':40,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'padx':4,'pady':2}"/>
 				<Label id="lblCycleEditTodo" text="Repeat" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
-				<Label id="lblSelCycleEditTodo" text="None" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e','padx':4,'pady':2}"/>
+				<Label id="lblSelCycleEditTodo" text="Never" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e','padx':4,'pady':2}"/>
 			</Frame>
 			<Frame id="frmEndEditTodo" 
 				layout="pack" 
@@ -172,6 +172,22 @@
 				<Label id="lblEndEditTodo" text="End of Repeat" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':4,'pady':2}"/>
 				<Label id="lblSelEndEditTodo" text="Never" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'w','padx':(56,4),'pady':2}"/>
 			</Frame>
+		</Frame>
+	</CustomDialog>
+	<CustomDialog id="dlgRepeatCycle" text="Repeat Cycle" Width="400" Height="600">
+		<Frame id="frmCycleRepeatCycle" layout="pack" pack="{'padx':8,'pady':4,'fill':'x','expand':True}" options="{'background':'white'}">
+			<Label id="lblEveryRepeatCycle" text="Every" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':0,'columnspan':2,'sticky':'w','padx':4,'pady':2}"/>
+			<Label id="lblSelEveryRepeatCycle" text="0" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':1,'column':2,'sticky':'w','padx':4,'pady':2}"/>
+			<ScrollPicker id="sprEveryRepeatCycle" width="400" height="150" type="int" options="{'start':0,'end':100}" layout="grid" grid="{'row':2,'column':0,'columnspan':3,'padx':4,'pady':2}"/>
+			<Label id="lblFrequencyRepeatCycle" text="Frequency" options="{'width':48,'style':'BW.TLabel'}" layout="grid" grid="{'row':3,'column':0,'columnspan':2,'sticky':'w','padx':4,'pady':2}"/>
+			<Label id="lblSelFrqRepeatCycle" text="Hour" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':3,'column':2,'sticky':'w','padx':4,'pady':2}"/>
+			<ScrollPicker id="sprFrqRepeatCycle" width="400" height="150" type="str" options="{'value_list':['Hour','Day','Week','Month','Season','Year']}" layout="grid" grid="{'row':4,'column':0,'columnspan':3,'padx':4,'pady':2}"/>
+		</Frame>
+		<Label id="lblInfoRepeatCycle" text="..." options="{'width':48}" layout="pack" pack="{'padx':8,'pady':4,'fill':'both','expand':True}"/>
+		<Style text="Card.TFrame" options="{'background':'white','relief':'flat','borderwidth':0}"/>
+		<Frame id="frmWeekCustomRepeatCycle" layout="pack" pack="{'padx':8,'pady':4,'fill':'both','expand':True}" options="{'background':'white','relief':'flat','borderwidth':0}">
+		</Frame>
+		<Frame id="frmMonthCustomRepeatCycle" layout="pack" pack="{'padx':8,'pady':4,'fill':'x','expand':True}" options="{'background':'white','relief':'flat','borderwidth':0}">
 		</Frame>
 	</CustomDialog>
 </Window>
