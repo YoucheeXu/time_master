@@ -241,7 +241,7 @@ class Schedule:
                 return clock_list
         # the last second of date
         date_end = datetime.datetime.combine(date, datetime.time.max)
-        pv(date_end)
+        # pv(date_end)
         next_clock = datetime.datetime.combine(date, event.clock)
         while next_clock < date_end:
             next_clock += datetime.timedelta(hours=event.every)
@@ -250,27 +250,28 @@ class Schedule:
         return clock_list
 
     def agendas_on_date(self, date: datetime.date):
-        agenda_dict: dict[int, Agenda] = {}
+        agenda_dict: dict[int, list[Agenda]] = {}
         for eid, event in self._event_dict.items():
             if event.unit != TimeUnit.HOUR:
                 if self._event_on_date(event, date):
-                    agenda_dict[eid]=Agenda(event.name, event.clock, event.action)
+                    agenda_dict[eid] = [Agenda(event.name, event.clock, event.action)]
             else:
                 clock_list = self.clocks_on_date(event, date)
                 for clock in clock_list:
-                    agenda_dict[eid] = Agenda(event.name, clock, event.action)
+                    if eid not in agenda_dict:
+                        agenda_dict[eid] = []
+                    agenda_dict[eid].append(Agenda(event.name, clock, event.action))
         return agenda_dict
 
     def event_to_agenda(self):
         self.clear_agenda()
-        pv(self._event_dict)
+        # pv(self._event_dict)
         now = datetime.datetime.now()
         today = datetime.date.today()
 
         for _, event in self._event_dict.items():
             if event.unit != TimeUnit.HOUR:
                 if self._event_on_date(event, today) and (event.clock > now.time()):
-                    # self.add_agenda(event.name, event.clock, event.action)
                     self._today_agenda_list.append(Agenda(event.name, event.clock, event.action))
             else:
                 clock_list = self.clocks_on_date(event, today)
@@ -278,10 +279,10 @@ class Schedule:
                     # self.add_agenda(event.name, clock, event.action)
                     self._today_agenda_list.append(Agenda(event.name, clock, event.action))
 
-        pv(self._extra_agenda_list)
+        # pv(self._extra_agenda_list)
         self._today_agenda_list += self._extra_agenda_list
         self._today_agenda_list = self.sort_agenda(self._today_agenda_list)
-        pv(self._today_agenda_list)
+        # pv(self._today_agenda_list)
 
     def sleep_to_nextday(self, today: datetime.datetime):
         """ _summary_
@@ -299,7 +300,7 @@ class Schedule:
         pv(nextday)
 
         delta_seconds = (nextday - today).seconds
-        pv(delta_seconds)
+        # pv(delta_seconds)
         time.sleep(delta_seconds)
         return nextday
 
