@@ -628,8 +628,11 @@ class TodoItem:
         self._bind_events()
 
         is_expired = self._is_reminder_expired(self._todo)
-        pv(is_expired)
-        self._update_text_display(is_expired)
+        reminder_info = self._todo["data"]["reminder_infos"][todo["reminder_idx"]]
+        reminder_time = reminder_info["clock_time"]
+        reminder_str= time2str(reminder_time)
+        cyc_str, _ = reminder2str(self._todo["data"]["reminder"])
+        self._update_text_display(f"Remind: {reminder_str} 🔁 {cyc_str[:-5]}", is_expired)
 
     @property
     def todo(self):
@@ -943,7 +946,7 @@ class TodoItem:
 
         return reminder_dtime < datetime.datetime.now()
 
-    def _update_text_display(self, is_expired: bool = False, is_completed: bool = False):
+    def _update_text_display(self, reminder_str: str, is_expired: bool = False, is_completed: bool = False):
         # Clear text container
         for widget in self._text_container.winfo_children():
             widget.destroy()
@@ -976,15 +979,10 @@ class TodoItem:
         else:
             note_label.pack_forget()
 
-        # Reminder info
-        if reminder := self._todo["data"]["reminder"]:
-            reminder_info, _ = reminder2str(reminder)
-        else:
-            reminder_info = "No reminder"
         reminder_color: str = COLORS["danger"] if is_expired else COLORS["secondary_text"]
 
         reminder_label: tk.Label = tk.Label(
-            text_frame, text=reminder_info,
+            text_frame, text=reminder_str,
             font=(FONT_CONFIG["small"][0], FONT_CONFIG["small"][1], strike),
             bg=COLORS["background"], fg=reminder_color, anchor="w", wraplength=280, justify="left"
         )
@@ -1684,7 +1682,7 @@ class TodoTab(Container):
             "every": 1,
             "unit": TimeUnit.HOUR,
             "custom": DayType.EVERYDAY,
-            "cycbgn_dtime": datetime.datetime.today(),
+            "cycbgn_dtime": datetime.datetime.combine(datetime.date.today(), datetime.time(8, 0)),
             "cycend_dtime": None
         }
         todo2: TodoData = {
