@@ -231,21 +231,16 @@ class Schedule:
 
     def clocks_on_date(self, event: Event, date: datetime.date):
         clock_list: list[datetime.time] = []
-        now = datetime.datetime.now()
-        strt_dtime = event.cycbgn_dtime
-        if now < strt_dtime:
-            return clock_list
-        if event.cycend_dtime is not None:
-            end_dtime = event.cycend_dtime
-            if now > end_dtime:
-                return clock_list
-        # the last second of date
-        date_end = datetime.datetime.combine(date, datetime.time.max)
-        # pv(date_end)
+
+        if event.cycend_dtime is None:
+            end_dtime = datetime.datetime.combine(date, datetime.time.max)
+        else:
+            end_dtime = min(datetime.datetime.combine(date, datetime.time.max), event.cycend_dtime)
+
         next_clock = datetime.datetime.combine(date, event.clock)
-        while next_clock < date_end:
+        while next_clock < end_dtime:
             next_clock += datetime.timedelta(hours=event.every)
-            if next_clock.time() > now.time():
+            if next_clock > event.cycbgn_dtime:
                 clock_list.append(next_clock.time())
         return clock_list
 
@@ -432,8 +427,9 @@ def main(alarm_mp3: str, dripping_water_mp3: str):
     schedule.add_agenda("Sleep", datetime.time(23, 00), ActTyp.LOCK_SCREEN)
     date = datetime.date.today()
     agenda_dict = schedule.agendas_on_date(date)
-    agenda_list = schedule.sort_agenda(list(agenda_dict.values()))
-    pv(agenda_list)
+    for _, agenda_list in agenda_dict.items():
+        agenda_list = schedule.sort_agenda(agenda_list)
+        pv(agenda_list)
     schedule.exec()
 
 
