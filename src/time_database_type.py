@@ -228,31 +228,35 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
         frequency_text = f"every {every} {unit_text}s"
 
     # 4. Process custom field by scenario to generate core description
-    if isinstance(custom, DayType):
-        # Scenario 1: custom is DayType (ED/WD/HD)
-        custom_text = custom.name.lower()
-        # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
-        if every == 1:
-            clk_str = f"{custom_text} {time_text}" if time_text else ""
-            schedule_str = f"{custom_text} {duration}m"
+    if unit == TimeUnit.HOUR:
+        clk_str = f"{frequency_text} {time_text}" if time_text else ""
+        schedule_str = f"{frequency_text} {duration}m"
+    else:
+        if isinstance(custom, DayType):
+            # Scenario 1: custom is DayType (ED/WD/HD)
+            custom_text = custom.name.lower()
+            # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
+            if every == 1:
+                clk_str = f"{custom_text} {time_text}" if time_text else ""
+                schedule_str = f"{custom_text} {duration}m"
+            else:
+                clk_str = f"{custom_text} of {frequency_text} {time_text}" if time_text else ""
+                schedule_str = f"{custom_text} of {frequency_text} {duration}m"
+
         else:
+            # Scenario 2: custom is list of weekday numbers (e.g., [1,3])
+            if unit == TimeUnit.WEEK:
+                # Validate number validity in list
+                invalid_days = [day for day in custom if day not in WEEKDAY_MAPPING]
+                if invalid_days:
+                    raise ValueError(f"Weekday numbers must be between 1-7, invalid values: {invalid_days}")
+                # Convert to weekday names (use comma separator for multiple days, e.g., "Monday, Wednesday")
+                custom_names = [WEEKDAY_MAPPING[day] for day in custom]
+            custom_names = [str(num) for num in custom]
+            custom_text = ", ".join(custom_names)
+            # Combine description (e.g., "Monday of every 4 weeks 21:00")
             clk_str = f"{custom_text} of {frequency_text} {time_text}" if time_text else ""
             schedule_str = f"{custom_text} of {frequency_text} {duration}m"
-
-    else:
-        # Scenario 2: custom is list of weekday numbers (e.g., [1,3])
-        if unit == TimeUnit.WEEK:
-            # Validate number validity in list
-            invalid_days = [day for day in custom if day not in WEEKDAY_MAPPING]
-            if invalid_days:
-                raise ValueError(f"Weekday numbers must be between 1-7, invalid values: {invalid_days}")
-            # Convert to weekday names (use comma separator for multiple days, e.g., "Monday, Wednesday")
-            custom_names = [WEEKDAY_MAPPING[day] for day in custom]
-        custom_names = [str(num) for num in custom]
-        custom_text = ", ".join(custom_names)
-        # Combine description (e.g., "Monday of every 4 weeks 21:00")
-        clk_str = f"{custom_text} of {frequency_text} {time_text}" if time_text else ""
-        schedule_str = f"{custom_text} of {frequency_text} {duration}m"
 
     return clk_str, schedule_str
 
