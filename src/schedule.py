@@ -98,10 +98,11 @@ class Schedule:
 
     def add_event(self, eid: int, name: str, clock: datetime.time,
             every: int = 0, unit: TimeUnit = TimeUnit.DAY, custom: DayType | list[int] = DayType.EVERYDAY,
-            cycend_dtime: datetime.datetime | None = None,
+            cycbgn_dtime: datetime.datetime | None = None, cycend_dtime: datetime.datetime | None = None,
             action: ActTyp = ActTyp.NOACTION):
-        now = datetime.datetime.now()
-        event = Event(name, clock, every, unit, custom, now, cycend_dtime, action)
+        if cycbgn_dtime is None:
+            cycbgn_dtime = datetime.datetime.now()
+        event = Event(name, clock, every, unit, custom, cycbgn_dtime, cycend_dtime, action)
         self._event_dict[eid] = event
         self._event_dirty = True
 
@@ -414,7 +415,7 @@ def main(alarm_mp3: str, dripping_water_mp3: str):
     # strtstamp = datetime.datetime.now().timestamp()
     # tomorrow = schedule.sleep_to_nextday(today)
     # print(f"tomorrow = {tomorrow}")
-    schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR, DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
+    schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR, DayType.EVERYDAY, None, None, ActTyp.DRIPPING_WATER)
     schedule.event_to_agenda()
     schedule.add_agenda("Lunch", datetime.time(12, 00), ActTyp.LOCK_SCREEN)
     # schedule.add_agenda("Nap", datetime.time(12, 30), ActTyp.LOCK_SCREEN)

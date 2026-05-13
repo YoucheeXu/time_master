@@ -1658,7 +1658,8 @@ class TodoTab(Container):
                 reminderdata = plandata["reminders"][eid]
                 if clock_time := reminderdata["clk_time"]:
                     self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
-                        reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
+                        reminderdata["unit"], reminderdata["custom"],
+                        reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
                         ActTyp.LOCK_SCREEN)
                 todo: TodoData = {
                     "name": plandata["name"],
@@ -1697,7 +1698,8 @@ class TodoTab(Container):
             "reminder_infos": []
         }
         self._schedule.add_event(eid, todo2["name"], clk_time, reminderdata["every"],
-                        reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
+                        reminderdata["unit"], reminderdata["custom"],
+                        reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
                         ActTyp.DRIPPING_WATER)
         self._todos[tid] = todo2
 

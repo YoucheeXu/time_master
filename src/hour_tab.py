@@ -977,7 +977,9 @@ class HourTab(Container):
             for eid, reminderdata in plandata["reminders"].items():
                 if clock_time := reminderdata["clk_time"]:
                     self._schedule.add_event(eid, name, clock_time, reminderdata["every"], reminderdata["unit"],
-                        reminderdata["custom"], reminderdata["cycend_dtime"], ActTyp.LOCK_SCREEN)
+                        reminderdata["custom"],
+                        reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
+                        ActTyp.LOCK_SCREEN)
 
     def update_hourctrl_attrib(self, uid: int, attrib: str, val: str | int):
         """_summary_
