@@ -109,6 +109,7 @@ type TodosDict = dict[int, TodoData]
 class Todo(TypedDict):
     tid: int
     data: TodoData
+    day: datetime.date
     reminder_idx: int
 
 
@@ -587,7 +588,6 @@ class TodoItem:
         self._show_divider: bool = show_divider
 
         self._todo: Todo = todo
-        self._todo["reminder_idx"] = 0
 
         # Core UI containers
         self._wrapper: tk.Frame = tk.Frame(
@@ -626,7 +626,10 @@ class TodoItem:
         self._create_delete_button()
         self._create_divider()
         self._bind_events()
-        self._update_text_display()
+
+        is_expired = self._is_reminder_expired(self._todo)
+        pv(is_expired)
+        self._update_text_display(is_expired)
 
     @property
     def todo(self):
@@ -929,14 +932,16 @@ class TodoItem:
         # self._owner._current_edit_entry = None
         self._update_text_display()
 
-    def is_reminder_expired(self, todo_dict: TodoDict) -> bool:
-        if todo_dict["reminder_id"] <= 0:
+    def _is_reminder_expired(self, todo: Todo) -> bool:
+        tododata = todo["data"]
+        if tododata["reminder_id"] <= 0:
             return False
 
-        current_ts: float = datetime.datetime.now().timestamp()
-        if todo_dict.get("repeat_cycle", "No repeat") != "No repeat":
-            return False
-        return todo_dict["reminder_time"] < current_ts
+        reminder_info = tododata["reminder_infos"][todo["reminder_idx"]]
+        reminder_time = reminder_info["clock_time"]
+        reminder_dtime = datetime.datetime.combine(todo["day"], reminder_time)
+
+        return reminder_dtime < datetime.datetime.now()
 
     def _update_text_display(self, is_expired: bool = False, is_completed: bool = False):
         # Clear text container
@@ -1218,6 +1223,7 @@ class TodayTodoPage(BaseTodoPage):
         # sorted_todos = sorted(self._todos, key=lambda x: x["created_at"], reverse=True)
         sorted_todos = self._todos
 
+        today =  datetime.date.today()
         for tid, tododata in sorted_todos.items():
             group_key = "no_reminder"
             if tododata["reminder_id"] !=0:
@@ -1227,7 +1233,9 @@ class TodayTodoPage(BaseTodoPage):
                         break
             todo: Todo = {
                 "tid": tid,
-                "data": tododata
+                "data": tododata,
+                "day": today,
+                "reminder_idx": 0
             }
             grouped_todos[group_key].append(todo)
 
