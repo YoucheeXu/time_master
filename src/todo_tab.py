@@ -90,19 +90,26 @@ class ReminderGroups(TypedDict):
     afternoon: ReminderDataDict
     evening: ReminderDataDict
 
-# class TodoDict(TypedDict):
-    # iid: str
-    # text: str
-    # completed: bool
-    # created_at: float
-    # note: str
-    # reminder_time: float
-    # repeat_cycle: str
+class ReminderInfo(TypedDict):
+    clock_time: datetime.time
+    completed: bool
 
-class TodoDict(PlanDataDict):
-    tid: int
+class TodoData(TypedDict):
+    name: str
+    note: str
+    tags: list[str]
+    fid: int
+    status: StatusEnum
     reminder_id: int
-    reminder: ReminderDataDict | None
+    reminder: ReminderDataDict
+    reminder_infos: list[ReminderInfo]
+
+type TodosDict = dict[int, TodoData]
+
+class Todo(TypedDict):
+    tid: int
+    data: TodoData
+    reminder_idx: int
 
 
 class RepeatCycleDlg(DialogCtrl):
@@ -380,19 +387,8 @@ class EditTodoDialog(DialogCtrl):
             app (tkWin): _description_
             dlg_cfg (et.Element): _description_
         """
-        plandata = default_plan_data()
-        self._todo_dict: TodoDict = {
-            **plandata,
-            "tid": -1,
-            "reminder_id": -1,
-            "reminder": None,
-        }
-        self._todo_dict_old: TodoDict = {
-            **plandata,
-            "tid": -1,
-            "reminder_id": -1,
-            "reminder": None,
-        }
+        self._todo_dict: TodoDict | None = None
+        self._todo_dict_old: TodoDict | None = None
         super().__init__(app, dlg_cfg)
 
     @override
@@ -418,6 +414,8 @@ class EditTodoDialog(DialogCtrl):
 
     @override
     def _confirm(self, **kwargs: object):
+        assert self._todo_dict is not None
+        assert self._todo_dict_old is not None
         entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
         name = entry_name.get_val()
         self._todo_dict["name"] = name
@@ -503,6 +501,7 @@ class EditTodoDialog(DialogCtrl):
                         lbl_time.set_text("")
                     time_scrollerpicker_ctrl.hide(not val)
                 case "tspTimeEditTodo":
+                    assert self._todo_dict is not None
                     lbl_time = cast(LabelCtrl, self.get_control("lblSelTimeEditTodo"))
                     time = cast(datetime.time, kwargs['val'])
                     # date_text = f"{date.year}年{date.month:02d}月{date.day:02d}日"
@@ -523,6 +522,7 @@ class EditTodoDialog(DialogCtrl):
                     dlg = RepeatCycleDlg(self._app, dlg_cfg)
                     dlg.do_show(self, x+20, y+20, cycle_info=cycle_info)
                 case "ModifyCycle":
+                    assert self._todo_dict is not None
                     cycle_info = cast(str, kwargs["cycle_info"])
                     lbl = cast(LabelCtrl, self.get_control(idctrl="lblSelCycleEditTodo"))
                     lbl.set_text(cycle_info)
@@ -580,12 +580,14 @@ class RoundCheckbutton:
 # --------------------------
 class TodoItem:
     def __init__(
-        self, parent: tk.Frame, todo_dict: TodoDict, owner: Container,
+        self, parent: tk.Frame, todo: Todo, owner: Container,
             show_divider: bool = True) -> None:
         self._parent: tk.Frame = parent
         self._owner: Container = owner
         self._show_divider: bool = show_divider
-        self._todo_dict: TodoDict = todo_dict
+
+        self._todo: Todo = todo
+        self._todo["reminder_idx"] = 0
 
         # Core UI containers
         self._wrapper: tk.Frame = tk.Frame(
@@ -628,12 +630,12 @@ class TodoItem:
 
     @property
     def todo(self):
-        return self._todo_dict
+        return self._todo
 
     @todo.setter
-    def todo(self, val: TodoDict):
-        self._todo_dict = val
-        pv(self._todo_dict)
+    def todo(self, val: Todo):
+        self._todo = val
+        pv(self._todo)
 
     def _create_left_area(self) -> None:
         self._left_area: tk.Frame = tk.Frame(
@@ -643,8 +645,7 @@ class TodoItem:
         _ = self._left_area.pack_propagate(False)
 
         self._checkbox: RoundCheckbutton = RoundCheckbutton(
-            self._left_area, callback=self._on_toggle_completed,
-            is_checked=self._todo_dict["status"] == StatusEnum.COMPLETED
+            self._left_area, callback=self._on_toggle_completed
         )
 
         self._text_container: tk.Frame = tk.Frame(self._left_area, bg=COLORS["background"])
@@ -871,17 +872,17 @@ class TodoItem:
 
     def _switch_to_edit_mode(self) -> None:
         # Cancel other edits
-        if self._editing_todo_id and self._editing_todo_id != self._todo_dict["iid"]:
+        if self._editing_todo_id and self._editing_todo_id != self._todo["iid"]:
             self.cancel_edit()
 
-        if self._editing_todo_id == self._todo_dict["iid"]:
+        if self._editing_todo_id == self._todo["iid"]:
             return
 
         # Clear text container
         for widget in self._text_container.winfo_children():
             widget.destroy()
 
-        self._editing_todo_id = self._todo_dict["tid"]
+        self._editing_todo_id = self._todo["tid"]
 
         # Create edit entry
         original_width: int = int((400 - 100) / 8)
@@ -893,7 +894,7 @@ class TodoItem:
             highlightthickness=1, highlightcolor=COLORS["accent"], width=new_width
         )
         self._edit_entry.pack(side="left", fill="x", expand=False, padx=5, pady=10)
-        self._edit_entry.insert(0, self._todo_dict["name"])
+        self._edit_entry.insert(0, self._todo["name"])
         self._edit_entry.select_range(0, tk.END)
         self._edit_entry.focus_force()
         self._current_edit_entry = self._edit_entry
@@ -912,7 +913,7 @@ class TodoItem:
             new_text = "Unnamed todo"
 
         # Update data
-        self._todo_dict["name"] = new_text
+        self._todo["name"] = new_text
         # self._app.save_todos()
 
         # Exit edit mode
@@ -937,15 +938,15 @@ class TodoItem:
             return False
         return todo_dict["reminder_time"] < current_ts
 
-    def _update_text_display(self) -> None:
+    def _update_text_display(self, is_expired: bool = False, is_completed: bool = False):
         # Clear text container
         for widget in self._text_container.winfo_children():
             widget.destroy()
 
         # Text styling
         text_color = COLORS["secondary_text"] \
-            if self._todo_dict["status"] == StatusEnum.COMPLETED else COLORS["primary_text"]
-        strike: str = "overstrike" if self._todo_dict["status"] == StatusEnum.COMPLETED else "normal"
+            if is_completed else COLORS["primary_text"]
+        strike: str = "overstrike" if is_completed else "normal"
 
         # Main text frame
         text_frame: tk.Frame = tk.Frame(self._text_container, bg=COLORS["background"])
@@ -953,7 +954,7 @@ class TodoItem:
 
         # Todo title
         name_label: tk.Label = tk.Label(
-            text_frame, text=self._todo_dict["name"],
+            text_frame, text=self._todo["data"]["name"],
             font=(FONT_CONFIG["body"][0], FONT_CONFIG["body"][1], "bold", strike),
             bg=COLORS["background"], fg=text_color, anchor="w", wraplength=280, justify="left"
         )
@@ -961,21 +962,20 @@ class TodoItem:
 
         # Note text
         note_label: tk.Label = tk.Label(
-            text_frame, text=self._todo_dict.get("note", ""),
+            text_frame, text=self._todo.get("note", ""),
             font=(FONT_CONFIG["small"][0], FONT_CONFIG["small"][1], strike),
             bg=COLORS["background"], fg=COLORS["secondary_text"], anchor="w", wraplength=280, justify="left"
         )
-        if self._todo_dict.get("note", "").strip():
+        if self._todo.get("note", "").strip():
             note_label.pack(side="top", fill="x", anchor="w", pady=(0, 1))
         else:
             note_label.pack_forget()
 
         # Reminder info
-        if reminder := self._todo_dict["reminder"]:
+        if reminder := self._todo["data"]["reminder"]:
             reminder_info, _ = reminder2str(reminder)
         else:
             reminder_info = "No reminder"
-        is_expired: bool = self.is_reminder_expired(self._todo_dict)
         reminder_color: str = COLORS["danger"] if is_expired else COLORS["secondary_text"]
 
         reminder_label: tk.Label = tk.Label(
@@ -994,11 +994,11 @@ class TodoItem:
     def _on_toggle_completed(self) -> None:
         # if self._owner._editing_todo_id == self._todo_dict["tid"]:
         #     self.cancel_edit()
-        if self._todo_dict["status"] == StatusEnum.COMPLETED:
-           self._todo_dict["status"] = StatusEnum.ONGOING
+        if self._todo["status"] == StatusEnum.COMPLETED:
+           self._todo["status"] = StatusEnum.ONGOING
         else:
-            self._todo_dict["status"] = StatusEnum.COMPLETED
-        self._checkbox.set_checked(self._todo_dict["status"] == StatusEnum.COMPLETED)
+            self._todo["status"] = StatusEnum.COMPLETED
+        self._checkbox.set_checked(self._todo["status"] == StatusEnum.COMPLETED)
         # self._app.save_todos()
         self._update_text_display()
 
@@ -1006,7 +1006,7 @@ class TodoItem:
         # self._owner.update_stats()
 
     def delete(self) -> None:
-        if self._editing_todo_id == self._todo_dict["tid"]:
+        if self._editing_todo_id == self._todo["tid"]:
             self._editing_todo_id = None
             self._current_edit_entry = None
 
@@ -1020,7 +1020,7 @@ class TodoItem:
     def open_detail(self, x: int, y: int) -> None:
         if self._editing_todo_id:
             self.cancel_edit()
-        _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo_dict=self._todo_dict)
+        _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo_dict=self._todo)
         # pv(self._todo_dict)
 
     def update_edit_mode(self) -> None:
@@ -1029,11 +1029,12 @@ class TodoItem:
         else:
             self._edit_delete_btn.pack_forget()
 
-    def update_data(self, updated_data: TodoDict) -> None:
-        self._todo_dict = updated_data
-        self._checkbox.set_checked(updated_data["status"] == StatusEnum.COMPLETED)
-        self._update_text_display()
-
+    # TODO
+    def tick(self) -> None:
+        # calc status
+        pass
+        # self._checkbox.set_checked(updated_data["status"] == StatusEnum.COMPLETED)
+        # self._update_text_display()
 
 class BaseTodoPage(Container, metaclass=abc.ABCMeta):
     """Base class for all Todo pages (shared UI structure).
@@ -1104,7 +1105,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
         self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
 
-        self._todos: list[TodoDict] = []
+        self._todos: TodosDict = {}
 
     @property
     def frame(self):
@@ -1123,7 +1124,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         return self._todos
 
     @todos.setter
-    def todos(self, val: list[TodoDict]):
+    def todos(self, val: TodosDict):
         self._todos = val
         pv(self._todos)
 
@@ -1200,15 +1201,7 @@ class TodayTodoPage(BaseTodoPage):
             # print(f"Error saving todos: {e}")
             # _ = messagebox.showerror("Error", "Failed to save todo data!")
 
-    def get_todo_time_group(self, todo_dict: TodoDict) -> Literal["morning", "afternoon", "evening", "no_reminder"]:
-        if todo_dict["reminder_id"] <= 0:
-            return "no_reminder"
-
-        reminder = todo_dict["reminder"]
-        assert reminder and reminder["clk_time"]
-        # reminder_dt = datetime.fromtimestamp(todo_dict["reminder_time"])
-        reminder_time = reminder["clk_time"]
-
+    def get_todo_time_group(self, reminder_time: datetime.time):
         if TIME_GROUPS["morning"]["start"] <= reminder_time < TIME_GROUPS["morning"]["end"]:
             return "morning"
         elif TIME_GROUPS["afternoon"]["start"] <= reminder_time < TIME_GROUPS["afternoon"]["end"]:
@@ -1216,8 +1209,8 @@ class TodayTodoPage(BaseTodoPage):
         else:
             return "evening"
 
-    def group_todos_by_time(self) -> dict[str, list[TodoDict]]:
-        grouped_todos: dict[str, list[TodoDict]] = {
+    def group_todos_by_time(self):
+        grouped_todos: dict[str, list[Todo]] = {
             "morning": [], "afternoon": [], "evening": [], "no_reminder": []
         }
 
@@ -1225,8 +1218,17 @@ class TodayTodoPage(BaseTodoPage):
         # sorted_todos = sorted(self._todos, key=lambda x: x["created_at"], reverse=True)
         sorted_todos = self._todos
 
-        for todo in sorted_todos:
-            group_key = self.get_todo_time_group(todo)
+        for tid, tododata in sorted_todos.items():
+            group_key = "no_reminder"
+            if tododata["reminder_id"] !=0:
+                for reminder_info in tododata["reminder_infos"]:
+                    if not reminder_info["completed"]:
+                        group_key = self.get_todo_time_group(reminder_info["clock_time"])
+                        break
+            todo: Todo = {
+                "tid": tid,
+                "data": tododata
+            }
             grouped_todos[group_key].append(todo)
 
         return grouped_todos
@@ -1423,30 +1425,18 @@ class TodayTodoPage(BaseTodoPage):
 
     def delete_todo_by_id(self, todo_id: int) -> None:
         # Remove from list
-        for idx, todo in enumerate(self._todos):
-            if todo["iid"] == todo_id:
-                del self._todos[idx]
-                break
+        del self._todos[todo_id]
 
         # Save and refresh
         # self.save_todos()
         self.render_todo_list()
         self.update_stats()
 
-    def update_todo_detail(self, updated_data: TodoDict) -> None:
+    # TODO:
+    def tick(self) -> None:
         # Update todo in list
-        for idx, todo in enumerate(self._todos):
-            if todo["iid"] == updated_data["iid"]:
-                self._todos[idx] = updated_data
-                break
-
-        # Save and refresh UI
-        # self.save_todos()
         for todo_item in self._todo_items:
-            if todo_item._todo_dict["tid"] == updated_data["tid"]:
-                todo_item.update_data(updated_data)
-                break
-        self.update_stats()
+            todo_item.tick()
 
     def cancel_edit(self) -> None:
         self._editing_todo_id = None
@@ -1608,7 +1598,7 @@ class TodoTab(Container):
         self._schedule: Schedule = schedule
 
         self._todos_db: TimeDatabase = TimeDatabase()
-        self._todos: list[TodoDict] = []
+        self._todos: TodosDict = {}
         self._eids: list[int] = []
 
         self._pages: dict[str, BaseTodoPage] = {}
@@ -1653,7 +1643,7 @@ class TodoTab(Container):
         _ = self._open(db_path)
 
         plans = self._todos_db.read_plans()
-        for pid, plandata in plans.items():
+        for tid, plandata in plans.items():
             eids = list(plandata["reminders"].keys())
             if len(eids) > 0:
                 eid = eids[0]
@@ -1662,19 +1652,56 @@ class TodoTab(Container):
                     self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
                         reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
                         ActTyp.LOCK_SCREEN)
-                todo: TodoDict = {
-                    **plandata,
-                    "tid": pid,
+                todo: TodoData = {
+                    "name": plandata["name"],
+                    "note": plandata["note"],
+                    "tags": plandata["tags"],
+                    "fid": plandata["fid"],
+                    "status": plandata["status"],
                     "reminder_id": eid,
-                    "reminder": reminderdata
+                    "reminder": reminderdata,
+                    "reminder_infos": []
                 }
-                self._todos.append(todo)
+                self._todos[tid] = todo
+
+        # only for test
+        tid = 1
+        eid = uuid.uuid4().int
+        clk_time = datetime.time(0, 30)
+        reminderdata: ReminderDataDict = {
+            "clk_time": clk_time,
+            "bgn_time": None,
+            "duration": 0,
+            "every": 1,
+            "unit": TimeUnit.HOUR,
+            "custom": DayType.EVERYDAY,
+            "cycbgn_dtime": datetime.datetime.today(),
+            "cycend_dtime": None
+        }
+        todo2: TodoData = {
+            "name": "Stretch",
+            "note": "",
+            "tags": [],
+            "fid": -1,
+            "status": StatusEnum.ONGOING,
+            "reminder_id": eid,
+            "reminder": reminderdata,
+            "reminder_infos": []
+        }
+        self._schedule.add_event(eid, todo2["name"], clk_time, reminderdata["every"],
+                        reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"],
+                        ActTyp.DRIPPING_WATER)
+        self._todos[tid] = todo2
 
         # Get today todo
-        today_todo: list[TodoDict] = []
-        today = datetime.date.today()
-        today_agenda = self._schedule.agendas_on_date(today)
-        for todo in self._todos:
+        self._pages["TodayTodo"].todos = self._get_todos_by_day(datetime.date.today())
+
+    def _get_todos_by_day(self, day: datetime.date):
+        todos: TodosDict = {}
+
+        day_agenda = self._schedule.agendas_on_date(day)
+
+        for tid, todo in self._todos.items():
             eid = todo["reminder_id"]
             pv(eid)
             if eid == 0:
@@ -1682,12 +1709,20 @@ class TodoTab(Container):
                 assert reminderdata is not None
                 cycbgn_dtime = reminderdata["cycbgn_dtime"]
                 assert cycbgn_dtime is not None
-                if cycbgn_dtime.date() == today:
-                    today_todo.append(todo)
+                if cycbgn_dtime.date() == day:
+                    todos[tid] = todo
             else:
-                if eid in today_agenda:
-                    today_todo.append(todo)
-        self._pages["TodayTodo"].todos = today_todo
+                if eid in day_agenda:
+                    todos[tid] = todo
+                    agendas = day_agenda[eid]
+                    for agenda in agendas:
+                        reminderinfo: ReminderInfo = {
+                            "clock_time": agenda.clock,
+                            "completed": False
+                        }
+                        todos[tid]["reminder_infos"].append(reminderinfo)
+
+        return todos
 
     def open_todo_detail_dlg(self, x: int, y: int, **kwargs: object) -> None:
         dlg_id = "dlgEditTodo"
