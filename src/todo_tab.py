@@ -589,6 +589,9 @@ class TodoItem:
 
         self._todo: Todo = todo
 
+        self._reminder_str: str = ""
+        self._expired: bool = False
+
         # Core UI containers
         self._wrapper: tk.Frame = tk.Frame(
             parent, bg=COLORS["background"], height=SWIPE_CONFIG["placeholder_height"], width=400
@@ -627,12 +630,9 @@ class TodoItem:
         self._create_divider()
         self._bind_events()
 
-        is_expired = self._is_reminder_expired(self._todo)
-        reminder_info = self._todo["data"]["reminder_infos"][todo["reminder_idx"]]
-        reminder_time = reminder_info["clock_time"]
-        reminder_str= time2str(reminder_time)
-        cyc_str, _ = reminder2str(self._todo["data"]["reminder"])
-        self._update_text_display(f"Remind: {reminder_str} 🔁 {cyc_str[:-5]}", is_expired)
+        self._expired = self._is_reminder_expired(self._todo)
+        self._reminder_str = self._get_reminder_str(self._todo)
+        self._update_text_display(self._reminder_str, self._expired)
 
     @property
     def todo(self):
@@ -993,20 +993,34 @@ class TodoItem:
             _ = widget.bind("<Button-1>", self._on_text_click)
             _ = widget.bind("<B1-Motion>", lambda e: "break")
 
-    # Public Methods
+    def _get_reminder_str(self, todo: Todo):
+        reminder_info = todo["data"]["reminder_infos"][todo["reminder_idx"]]
+        reminder_time = reminder_info["clock_time"]
+        clock_str= time2str(reminder_time)
+        cyc_str, _ = reminder2str(todo["data"]["reminder"])
+        reminder_str = f"Remind: {clock_str} 🔁 {cyc_str[:-5]}"
+        return reminder_str
+
     def _on_toggle_completed(self) -> None:
         # if self._owner._editing_todo_id == self._todo_dict["tid"]:
         #     self.cancel_edit()
-        if self._todo["status"] == StatusEnum.COMPLETED:
-           self._todo["status"] = StatusEnum.ONGOING
-        else:
-            self._todo["status"] = StatusEnum.COMPLETED
-        self._checkbox.set_checked(self._todo["status"] == StatusEnum.COMPLETED)
-        # self._app.save_todos()
-        self._update_text_display()
+
+        reminder_idx = self._todo["reminder_idx"]
+        tododata = self._todo["data"]
+        tododata["reminder_infos"][reminder_idx]["completed"] = True
+
+        self._update_text_display(self._reminder_str, self._expired, True)
 
         # Notify to owner
-        # self._owner.update_stats()
+        _ = self._owner.process_message("CompleteTodo", todo=self._todo)
+
+        # if self._todo["reminder_idx"] == -1:
+        #     # _ = self._owner.process_message("CompleteTodo", todo=self._todo)
+        #     pass
+        # else:
+        #     self._expired = self._is_reminder_expired(self._todo)
+        #     self._reminder_str = self._get_reminder_str(self._todo)
+        #     self._update_text_display(self._reminder_str, self._expired)
 
     def delete(self) -> None:
         if self._editing_todo_id == self._todo["tid"]:
@@ -1173,36 +1187,18 @@ class TodayTodoPage(BaseTodoPage):
             # self.render_todo_list()
         pass
 
-    # def load_todos(self) -> list[TodoDict]:
-        # todos: list[TodoDict] = []
-        # if os.path.exists(self._data_file):
-            # try:
-                # with open(self._data_file, "r", encoding="utf-8") as f:
-                    # raw_todos = cast(list[TodoDict], json.load(f))
-                    # for todo in raw_todos:
-                        # Ensure all fields exist
-                        # todo_dict: TodoDict = {
-                            # "iid": todo.get("iid", str(uuid.uuid4())),
-                            # "text": todo.get("text", ""),
-                            # "completed": todo.get("completed", False),
-                            # "created_at": todo.get("created_at", datetime.now().timestamp()),
-                            # "note": todo.get("note", ""),
-                            # "reminder_time": todo.get("reminder_time"),
-                            # "repeat_cycle": todo.get("repeat_cycle", "No repeat")
-                        # }
-                        # todos.append(todo_dict)
-            # except Exception as e:
-                # print(f"Error loading todos: {e}")
-                # todos = []
-        # return todos
+    def _find_next_reminder(self, tododata: TodoData):
+        last_fnshd_idx = -1
+        for idx, reminder_info in enumerate(tododata['reminder_infos']):
+            if reminder_info["completed"]:
+                last_fnshd_idx = idx
 
-    # def save_todos(self) -> None:
-        # try:
-            # with open(self._data_file, "w", encoding="utf-8") as f:
-                # json.dump(self._todos, f, ensure_ascii=False, indent=2)
-        # except Exception as e:
-            # print(f"Error saving todos: {e}")
-            # _ = messagebox.showerror("Error", "Failed to save todo data!")
+        if last_fnshd_idx == -1:
+            reminder_idx = 0
+        else:
+            reminder_idx = last_fnshd_idx + 1
+
+        return reminder_idx
 
     def get_todo_time_group(self, reminder_time: datetime.time):
         if TIME_GROUPS["morning"]["start"] <= reminder_time < TIME_GROUPS["morning"]["end"]:
@@ -1229,11 +1225,12 @@ class TodayTodoPage(BaseTodoPage):
                     if not reminder_info["completed"]:
                         group_key = self.get_todo_time_group(reminder_info["clock_time"])
                         break
+            reminder_idx = self._find_next_reminder(tododata)
             todo: Todo = {
                 "tid": tid,
                 "data": tododata,
                 "day": today,
-                "reminder_idx": 0
+                "reminder_idx": reminder_idx
             }
             grouped_todos[group_key].append(todo)
 
@@ -1375,6 +1372,7 @@ class TodayTodoPage(BaseTodoPage):
 
     @override
     def refresh_todos(self):
+        self._todo_items.clear()
         self.render_todo_list()
         self.update_stats()
 
@@ -1569,6 +1567,41 @@ class TodayTodoPage(BaseTodoPage):
         # self.save_todos()
         self.render_todo_list()
 
+    def _on_complete_todo(self, todo: Todo):
+        assert self._owner is not None
+        tododata = todo["data"]
+        now = datetime.datetime.now()
+        reminder_idx = todo["reminder_idx"]
+        reminder_info = tododata["reminder_infos"][reminder_idx]
+
+        # Mark complete
+        tid = todo["tid"]
+        self._todos[tid]["reminder_infos"][reminder_idx]["completed"] = True
+
+        # Notify owner
+        clock_time = reminder_info["clock_time"]
+        reminder_dtime = datetime.datetime.combine(todo["day"], clock_time)
+        duration = int(reminder_dtime.timestamp())
+        _ = self._owner.process_message("RecordTodo", id=todo["tid"],
+            strt_dtime=now, duration=duration)
+
+        # Next reminder
+        reminder_idx = -1
+        now = datetime.datetime.now()
+        reminder_infos = tododata["reminder_infos"]
+        for idx in range(todo["reminder_idx"] + 1, len(reminder_infos)):
+            if not reminder_infos[idx]["completed"]:
+                clock_time = reminder_infos[idx]["clock_time"]
+                reminder_dtime = datetime.datetime.combine(todo["day"], clock_time)
+                if reminder_dtime >= now:
+                    reminder_idx = idx
+                    break
+
+        if reminder_idx == -1:
+            del self._todos[tid]
+
+        self.refresh_todos()
+
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         assert self._owner is not None
@@ -1578,6 +1611,9 @@ class TodayTodoPage(BaseTodoPage):
             #     self.modify_todo(todo["tid"], todo)
                 # assert self._owner is not None
                 # _ = self._owner.process_message("ModifyTodo", todo_dict=todo)
+            case "CompleteTodo":
+                todo = cast(Todo, kwargs["todo"])
+                self._on_complete_todo(todo)
             case _:
                 return self._owner.process_message(idmsg, **kwargs)
         return True
@@ -1701,7 +1737,7 @@ class TodoTab(Container):
                         ActTyp.DRIPPING_WATER)
         self._todos[tid] = todo2
 
-        # Get today todo
+        # TODO: Retrieve unfinished todos as of today
         self._pages["TodayTodo"].todos = self._get_todos_by_day(datetime.date.today())
 
     def _get_todos_by_day(self, day: datetime.date):
