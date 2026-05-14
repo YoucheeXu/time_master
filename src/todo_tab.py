@@ -3,6 +3,7 @@
 from __future__ import annotations
 from copy import deepcopy
 import datetime
+from os import name
 import uuid
 import abc
 from functools import partial
@@ -994,11 +995,14 @@ class TodoItem:
             _ = widget.bind("<B1-Motion>", lambda e: "break")
 
     def _get_reminder_str(self, todo: Todo):
-        reminder_info = todo["data"]["reminder_infos"][todo["reminder_idx"]]
-        reminder_time = reminder_info["clock_time"]
-        clock_str= time2str(reminder_time)
-        cyc_str, _ = reminder2str(todo["data"]["reminder"])
-        reminder_str = f"Remind: {clock_str} 🔁 {cyc_str[:-5]}"
+        if todo["data"]["reminder_id"] !=0 :
+            reminder_info = todo["data"]["reminder_infos"][todo["reminder_idx"]]
+            reminder_time = reminder_info["clock_time"]
+            clock_str= time2str(reminder_time)
+            cyc_str, _ = reminder2str(todo["data"]["reminder"])
+            reminder_str = f"Remind: {clock_str} 🔁 {cyc_str[:-5]}"
+        else:
+            reminder_str = "No reminder"
         return reminder_str
 
     def _on_toggle_completed(self) -> None:
@@ -1122,7 +1126,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
         self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
 
-        self._todos: TodosDict = {}
+        self._todos_data: TodosDict = {}
 
     @property
     def frame(self):
@@ -1138,12 +1142,12 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
 
     @property
     def todos(self):
-        return self._todos
+        return self._todos_data
 
     @todos.setter
     def todos(self, val: TodosDict):
-        self._todos = val
-        pv(self._todos)
+        self._todos_data = val
+        pv(self._todos_data)
 
     @abc.abstractmethod
     def refresh_todos(self):
@@ -1215,7 +1219,7 @@ class TodayTodoPage(BaseTodoPage):
 
         # Sort by creation time (newest first)
         # sorted_todos = sorted(self._todos, key=lambda x: x["created_at"], reverse=True)
-        sorted_todos = self._todos
+        sorted_todos = self._todos_data
 
         today =  datetime.date.today()
         for tid, tododata in sorted_todos.items():
@@ -1252,8 +1256,8 @@ class TodayTodoPage(BaseTodoPage):
         self._stats_label.pack(anchor="w")
 
     def get_stats_text(self) -> str:
-        total = len(self._todos)
-        completed = sum(1 for todo in self._todos if todo["status"] == StatusEnum.COMPLETED)
+        total = len(self._todos_data)
+        completed = sum(1 for todo in self._todos_data if todo["status"] == StatusEnum.COMPLETED)
         return f"Completed {completed} / Total {total}"
 
     def setup_todo_list(self) -> None:
@@ -1390,7 +1394,7 @@ class TodayTodoPage(BaseTodoPage):
         plandata['name'] = text
         # eid = uuid.uuid4().int
         eid = 0
-        today = datetime.datetime.today()
+        now = datetime.datetime.now()
         reminderdata: ReminderDataDict = {
             "clk_time": None,
             "bgn_time": None,  # Default
@@ -1398,27 +1402,27 @@ class TodayTodoPage(BaseTodoPage):
             "every": 0,
             "unit": TimeUnit.WEEK,
             "custom": DayType.EVERYDAY,
-            "cycbgn_dtime": today,  # Default
+            "cycbgn_dtime": now,  # Default
             "cycend_dtime": None   # Default
         }
         plandata["reminders"][eid] = reminderdata
 
-        # hid = int(uuid.uuid4())
-        assert self._owner is not None
-        hid = cast(int, self._owner.process_message("NewTodo", plan=plandata, reminder=reminderdata))
-
-        new_todo: TodoDict = {
-            **plandata,
-            # "iid": str(uuid.uuid4()),
-            "tid": hid,
+        new_todo: TodoData = {
+            "name": plandata['name'],
+            "note": plandata['note'],
+            "tags": plandata['tags'],
+            "fid": plandata['fid'],
+            "status": plandata["status"],
             "reminder_id": 0,
             "reminder": reminderdata,
-            # "created_at": datetime.now().timestamp(),
+            "reminder_infos": []
         }
 
-        # Save and refresh
-        self._todos.append(new_todo)
-        # self.save_todos()
+        assert self._owner is not None
+        tid = cast(int, self._owner.process_message("NewTodo", tododata=new_todo, plandata=plandata, reminderdata=reminderdata))
+
+        self._todos_data[tid] = new_todo
+
         self.render_todo_list()
         self.update_stats()
 
@@ -1429,7 +1433,7 @@ class TodayTodoPage(BaseTodoPage):
 
     def delete_todo_by_id(self, todo_id: int) -> None:
         # Remove from list
-        del self._todos[todo_id]
+        del self._todos_data[todo_id]
 
         # Save and refresh
         # self.save_todos()
@@ -1553,15 +1557,15 @@ class TodayTodoPage(BaseTodoPage):
             return
 
         # Find original todo
-        original_todo = next((t for t in self._todos if t["iid"] == self._original_todo_id), None)
+        original_todo = next((t for t in self._todos_data if t["iid"] == self._original_todo_id), None)
         if not original_todo:
             return
 
         # Remove original todo from list
-        self._todos = [t for t in self._todos if t["iid"] != self._original_todo_id]
+        self._todos_data = [t for t in self._todos_data if t["iid"] != self._original_todo_id]
 
         # Insert at new position
-        self._todos.insert(placeholder_index, original_todo)
+        self._todos_data.insert(placeholder_index, original_todo)
 
         # Save and re-render
         # self.save_todos()
@@ -1576,7 +1580,7 @@ class TodayTodoPage(BaseTodoPage):
 
         # Mark complete
         tid = todo["tid"]
-        self._todos[tid]["reminder_infos"][reminder_idx]["completed"] = True
+        self._todos_data[tid]["reminder_infos"][reminder_idx]["completed"] = True
 
         # Notify owner
         clock_time = reminder_info["clock_time"]
@@ -1598,7 +1602,7 @@ class TodayTodoPage(BaseTodoPage):
                     break
 
         if reminder_idx == -1:
-            del self._todos[tid]
+            del self._todos_data[tid]
 
         self.refresh_todos()
 
@@ -1707,36 +1711,6 @@ class TodoTab(Container):
                 }
                 self._todos[tid] = todo
 
-        # only for test
-        tid = 1
-        eid = uuid.uuid4().int
-        clk_time = datetime.time(0, 30)
-        reminderdata: ReminderDataDict = {
-            "clk_time": clk_time,
-            "bgn_time": None,
-            "duration": 0,
-            "every": 1,
-            "unit": TimeUnit.HOUR,
-            "custom": DayType.EVERYDAY,
-            "cycbgn_dtime": datetime.datetime.combine(datetime.date.today(), datetime.time(8, 0)),
-            "cycend_dtime": None
-        }
-        todo2: TodoData = {
-            "name": "Stretch",
-            "note": "",
-            "tags": [],
-            "fid": -1,
-            "status": StatusEnum.ONGOING,
-            "reminder_id": eid,
-            "reminder": reminderdata,
-            "reminder_infos": []
-        }
-        self._schedule.add_event(eid, todo2["name"], clk_time, reminderdata["every"],
-                        reminderdata["unit"], reminderdata["custom"],
-                        reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
-                        ActTyp.DRIPPING_WATER)
-        self._todos[tid] = todo2
-
         # TODO: Retrieve unfinished todos as of today
         self._pages["TodayTodo"].todos = self._get_todos_by_day(datetime.date.today())
 
@@ -1796,18 +1770,12 @@ class TodoTab(Container):
                 x, y = cast(tuple[int, int], kwargs['mousepos'])
                 self.open_todo_detail_dlg(x, y, **kwargs)
             case "NewTodo":
-                plandata: PlanDataDict = cast(PlanDataDict, kwargs["plan"])
-                reminderdata: ReminderDataDict = cast(ReminderDataDict, kwargs["reminder"])
+                plandata: PlanDataDict = cast(PlanDataDict, kwargs["plandata"])
+                reminderdata: ReminderDataDict = cast(ReminderDataDict, kwargs["reminderdata"])
                 tid = self._todos_db.add_plan(**plandata)
                 _ = self._todos_db.add_reminder(tid, 0, **reminderdata)
-                todo: TodoDict = {
-                    **plandata,
-                    "tid": tid,
-                    "reminder_id": 0,
-                    "reminder": reminderdata,
-                    # "created_at": datetime.now().timestamp(),
-                }
-                self._todos.append(todo)
+                todo = cast(TodoData, kwargs['tododata'])
+                self._todos[tid] = todo
                 return tid
             case "ModifyTodo":
                 todo = cast(TodoDict, kwargs["todo_dict"])
