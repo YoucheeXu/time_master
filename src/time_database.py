@@ -724,6 +724,41 @@ class TimeDatabase:
 
         return record_dict
 
+    def get_records_by_pid(self, pid: int):
+        """ Query records within the specified date range from the RECORDS table
+
+        Args:
+            pid (int): Filter records by pid
+
+        Returns:
+            dict[int, RecordDict]: Dictionary with record ID (rid) as key and record details as value
+        """
+        record_dict: dict[int, RecordDataDict] = {}
+
+        # Step 1: Dynamically build SQL query and parameters based on pid
+        query_parts = [
+            "SELECT * FROM RECORDS",
+            "WHERE pid = ?"
+        ]
+        query_params = [str(pid)]
+
+        # Combine query parts into final SQL
+        query_sql = "\n    ".join(query_parts)
+
+        # Step 2: Iterate over query results and build record dictionary
+        for rid, pid, name, bgn_dtime, duration in \
+                cast(Generator[RecordSqlTuple, None, None],
+                self._database.each(query_sql, tuple(query_params))):
+            record: RecordDataDict = {
+                "pid": pid,
+                "name": name,
+                "bgn_dtime": self._timestamp2datetime(bgn_dtime),
+                "duration": duration
+            }
+            record_dict[rid] = record
+
+        return record_dict
+
     def close(self):
         """_summary_
 
