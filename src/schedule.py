@@ -107,18 +107,18 @@ class Schedule:
         self._event_dirty = True
 
     def modify_event(self, eid: int, clock: datetime.time, cycbgn_dtime: datetime.datetime, name: str | None = None,
-            every: int = 0, unit: TimeUnit = TimeUnit.DAY, custom: DayType | list[int] = DayType.EVERYDAY,
+            every: int | None = None, unit: TimeUnit | None = None, custom: DayType | list[int] | None = None,
             cycend_dtime: datetime.datetime | None = None,
-            action: ActTyp = ActTyp.NOACTION):
+            action: ActTyp | None = None):
         event = self._event_dict[eid]
         event.name = name if name else event.name
         event.clock = clock
-        event.every = every
-        event.unit = unit
-        event.custom = custom
+        event.every = every if every else event.every
+        event.unit = unit if unit else event.unit
+        event.custom = custom if custom  else event.custom
         event.cycbgn_dtime = cycbgn_dtime
         event.cycend_dtime = cycend_dtime
-        event.action = action
+        event.action = action if action else event.action
         self._event_dirty = True
 
     def del_event(self, eid: int):
