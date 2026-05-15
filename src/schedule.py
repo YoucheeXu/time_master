@@ -244,9 +244,9 @@ class Schedule:
 
         next_clock = datetime.datetime.combine(date, event.clock)
         while next_clock < end_dtime:
-            next_clock += datetime.timedelta(hours=event.every)
             if next_clock > event.cycbgn_dtime:
                 clock_list.append(next_clock.time())
+            next_clock += datetime.timedelta(hours=event.every)
         return clock_list
 
     def agendas_on_date(self, date: datetime.date):
