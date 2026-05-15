@@ -3,7 +3,6 @@
 from __future__ import annotations
 from copy import deepcopy
 import datetime
-from os import name
 import uuid
 import abc
 from functools import partial
@@ -389,20 +388,22 @@ class EditTodoDialog(DialogCtrl):
             app (tkWin): _description_
             dlg_cfg (et.Element): _description_
         """
-        self._todo_dict: TodoDict | None = None
-        self._todo_dict_old: TodoDict | None = None
+        self._todo: Todo | None = None
+        self._todo_old: Todo | None = None
         super().__init__(app, dlg_cfg)
 
     @override
     def _beforego(self, **kwargs: object):
-        self._todo_dict = cast(TodoDict, kwargs["todo_dict"])
-        self._todo_dict_old = deepcopy(self._todo_dict)
-        entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
-        entry_name.set_val(self._todo_dict["name"])
-        entry_note = cast(EntryCtrl, self._app.get_control("txtNoteEditTodo"))
-        entry_note.set_val(self._todo_dict["note"])
+        self._todo = cast(Todo, kwargs["todo"])
+        self._todo_old = deepcopy(self._todo)
 
-        if self._todo_dict["reminder_id"] > 0:
+        tododata = self._todo["data"]
+        entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
+        entry_name.set_val(tododata["name"])
+        entry_note = cast(EntryCtrl, self._app.get_control("txtNoteEditTodo"))
+        entry_note.set_val(tododata["note"])
+
+        if tododata["reminder_id"] > 0:
             pass
 
         calendar = cast(CalendarCtrl, self.get_control("cadDateEditTodo"))
@@ -416,14 +417,14 @@ class EditTodoDialog(DialogCtrl):
 
     @override
     def _confirm(self, **kwargs: object):
-        assert self._todo_dict is not None
-        assert self._todo_dict_old is not None
+        assert self._todo is not None
+        assert self._todo_old is not None
+
+        tododata = self._todo["data"]
         entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
-        name = entry_name.get_val()
-        self._todo_dict["name"] = name
+        tododata["name"] = entry_name.get_val()
         entry_note = cast(EntryCtrl, self._app.get_control("txtNoteEditTodo"))
-        note = entry_note.get_val()
-        self._todo_dict["note"] = note
+        tododata["note"] = entry_note.get_val()
 
         # date: datetime.date | None = None
         # lbl_date = cast(LabelCtrl, self.get_control("lblSelDateEditTodo"))
@@ -455,8 +456,12 @@ class EditTodoDialog(DialogCtrl):
 
         # TODO: compare self._todo_dict with self._todo_old
 
+
+        if tododata["reminder"]["every"] !=0 and tododata["reminder_id"] == 0:
+            tododata["reminder_id"] = uuid.uuid4().int
+
         assert self._owner is not None
-        _ = self._owner.process_message("ModifyTodo", todo_dict=self._todo_dict)
+        _ = self._owner.process_message("ModifyTodo", todo=self._todo)
         # pv(self._owner)
 
         return True, ""
@@ -503,7 +508,7 @@ class EditTodoDialog(DialogCtrl):
                         lbl_time.set_text("")
                     time_scrollerpicker_ctrl.hide(not val)
                 case "tspTimeEditTodo":
-                    assert self._todo_dict is not None
+                    assert self._todo is not None
                     lbl_time = cast(LabelCtrl, self.get_control("lblSelTimeEditTodo"))
                     time = cast(datetime.time, kwargs['val'])
                     # date_text = f"{date.year}年{date.month:02d}月{date.day:02d}日"
@@ -511,7 +516,7 @@ class EditTodoDialog(DialogCtrl):
                     # print(f"select date: {date_text}")
                     lbl_time.set_text(time_text)
 
-                    reminder = self._todo_dict["reminder"]
+                    reminder = self._todo["data"]["reminder"]
                     assert reminder is not None
                     reminder["clk_time"] = datetime.datetime.strptime(lbl_time.get_text(), "%H:%M").time()
                     # pv(self._todo_dict)
@@ -524,12 +529,12 @@ class EditTodoDialog(DialogCtrl):
                     dlg = RepeatCycleDlg(self._app, dlg_cfg)
                     dlg.do_show(self, x+20, y+20, cycle_info=cycle_info)
                 case "ModifyCycle":
-                    assert self._todo_dict is not None
+                    assert self._todo is not None
                     cycle_info = cast(str, kwargs["cycle_info"])
                     lbl = cast(LabelCtrl, self.get_control(idctrl="lblSelCycleEditTodo"))
                     lbl.set_text(cycle_info)
 
-                    reminder = self._todo_dict["reminder"]
+                    reminder = self._todo["data"]["reminder"]
                     assert reminder is not None
                     reminder["every"] = cast(int, kwargs["every"])
                     reminder["unit"] = cast(TimeUnit, kwargs["frq"])
@@ -669,7 +674,7 @@ class TodoItem:
         self._more_btn: tk.Button = tk.Button(
             self._btn_container, text="⋮", font=("Arial", 14, "bold"), bg=COLORS["background"],
             fg=COLORS["accent"], borderwidth=0, relief="flat", width=2, height=2)
-        _ = self._more_btn.configure(command=lambda: self.open_detail(self._more_btn.winfo_rootx(),
+        _ = self._more_btn.configure(command=lambda: self._on_open_detail(self._more_btn.winfo_rootx(),
             self._more_btn.winfo_rooty()))
         self._more_btn.pack(side="top", padx=2, pady=5)
 
@@ -1038,10 +1043,10 @@ class TodoItem:
         # Notify to owner
         # self._owner.delete_todo_by_id(self._todo_dict["tid"])
 
-    def open_detail(self, x: int, y: int) -> None:
+    def _on_open_detail(self, x: int, y: int) -> None:
         if self._editing_todo_id:
             self.cancel_edit()
-        _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo_dict=self._todo)
+        _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo=self._todo)
         # pv(self._todo_dict)
 
     def update_edit_mode(self) -> None:
@@ -1069,7 +1074,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         controller: Main application instance for frame navigation
         page_title: Display title for the page's title bar
     """
-    def __init__(self, parent: tk.Frame, owner: Container, page_title: str) -> None:
+    def __init__(self, parent: tk.Frame, owner: Container, name: str, page_title: str) -> None:
         self._page_title: str = page_title
         super().__init__(owner)
 
@@ -1126,6 +1131,8 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
         self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
 
+        self._name: str = name
+
         self._todos_data: TodosDict = {}
 
     @property
@@ -1138,7 +1145,11 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         Triggers the main app's frame switching method to display TodoTab.
         """
         assert self._owner is not None
-        _ = self._owner.process_message("ShowPage", page="MainTodo")
+        _ = self._owner.process_message("ShowMainPage")
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def todos(self):
@@ -1149,6 +1160,13 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self._todos_data = val
         pv(self._todos_data)
 
+    def show_page(self):
+        self._alive = True
+        self.refresh_todos()
+
+    def hide_page(self):
+        self._alive = False
+
     @abc.abstractmethod
     def refresh_todos(self):
         pass
@@ -1158,8 +1176,8 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
 
 
 class TodayTodoPage(BaseTodoPage):
-    def __init__(self, parent: tk.Frame, owner: Container):
-        super().__init__(parent, owner, "Today")
+    def __init__(self, parent: tk.Frame, owner: Container, name: str, page_title: str):
+        super().__init__(parent, owner, name, page_title)
 
         self._stats_label: tk.Label | None = None
         self._canvas: tk.Canvas | None = None
@@ -1638,7 +1656,7 @@ class TodoTab(Container):
             schedule (_type_): _description_
         """
         super().__init__()
-        # self._parent: tk.Misc = parent
+
         self._gui: tkWin = cast(tkWin, owner)
         self._gui.filter_message(self.process_message)
         self._schedule: Schedule = schedule
@@ -1647,25 +1665,24 @@ class TodoTab(Container):
         self._todos: TodosDict = {}
         self._eids: list[int] = []
 
-        self._pages: dict[str, BaseTodoPage] = {}
-        self._pages_frame: dict[str, tk.Frame] = {}
+        self._active_page: BaseTodoPage | None = None
+
+        self._pages: list[BaseTodoPage] = []
+        # self._pages_frame: dict[str, tk.Frame] = {}
 
         parent = cast(tk.Frame, cast(tkControl, self._gui.get_control("tabTodo")).control)
-        self._pages["TodayTodo"] = TodayTodoPage(parent, self)
-        self._pages_frame["TodayTodo"] = self._pages["TodayTodo"].frame
-        # self._pages["PlannedTodo"] = PlannedTodoPage(parent, self)
+        page = TodayTodoPage(parent, self, "TodayTodo", "Today")
+        self._pages.append(page)
 
-        for _, frame in self._pages_frame.items():
-            frame.grid(row=0, column=0, sticky="nsew")
+        for page in self._pages:
+            page.frame.grid(row=0, column=0, sticky="nsew")
         _ = parent.grid_rowconfigure(0, weight=1)
         _ = parent.grid_columnconfigure(0, weight=1)
 
-        self._pages_frame["MainTodo"] = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
+        self._main_pages_frame: tk.Frame = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmMainTodo")).control)
 
         frame = cast(tk.Frame, cast(tkControl, self._gui.get_control("frmTodayTodo")).control)
         _ = frame.bind("<Button-1>", lambda e: self._show_page("TodayTodo"))
-
-        self._pages_frame["MainTodo"].tkraise()
 
     def _open(self, db_path: str):
         """_summary_
@@ -1698,7 +1715,7 @@ class TodoTab(Container):
                     self._schedule.add_event(eid, plandata["name"], clock_time, reminderdata["every"],
                         reminderdata["unit"], reminderdata["custom"],
                         reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
-                        ActTyp.LOCK_SCREEN)
+                        ActTyp.DRIPPING_WATER)
                 todo: TodoData = {
                     "name": plandata["name"],
                     "note": plandata["note"],
@@ -1711,17 +1728,13 @@ class TodoTab(Container):
                 }
                 self._todos[tid] = todo
 
-        # TODO: Retrieve unfinished todos as of today
-        self._pages["TodayTodo"].todos = self._get_todos_by_day(datetime.date.today())
+        self._show_page("TodayTodo")
 
     def _get_todos_by_day(self, day: datetime.date):
         todos: TodosDict = {}
 
-        day_agenda = self._schedule.agendas_on_date(day)
-
         for tid, todo in self._todos.items():
-            eid = todo["reminder_id"]
-            pv(eid)
+            eid = todo["reminder_id"] 
             if eid == 0:
                 reminderdata = todo["reminder"]
                 assert reminderdata is not None
@@ -1730,6 +1743,7 @@ class TodoTab(Container):
                 if cycbgn_dtime.date() == day:
                     todos[tid] = todo
             else:
+                day_agenda = self._schedule.agendas_on_date(day)
                 if eid in day_agenda:
                     todos[tid] = todo
                     agendas = day_agenda[eid]
@@ -1749,15 +1763,39 @@ class TodoTab(Container):
         editodo_dlg.do_show(self, x, y, **kwargs)
 
     def _show_page(self, page_name: str):
-        if page_name in self._pages:
-            page = self._pages[page_name]
-            page.refresh_todos()
-        frame = self._pages_frame[page_name]
-        frame.tkraise()
+        for page in self._pages:
+            if page.name == page_name:
+                self._active_page = page
+                self._update_page()
+                page.show_page()
+            else:
+                page.hide_page()
+
+    def _update_page(self):
+        assert self._active_page is not None
+        page_name = self._active_page.name
+
+        if page_name == "TodayTodo":
+            today_todos: TodosDict = {}
+            today = datetime.datetime.today()
+            for tid, tododata in self._todos.items():
+                cycbgn_dtime = tododata["reminder"]["cycbgn_dtime"]
+                cycend_dtime = tododata["reminder"]["cycend_dtime"]
+                assert cycbgn_dtime is not None
+                if tododata["status"] == StatusEnum.ONGOING and cycbgn_dtime <= today:
+                    if cycend_dtime is None or cycend_dtime >= today:
+                        today_todos[tid] = tododata
+
+            todos = self._get_todos_by_day(today.date())
+            today_todos |= todos
+            self._active_page.todos = today_todos
 
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         match idmsg:
+            case "ShowMainPage":
+                self._main_pages_frame.tkraise()
+                self._active_page = None
             case "ShowPage":
                 page_name = cast(str, kwargs["page"])
                 self._show_page(page_name)
@@ -1778,9 +1816,49 @@ class TodoTab(Container):
                 self._todos[tid] = todo
                 return tid
             case "ModifyTodo":
-                todo = cast(TodoDict, kwargs["todo_dict"])
-                # TODO
-                # pv(todo)
+                todo = cast(Todo, kwargs["todo"])
+                
+                tododata = todo["data"]
+                plandata: PlanDataDict = {
+                    "name": tododata["name"],
+                    "note": tododata["note"],
+                    "tags": tododata["tags"],
+                    "iid": None,
+                    "fid": tododata["fid"],
+                    "reminders": {},
+                    "action": ActTyp.NOACTION,
+                    "status": tododata["status"],
+                    "location": None,
+                    "sums": 0
+                }
+
+                tid = todo["tid"]
+                # _ = self._todos_db.modify_plan(tid, **plandata)
+                if eid := tododata["reminder_id"]:
+                    reminderdata = tododata["reminder"]
+                    if self._todos[tid]["reminder_id"]:
+                        _ = self._todos_db.del_reminder(tid, 0)
+                        _ = self._todos_db.add_reminder(tid, eid, **reminderdata)
+                    else:
+                        _ = self._todos_db.modify_reminder(tid, eid, **reminderdata)
+                    clock_time = reminderdata["clk_time"]
+                    assert clock_time is not None
+                    cycbgn_dtime = reminderdata["cycbgn_dtime"]
+                    assert cycbgn_dtime is not None
+                    if eid in self._schedule.events:
+                        _ = self._schedule.modify_event(eid, clock_time, cycbgn_dtime, tododata["name"], 
+                            reminderdata["every"], reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"])
+                    else:
+                        self._schedule.add_event(eid, tododata["name"], clock_time, reminderdata["every"],
+                        reminderdata["unit"], reminderdata["custom"],
+                        cycbgn_dtime, reminderdata["cycend_dtime"],
+                        ActTyp.DRIPPING_WATER)
+
+                self._todos[tid] = todo["data"]
+                self._update_page()
+
+                if self._active_page:
+                    self._active_page.refresh_todos()
             case _:
                 print(f"undeal message {idmsg}")
         return True
