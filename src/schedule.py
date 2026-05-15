@@ -106,17 +106,17 @@ class Schedule:
         self._event_dict[eid] = event
         self._event_dirty = True
 
-    def modify_event(self, eid: int, clock: datetime.time,
+    def modify_event(self, eid: int, clock: datetime.time, cycbgn_dtime: datetime.datetime, name: str | None,
             every: int = 0, unit: TimeUnit = TimeUnit.DAY, custom: DayType | list[int] = DayType.EVERYDAY,
             cycend_dtime: datetime.datetime | None = None,
             action: ActTyp = ActTyp.NOACTION):
         event = self._event_dict[eid]
-        now = datetime.datetime.now()
+        event.name = name if name else event.name
         event.clock = clock
         event.every = every
         event.unit = unit
         event.custom = custom
-        event.cycbgn_dtime = now
+        event.cycbgn_dtime = cycbgn_dtime
         event.cycend_dtime = cycend_dtime
         event.action = action
         self._event_dirty = True
