@@ -71,6 +71,10 @@ class Schedule:
 
         self._actionsys: ActionSys = ActionSys()
 
+    @property
+    def events(self):
+        return self._event_dict
+
     # TODO: wait to finish
     def _is_workday(self, dt: datetime.date):
         return True
