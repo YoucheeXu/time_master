@@ -12,6 +12,7 @@ from pyutilities.logit import po, pv, pe
 from pygui_simple.winbasic import Widget, Container, Dialog
 from pygui_simple.tkwin import tkWin
 from pygui_simple.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
+from pygui_simple.tkslideswitch import SlideSwitchCtrl
 from pygui_simple.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
 from pygui_simple.tkmatplot import MatPlotCtrl, LineData
 # from pygui.tkcalendar import CalendarCtrl
@@ -203,8 +204,34 @@ class EditHourDlg(DialogCtrl):
         self._old_clock: str = ""
         self._old_schedule: str = ""
         self._old_iid: IconTuple = IconTuple(0, 0)
+        self._hid: int = 0
         self._eid: int = 0
         self._reminders_dict: dict[int, ReminderDataDict] = {}
+
+    def _add_clockctrl(self, cid: int, clkstr: str):
+        del_image = "del.png"
+
+        frm_clock = cast(Widget, self.get_control("frmClockEditHour"))
+
+        level = 1
+
+        btndel_xml = self._app.create_xml("ImageButton", {"id": f"btnDel{cid}EditHour",
+            "image": del_image,
+            "options": "{'height': 20, 'width': 20, 'bg':'white'}"})
+        id_btndel, btn_del = self._app.create_control(frm_clock, btndel_xml, level)
+        self._idctrl_dict[id_btndel] = btn_del
+        self._app.assemble_control(btn_del, {"layout":"grid",
+            "grid":f"{{'row':{cid+1},'column':0,'sticky':'w'}}"}
+        )
+
+        lblclock_xml = self._app.create_xml("Label", {"text": clkstr,
+            "id": f"lblClock{cid}EditHour", "options": "{'style':'BW.TLabel'}"})
+        # pv(lbl_item_xml)
+        id_lblclock, lbl_clock = self._app.create_control(frm_clock, lblclock_xml, level)
+        self._idctrl_dict[id_lblclock] = lbl_clock
+        self._app.assemble_control(lbl_clock, {"layout":"grid",
+            "grid":f"{{'row':{cid+1},'column':1,'sticky':'w'}}"}
+        )
 
     @override
     def _beforego(self, **kwargs: object):
@@ -212,8 +239,28 @@ class EditHourDlg(DialogCtrl):
         fid = cast(int, kwargs["fid"])
         self._old_fid = fid
         hid = cast(int, kwargs["id"])
+        self._hid = hid
         db = cast(TimeDatabase, kwargs["db"])
         owner = cast(Dialog, self.owner)
+
+        frm_item = cast(FrameCtrl, self.get_control("frmItemEditHour"))
+        _ = frm_item.control.columnconfigure(0, weight=0)
+        _ = frm_item.control.columnconfigure(1, weight=1)
+
+        frm_father = cast(FrameCtrl, self.get_control("frmFatherEditHour"))
+        _ = frm_father.control.columnconfigure(0, weight=0)
+        _ = frm_father.control.columnconfigure(1, weight=1)
+        _ = frm_father.control.columnconfigure(2, weight=1)
+
+        frm_clock = cast(FrameCtrl, self.get_control("frmClockEditHour"))
+        _ = frm_clock.control.columnconfigure(0, weight=0)
+        _ = frm_clock.control.columnconfigure(1, weight=1)
+        _ = frm_clock.control.columnconfigure(2, weight=1)
+
+        frm_schedule = cast(FrameCtrl, self.get_control("frmScheduleEditHour"))
+        _ = frm_schedule.control.columnconfigure(0, weight=0)
+        _ = frm_schedule.control.columnconfigure(1, weight=1)
+        _ = frm_schedule.control.columnconfigure(2, weight=1)
 
         if fid != -1:
             lbl_father = cast(LabelCtrl, self.get_control("lblSelFatherEditHour"))
@@ -222,10 +269,15 @@ class EditHourDlg(DialogCtrl):
             pv(name_father)
             lbl_father['text'] = name_father
 
+        lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
+        sls_clock = cast(SlideSwitchCtrl, self.get_control("slsClockEditHour"))
+
         if hid == 0:
             self.set_title("New Item")
             btn_delhour = cast(ButtonCtrl, self.get_control("btnDelItemEditHour"))
             btn_delhour.hide()
+            lbl_selclock.show()
+            sls_clock.hide()
             grp, idx = 0, 0
         else:
             self.set_title("Edit Item")
@@ -241,9 +293,21 @@ class EditHourDlg(DialogCtrl):
             self._eid = eid
             self._reminders_dict[eid] = reminder
             clkstr, schdulestr = reminder2str(reminder)
-            lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
+            pv(clkstr)
+
+            lbl_clock = cast(LabelCtrl, self.get_control("lblClockEditHour"))
             self._old_clock = lbl_selclock['text']
-            lbl_selclock['text'] = clkstr if clkstr else "选择定时提醒"
+            if clkstr:
+                lbl_clock['text'] = "提醒已开启"
+                lbl_selclock.hide()
+                sls_clock.show()
+                sls_clock.set_state(True)
+                self._add_clockctrl(0, clkstr)
+            else:
+                lbl_clock['text'] = "定时提醒"
+                lbl_selclock['text'] = "选择定时提醒"
+                lbl_selclock.show()
+                sls_clock.hide()
             lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
             self._old_schedule = lbl_selschedule['text']
             lbl_selschedule['text'] = schdulestr if schdulestr else "选择时间投入计划"
@@ -341,11 +405,30 @@ class EditHourDlg(DialogCtrl):
         plandata = db.get_plandata(hid)
         return plandata
 
+    def _del_reminder(self, cid: int):
+        eid = list(self._reminders_dict.keys())[cid]
+        del self._reminders_dict[eid]
+
+        lbl_clock = cast(LabelCtrl, self.get_control("lblClockEditHour"))
+        lbl_clock['text'] = "定时提醒"
+        lbl_selclock = cast(LabelCtrl, self.get_control("lblSelClockEditHour"))
+        lbl_selclock['text'] = "选择定时提醒"
+        lbl_selclock.show()
+        sls_clock = cast(SlideSwitchCtrl, self.get_control("slsClockEditHour"))
+        sls_clock.hide()
+
+        assert self._owner is not None
+        _ = self._owner.process_message("DelReminder", hid=self._hid, eid=eid)
+
     @override
     def process_message(self, idmsg: str, **kwargs: object):
         if self.alive:
             kwargs.update(self._extral_msg)
             owner = cast(Dialog, self.owner)
+            if idmsg.startswith("btnDel"):
+                cid = int(idmsg[6:])
+                self._del_reminder(cid)
+                return True
             match idmsg:
                 case "lblSelClockEditHour":
                     pv(kwargs)
@@ -1384,6 +1467,12 @@ class HourTab(Container):
                     clk_str, _ = reminder2str(reminder)
                     pv(clk_str)
                     self.update_hourctrl_attrib(hid, "clock", clk_str)
+                case "DelReminder":
+                    hid = cast(int, kwargs["id"])
+                    eid = cast(int, kwargs["eid"])
+                    self._hoursdb.del_reminder(hid, eid)
+                    self._schedule.del_event(eid)
+                    self.update_hourctrl_attrib(hid, "clock", "")
                 case "changeSchedule":
                     # come from `SelScheduleDlg` or <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
                     hid: int = cast(int, kwargs["id"])

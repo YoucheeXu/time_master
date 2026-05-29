@@ -18,6 +18,7 @@
 	</Menu>
 	<Notebook id="ntbMain" text="Notebook" layout="pack" pack="{'expand':True,'fill':'both'}">
 		<Tab id="tabHour" text="Hour">
+			<Style text="BW.TLabel" options="{'background':'white'}"/>
             <Frame id="frmHourHead" Width="400" Height="50" layout="pack" pack="{'side':'top','expand':True,'fill':'x'}" options="{'bg':'white'}">
                 <Label id="lblTitleHour" text="时间投资计划" layout="pack" pack="{'side':'left'}"/>
                 <Button id="btnNewHour" text="+" layout="pack" pack="{'side':'right'}"/>
@@ -26,7 +27,6 @@
 		</Tab>
 		<Tab id="tabTodo" text="Todo">
 			<Frame id="frmMainTodo" layout="grid" grid="{'row':0,'column':0,'sticky':'nsew'}">
-				<Style text="BW.TLabel" options="{'background':'white'}"/>
 				<Frame id="frmTodayTodo" options="{'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'nsew','padx':8,'pady':8}">
 					<Label id="lblTitleToday" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="Today" layout="grid" grid="{'row':0,'column':0,'sticky':'s','pady':(0,20)}"/>
 					<Label id="lblNumberToday" clickable="true" options="{'width':36,'style':'BW.TLabel'}" text="7" layout="grid" grid="{'row':0,'column':0,'sticky':'n','pady':(20,0)}"/>
@@ -121,22 +121,31 @@
 		</Notebook>
     </CustomDialog>
     <CustomDialog id="dlgEditHour" text="编辑项目" Width="400" Height="600">
-    	<Frame id="frmEditHour" layout="pack" pack="{'pady':4}">
-	    	<ImagePanel id="imgNameEditHour" image="gift.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':0,'column':0,'sticky':'W'}"/>
-            <Entry id="txtItemEditHour" text="你想要投入时间的事情" options="{'width':20}" layout="grid" grid="{'row':0,'column':1, 'sticky':'W'}"/>
-			<ImagePanel id="imgFatherEditHour" image="calendar.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':1,'column':0,'sticky':'W'}"/>
-			<Label id="lblFatherEditHour" text="所属项目" options="{'width':20}" layout="grid" grid="{'row':1,'column':1,'sticky':'W'}"/>
-			<Label id="lblSelFatherEditHour" text="选择所属项目" clickable="true" options="{'width':20}" layout="grid" grid="{'row':1,'column':2}"/>
-	    	<ImagePanel id="imgClockEditHour" image="VaadinAlarm.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':2,'column':0,'sticky':'W'}"/>
-			<Label id="lblClockEditHour" text="定时提醒" options="{'width':20}" layout="grid" grid="{'row':2,'column':1,'sticky':'W'}"/>
-			<Label id="lblSelClockEditHour" text="选择定时提醒" clickable="true" options="{'width':20}" layout="grid" grid="{'row':2,'column':2}"/>
-			<ImagePanel id="imgScheduleEditHour" image="calendar_green.png" options="{'width':20, 'height': 20}" layout="grid" grid="{'row':3,'column':0,'sticky':'W'}"/>
-			<Label id="lblScheduleEditHour" text="时间投入计划" options="{'width':20}" layout="grid" grid="{'row':3,'column':1,'sticky':'W'}"/>
-			<Label id="lblSelScheduleEditHour" text="选择时间投入计划" clickable="true" options="{'width':20}" layout="grid" grid="{'row':3,'column':2}"/>
+		<Frame id="frmItemEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,1)'}">
+			<ImagePanel id="imgNameEditHour" image="gift.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w'}"/>
+			<Entry id="txtItemEditHour" text="你想要投入时间的事情" layout="grid" grid="{'row':0,'column':1, 'sticky':'ewns'}"/>
 		</Frame>
-		<Label id="lblSelImgEditHour" text="选择图标" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
-		<PicsListview id="lstImageEditHour" num_column="7" pic_size="40" layout="pack" pack="{'pady':4}"/>
-		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'pady':4}"/>
+		<Frame id="frmFatherEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
+			<ImagePanel id="imgFatherEditHour" image="calendar.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w'}"/>
+			<Label id="lblFatherEditHour" text="所属项目" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+			<Label id="lblSelFatherEditHour" text="选择所属项目" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
+		</Frame>
+		<Frame id="frmClockEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
+			<ImagePanel id="imgClockEditHour" image="VaadinAlarm.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w','padx':0}"/>
+			<Label id="lblClockEditHour" text="定时提醒" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':0}"/>
+			<Label id="lblSelClockEditHour" text="选择定时提醒" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
+			<SlideSwitch id="slsClockEditHour" text="" options="{'width':40,'height':20}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
+		</Frame>
+		<Frame id="frmScheduleEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
+			<ImagePanel id="imgScheduleEditHour" image="calendar_green.png" options="{'width':20,'height':20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w'}"/>
+			<Label id="lblScheduleEditHour" text="时间投入计划" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w'}"/>
+			<Label id="lblSelScheduleEditHour" text="选择时间投入计划" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
+		</Frame>
+		<Frame id="frmEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'background':'white'}">
+			<Label id="lblSelImgEditHour" text="选择图标" options="{'style':'BW.TLabel'}" layout="pack" pack="{'pady':4,'anchor':'w'}"/>
+			<PicsListview id="lstImageEditHour" num_column="6" pic_size="40" layout="pack" pack="{'pady':4}"/>
+		</Frame>
+		<Button id="btnDelItemEditHour" text="删除项目" options="{'width':40}" layout="pack" pack="{'padx':12,'pady':4}"/>
     </CustomDialog>
     <CustomDialog id="dlgEditTodo" text="Todo Details" Width="400" Height="600">
 		<Frame id="frmInfoEditTodo" layout="pack" pack="{'padx':8,'pady':4,'expand':1,'fill':'x','anchor':'w'}" options="{'bg':'white'}">

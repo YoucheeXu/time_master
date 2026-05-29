@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.1",
     "opencv-python-headless>=4.12.0.88",
-    "pygui-simple==0.1.1",
+    "pygui-simple==0.2.0",
 ]
 
 [dependency-groups]
