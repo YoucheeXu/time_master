@@ -125,8 +125,9 @@ class TimeMasterApp(Container):
         # r2.join()
         self._gui.go()
 
-    def close(self):
-        """_summary_
+    @override
+    def destroy(self, **kwargs: object):
+        """ _summary_
         """
-        _ = self._tab_hour.close()
+        self._tab_hour.destroy(**kwargs)
         print("App exit!")

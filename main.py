@@ -19,7 +19,7 @@ def main():
     cfg_file = os.path.join(proj_path, "TimeMaster.json")
     app.open(cfg_file)
     app.run()
-    app.close()
+    app.destroy()
 
 
 if __name__ == "__main__":

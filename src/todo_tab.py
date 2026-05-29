@@ -1640,6 +1640,13 @@ class TodayTodoPage(BaseTodoPage):
                 return self._owner.process_message(idmsg, **kwargs)
         return True
 
+    @override
+    def destroy(self, **kwargs: object):
+        """ _summary_
+        """
+        pass
+
+
 class TodoTab(Container):
     """_summary_
 
@@ -1860,5 +1867,11 @@ class TodoTab(Container):
                 if self._active_page:
                     self._active_page.refresh_todos()
             case _:
-                print(f"undeal message {idmsg}")
+                print(f"TotoTab: undeal message {idmsg} with {kwargs}")
         return True
+
+    @override
+    def destroy(self, **kwargs: object):
+        """ _summary_
+        """
+        pass

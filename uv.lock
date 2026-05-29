@@ -358,15 +358,15 @@ wheels = [
 
 [[package]]
 name = "pygui-simple"
-version = "0.2.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
     { name = "opencv-python-headless" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/90/34aeb0bc6cc5e31694bc9785c3b9d321201be9980ebe786f5b4689f12685/pygui_simple-0.2.0.tar.gz", hash = "sha256:368997d5229048523b6459dd18ad20450daff38cab046bdd3fd7f879b2da9c36", size = 37015, upload-time = "2026-05-29T10:29:00.468Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/b0/6b4bd8d7def110cb77b0c28a8b352d37b40d53e4fe140d3ab9ce488f76a7/pygui_simple-0.3.1.tar.gz", hash = "sha256:2241ccacde43a5c11e91f394bd1cda8e93958e051128c9fd4a7407a30b295def", size = 37108, upload-time = "2026-05-29T14:30:17.807Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/88/c1142902cc99f1018c1dd0e472570253e0b59e5d8d0ea30ebdb87c1842a7/pygui_simple-0.2.0-py3-none-any.whl", hash = "sha256:62161b676add371113ce05f3c8f656ef51a2cef3ad400be9ddb6744191b70f76", size = 42040, upload-time = "2026-05-29T10:29:01.374Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/8f/0d2c048895605223ca8b31295bbd77fe18c0bc72fa56fa78134088fb3a6c/pygui_simple-0.3.1-py3-none-any.whl", hash = "sha256:7f6a5a5b9ad84f9e750003638b58d88f146e53eb935b590e80e368c4fb20272f", size = 42116, upload-time = "2026-05-29T14:30:16.758Z" },
 ]
 
 [[package]]
@@ -522,7 +522,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "opencv-python-headless", specifier = ">=4.12.0.88" },
-    { name = "pygui-simple", specifier = "==0.2.0" },
+    { name = "pygui-simple", specifier = "==0.3.1" },
 ]
 
 [package.metadata.requires-dev]

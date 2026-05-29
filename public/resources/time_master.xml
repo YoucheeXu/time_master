@@ -125,7 +125,7 @@
     <CustomDialog id="dlgEditHour" text="编辑项目" Width="400" Height="600">
 		<Frame id="frmItemEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,1)'}">
 			<ImagePanel id="imgNameEditHour" image="gift.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w'}"/>
-			<Entry id="txtItemEditHour" text="你想要投入时间的事情" layout="grid" grid="{'row':0,'column':1, 'sticky':'ewns'}"/>
+			<Entry id="txtItemEditHour" text="你想要投入时间的事情" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1, 'sticky':'ewns'}"/>
 		</Frame>
 		<Frame id="frmFatherEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
 			<ImagePanel id="imgFatherEditHour" image="calendar.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w'}"/>
