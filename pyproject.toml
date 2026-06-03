@@ -6,8 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.1",
-    "opencv-python-headless>=4.12.0.88",
-    "pygui-simple==0.3.1",
+    "pygui-simple==0.4.0",
 ]
 
 [dependency-groups]
