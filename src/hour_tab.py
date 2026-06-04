@@ -617,12 +617,12 @@ class HourDetailDlg(DialogCtrl):
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
         _ = plt_weekview.add_line(father_yline)
-        bottom = father_ydata
+        bottom_ydata = father_ydata
         for _, child_ydata in children_ydata.items():
-            if (any(x != 0 for x in child_ydata)):
-                child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom}, "bar")
-                bottom = child_ydata
-                _ = plt_weekview.add_line(child_yline)
+            child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom_ydata}, "bar")
+            _ = plt_weekview.add_line(child_yline)
+            for i in range(7):
+                bottom_ydata[i] = child_ydata[i] if child_ydata[i] != 0 else bottom_ydata[i]
         limit_yline = LineData(target_ydata, {"linestyle":"dotted","color":"red"})
         _ = plt_weekview.add_line(limit_yline)
         plt_weekview.draw()
