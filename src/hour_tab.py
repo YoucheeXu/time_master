@@ -622,7 +622,7 @@ class HourDetailDlg(DialogCtrl):
             child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom_ydata}, "bar")
             _ = plt_weekview.add_line(child_yline)
             for i in range(7):
-                bottom_ydata[i] = child_ydata[i] if child_ydata[i] != 0 else bottom_ydata[i]
+                bottom_ydata[i] += child_ydata[i]
         limit_yline = LineData(target_ydata, {"linestyle":"dotted","color":"red"})
         _ = plt_weekview.add_line(limit_yline)
         plt_weekview.draw()
