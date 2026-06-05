@@ -110,6 +110,7 @@
                 <ImageButton id="btnNextDayHour" image="right-arrow.png" options="{'height':20,'width':20,'bg':'white'}" layout="grid" grid="{'row':0,'column':2}"/>
                 <ImageButton id="btnNextWeekHour" image="next.png" options="{'height':20,'width':20,'bg':'white'}" layout="grid" grid="{'row':1,'column':2}"/>
         		<Label id="lblDaySum" text="今日共投入0小时" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':2,'column':0,'columnspan':3}"/>
+				<Canvas id="cvsDetailEveryDayHour" layout="grid" grid="{'row':3,'column':0,'columnspan':3}"/>
 			</Tab>
 			<Tab id="tabEveryWeekHour" text="每周投入">
 				<Label id="lblWeekSum" text="本周共投入0小时" options="{'width':20}" layout="pack" pack="{'pady':4}"/>

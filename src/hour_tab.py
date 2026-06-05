@@ -1,12 +1,19 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 from __future__ import annotations
+import os
 import math
 import datetime
 import xml.etree.ElementTree as et
 import re
 from typing import cast, override
 from typing import NamedTuple
+import tkinter as tk
+
+from matplotlib import backend_bases
+from matplotlib.colors import to_hex
+from matplotlib.container import BarContainer
+from matplotlib.patches import Rectangle
 
 from pyutilities.logit import po, pv, pe
 from pygui_simple.winbasic import Widget, Container, Dialog
@@ -14,6 +21,7 @@ from pygui_simple.tkwin import tkWin
 from pygui_simple.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
 from pygui_simple.tkslideswitch import SlideSwitchCtrl
 from pygui_simple.tkwin import PicsListviewCtrl, DialogCtrl, FrameCtrl
+from pygui_simple.tkwin import CanvasCtrl
 from pygui_simple.tkmatplot import MatPlotCtrl, LineData
 # from pygui.tkcalendar import CalendarCtrl
 from pygui_simple.tkscrollpicker import DateScrollPickerDialog, TimeScrollPickerDialog
@@ -553,16 +561,23 @@ class HourDetailDlg(DialogCtrl):
 
     def _plot_weekview(self, hid: int, detail: PlanDataDict, db: TimeDatabase,
             firstday: datetime.date):
+        name_labels: list[str] = []
+        actual_data: list[list[float]] = []
+        bar_list: list[BarContainer] = []
+        color_list: list[str] = []
+        aim_data: list[list[float]] = []
+        icon_path_list: list[str] = []
+
         children = db.get_children(hid)
         week_day = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
         target_ydata: list[float] = [0] * 7
 
         # TODO: add all reminder
-        if len(self._detail["reminders"]) == 0:
+        if len(detail["reminders"]) == 0:
             return
 
-        reminder = list(self._detail["reminders"].values())[0]
+        reminder = list(detail["reminders"].values())[0]
         # schedule = detail["schedule"]   # schedule = 计划每日45m
         # if schedule:
         # per_typ = schedule[3]
@@ -593,8 +608,6 @@ class HourDetailDlg(DialogCtrl):
                     target_ydata = [per_minutes, per_minutes, per_minutes, \
                         per_minutes, per_minutes, per_minutes, per_minutes]
 
-        plt_weekview = cast(MatPlotCtrl, self.get_control("pltEveryDayHour"))
-        plt_weekview.clear_canvas()
         xdata: list[int] = []
         father_ydata: list[float] = []
         children_ydata: dict[int, list[float]] = {}
@@ -613,19 +626,166 @@ class HourDetailDlg(DialogCtrl):
                     children_ydata[cid] = [minutes]
                 else:
                     children_ydata[cid].append(minutes)
+
+        name_labels.append(detail["name"])
+        actual_data.append(father_ydata)
+        aim_data.append(target_ydata)
+        icon = cast(IconTuple, detail["iid"])
+        imagepath = self._get_imagepath(icon.grpidx, icon.eleidx)
+        icon_path_list.append(imagepath)
+        for cid, child in children.items():
+            name_labels.append(child.data["name"])
+            actual_data.append(children_ydata[cid])
+            aim_data.append([45, 45, 45, 45, 45, 45, 45])
+            icon = cast(IconTuple, child.data["iid"])
+            imagepath = self._get_imagepath(icon.grpidx, icon.eleidx)
+            icon_path_list.append(imagepath)
+
+        # draw bar
+        plt_weekview = cast(MatPlotCtrl, self.get_control("pltEveryDayHour"))
+        plt_weekview.clear_canvas()        
         plt_weekview.xdata = xdata
         father_yline = LineData(father_ydata,
             {"tick_label":labels,"width":0.4,"facecolor":"green"}, "bar")
         _ = plt_weekview.add_line(father_yline)
-        bottom_ydata = father_ydata
+        bar = cast(BarContainer, father_yline.line)
+        bar_list.append(bar)
+        color_list.append(to_hex(bar.patches[0].get_facecolor()))
+
+        bottom_ydata = father_ydata.copy()
         for _, child_ydata in children_ydata.items():
             child_yline = LineData(child_ydata, {"width":0.4,"bottom":bottom_ydata}, "bar")
             _ = plt_weekview.add_line(child_yline)
+            bar = cast(BarContainer, child_yline.line)
+            bar_list.append(bar)
+            color_list.append(to_hex(bar.patches[0].get_facecolor()))
             for i in range(7):
                 bottom_ydata[i] += child_ydata[i]
         limit_yline = LineData(target_ydata, {"linestyle":"dotted","color":"red"})
         _ = plt_weekview.add_line(limit_yline)
         plt_weekview.draw()
+
+        # Hover tip
+        patch_map: dict[Rectangle, tuple[str, float]] = {}
+        for idx, bar_container in enumerate(bar_list):
+            item_name = name_labels[idx]
+            item_y_list = actual_data[idx]
+            # Bind each single bar patch with its subject name and daily value
+            for patch, val in zip(bar_container.patches, item_y_list):
+                patch_map[patch] = (item_name, val)
+
+        fig_canvas = plt_weekview.canvas
+
+        tooltip = plt_weekview.add_tooltip(0,0,"", bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8), visible=False)
+        def on_mouse_move(e: backend_bases.Event):
+            e = cast(backend_bases.MouseEvent, e)
+            if e.inaxes != plt_weekview.ax:
+                tooltip.set_visible(False)
+                fig_canvas.draw()
+                return
+            hover_patch = None
+            for patch in patch_map:
+                if patch.contains(e)[0]:
+                    hover_patch = patch
+                    break
+            if hover_patch is not None:
+                name, cur_val = patch_map[hover_patch]
+                # 格式：第一行项目名，第二行时间
+                tip_content = f"{name}\n{cur_val}min"
+                tooltip.set_text(tip_content)
+                tooltip.set_position((e.xdata if e.xdata else 0, e.ydata if e.ydata else 0))
+                tooltip.set_visible(True)
+            else:
+                tooltip.set_visible(False)
+            fig_canvas.draw()
+        plt_weekview.event_callback('motion_notify_event', on_mouse_move)
+
+        # detail bar
+        chart_total_w = 346
+        progress_canvas = cast(CanvasCtrl, self.get_control("cvsDetailEveryDayHour"))
+        _ = cast(tk.Canvas, progress_canvas.control).config(width=chart_total_w,background='white')
+
+        # Fixed layout constants for progress item styling
+        ICON_WIDTH: int = 32
+        BAR_TOTAL_LENGTH: int = 70
+        BAR_HEIGHT: int = 11  # Progress bar height set to half of original size
+        ITEM_FIXED_WIDTH: int = BAR_TOTAL_LENGTH + ICON_WIDTH + 50
+        ROW_GAP: int = 40
+        COL_GAP: int = 20
+        NAME_TEXT_HEIGHT: int = 18
+        GRAY_BG_COLOR: str = "#cccccc"
+
+        # Calculate max items per single row, auto wrap to new line when over width limit
+        per_row_max: int = int(chart_total_w / ITEM_FIXED_WIDTH)
+        per_row_max = max(1, per_row_max)
+
+        all_items = list(zip(name_labels, color_list, actual_data, aim_data, icon_path_list))
+
+        for col_idx, (lab, col, act_list, aim_list, icon_path) in enumerate(all_items):
+            cur_row = col_idx // per_row_max
+            cur_col = col_idx % per_row_max
+
+            # Calculate left margin for horizontal even distribution in one row
+            row_total_used_width = per_row_max * ITEM_FIXED_WIDTH + (per_row_max - 1) * COL_GAP
+            row_left_margin = (chart_total_w - row_total_used_width) / 2 if per_row_max > 1 else 15
+            base_x = row_left_margin + cur_col * (ITEM_FIXED_WIDTH + COL_GAP)
+            base_y = 15 + cur_row * ROW_GAP
+
+            sum_act = sum(act_list)
+            sum_aim = sum(aim_list)
+            ratio: float = sum_act / sum_aim if sum_aim != 0 else 0.0
+            fill_len: float = BAR_TOTAL_LENGTH * ratio
+
+            # Calculate vertical bound of left side full-height subject icon (covers name + progress bar area)
+            icon_top = base_y
+            icon_bottom = base_y + NAME_TEXT_HEIGHT + BAR_HEIGHT + 6
+            icon_h = int(icon_bottom - icon_top)
+            icon_center_x = base_x + ICON_WIDTH / 2
+            icon_center_y = (icon_top + icon_bottom) / 2
+
+            # Draw tall left sidebar icon (covers both name area and progress bar vertically)
+            icon_top = base_y
+            icon_bottom = base_y + NAME_TEXT_HEIGHT + BAR_HEIGHT + 3
+            icon_h = icon_bottom - icon_top
+            _ = progress_canvas.create_image(
+                icon_center_x, icon_center_y,
+                file_path=icon_path,
+                target_w=ICON_WIDTH,
+                target_h=icon_h,
+                fallback_fill=col,
+                anchor="center"
+            )
+
+            bar_start_x = base_x + ICON_WIDTH + 12
+            name_y_center = base_y + NAME_TEXT_HEIGHT / 2
+            right_text_x = bar_start_x + BAR_TOTAL_LENGTH + 12
+            bar_top = base_y + NAME_TEXT_HEIGHT + 4
+            bar_bottom = bar_top + BAR_HEIGHT
+            bar_center_y = (bar_top + bar_bottom) / 2
+
+            # Draw subject name above progress bar, left aligned
+            _ = progress_canvas.create_text(
+                bar_start_x, name_y_center, text=lab, anchor="w", font=("Microsoft YaHei", 10, "bold")
+            )
+
+            # Draw total consumed time text on same horizontal level as subject name
+            right_text_x = bar_start_x + BAR_TOTAL_LENGTH + 12
+            _ = progress_canvas.create_text(
+                right_text_x, name_y_center, text=f"{sum_act}min", anchor="w", font=("Microsoft YaHei", 9)
+            )
+
+            # Draw gray background base bar + colored progress fill bar
+            _ = progress_canvas.create_rectangle(
+                bar_start_x, bar_top, bar_start_x + BAR_TOTAL_LENGTH, bar_bottom, fill=GRAY_BG_COLOR, outline="#888888"
+            )
+            _ = progress_canvas.create_rectangle(
+                bar_start_x, bar_top, bar_start_x + fill_len, bar_bottom, fill=col, outline="black"
+            )
+
+            # Draw completion rate text aligned vertically with progress bar center
+            _ = progress_canvas.create_text(
+                right_text_x, bar_center_y, text=f"{ratio:.0%}", anchor="w", font=("Microsoft YaHei", 9)
+            )
 
     def _get_hours_last7days(self, hid: int):
         assert self._db is not None
