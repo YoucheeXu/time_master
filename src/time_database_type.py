@@ -223,9 +223,9 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
     # 2. Process frequency text (optimize singular/plural: no 's' for every=1, add 's' for every>1)
     unit_text = unit.name.lower()
     if every == 1:
-        frequency_text = f"every {unit_text}"
+        frequency_text = f"Every {unit_text}"
     else:
-        frequency_text = f"every {every} {unit_text}s"
+        frequency_text = f"Every {every} {unit_text}s"
 
     # 4. Process custom field by scenario to generate core description
     if unit == TimeUnit.HOUR:
@@ -234,7 +234,7 @@ def reminder2str(reminder: ReminderDataDict) -> tuple[str, str]:
     else:
         if isinstance(custom, DayType):
             # Scenario 1: custom is DayType (ED/WD/HD)
-            custom_text = custom.name.lower()
+            custom_text = custom.name.capitalize()
             # Simplify description (omit frequency when every=1, e.g., "Work day 21:00")
             if every == 1:
                 clk_str = f"{custom_text} {time_text}" if time_text else ""
