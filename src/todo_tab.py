@@ -21,12 +21,13 @@ from pygui_simple.tkwin import FrameCtrl
 from pygui_simple.tkwin import DialogCtrl, tkWin
 from pygui_simple.tkcalendar import CalendarCtrl
 from pygui_simple.tkscrollpicker import ScrollPickerCtrl, TimeScrollPickerCtrl
+from pygui_simple.tkslideswitch import SlideSwitchCtrl
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule
 from src.time_database_type import StatusEnum, str2reminder
 from src.time_database_type import TimeUnit, DayType, str_to_intenum
-from src.time_database_type import reminder2str, time2str, str2time
+from src.time_database_type import reminder2str, time2str, str2time, date2str
 from src.time_database_type import PlanDataDict, default_plan_data
 from src.time_database_type import ReminderDataDict, default_reminder_data
 from src.time_database import TimeDatabase
@@ -404,7 +405,19 @@ class EditTodoDialog(DialogCtrl):
         entry_note.set_val(tododata["note"])
 
         if tododata["reminder_id"] > 0:
-            pass
+            reminder_info = tododata["reminder_infos"][self._todo["reminder_idx"]]
+
+            reminder_date = self._todo["day"]
+            lbl_date = cast(LabelCtrl, self.get_control("lblSelDateEditTodo"))
+            lbl_date.set_text(date2str(reminder_date))
+            sls_date = cast(SlideSwitchCtrl, self.get_control("slsDateEditTodo"))
+            sls_date.set_state(True, False)
+
+            reminder_time = reminder_info["clock_time"]
+            lbl_time = cast(LabelCtrl, self.get_control("lblSelTimeEditTodo"))
+            lbl_time.set_text(time2str(reminder_time))
+            sls_time = cast(SlideSwitchCtrl, self.get_control("slsTimeEditTodo"))
+            sls_time.set_state(True, False)
 
         calendar = cast(CalendarCtrl, self.get_control("cadDateEditTodo"))
         calendar.cancel_select()
@@ -490,8 +503,8 @@ class EditTodoDialog(DialogCtrl):
                     lbl_date = cast(LabelCtrl, self.get_control("lblSelDateEditTodo"))
                     date = cast(datetime.date, kwargs['val'])
                     # date_text = f"{date.year}年{date.month:02d}月{date.day:02d}日"
-                    date_text = date.strftime("%B %d, %Y\t%A")
-                    # print(f"select date: {date_text}")
+                    # date_text = date.strftime("%B %d, %Y\t%A")
+                    date_text = date2str(date)
                     lbl_date.set_text(date_text)
                 case "lblSelTimeEditTodo":
                     lbl_time = cast(LabelCtrl, self.get_control("lblSelTimeEditTodo"))
@@ -511,15 +524,14 @@ class EditTodoDialog(DialogCtrl):
                     assert self._todo is not None
                     lbl_time = cast(LabelCtrl, self.get_control("lblSelTimeEditTodo"))
                     time = cast(datetime.time, kwargs['val'])
-                    # date_text = f"{date.year}年{date.month:02d}月{date.day:02d}日"
-                    time_text = time.strftime("%H:%M")
-                    # print(f"select date: {date_text}")
+                    # time_text = time.strftime("%H:%M")
+                    time_text = time2str(time)
                     lbl_time.set_text(time_text)
 
                     reminder = self._todo["data"]["reminder"]
                     assert reminder is not None
-                    reminder["clk_time"] = datetime.datetime.strptime(lbl_time.get_text(), "%H:%M").time()
-                    # pv(self._todo_dict)
+                    # reminder["clk_time"] = datetime.datetime.strptime(lbl_time.get_text(), "%H:%M").time()
+                    reminder["clk_time"] = str2time(lbl_time.get_text())
                 case "lblSelCycleEditTodo":
                     lbl = cast(LabelCtrl, self.get_control(idctrl="lblSelCycleEditTodo"))
                     cycle_info = lbl.get_text()

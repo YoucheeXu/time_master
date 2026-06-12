@@ -549,6 +549,11 @@ def str2time(timestr: str):
     else:
         return None
 
+def date2str(date: datetime.date | None):
+    if date is None:
+        return ""
+    return date.strftime("%Y-%m-%d %A")
+
 class PlanDataDict(TypedDict):
     """ _summary_
 
