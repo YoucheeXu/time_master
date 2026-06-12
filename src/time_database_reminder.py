@@ -146,17 +146,17 @@ def parse_iso_datetime(datetime_str: str | None) -> datetime.datetime | None:
         dt = datetime.datetime.fromisoformat(datetime_str)
 
         # Step 2: Strict validation of day/month (fixes Python <3.11 leniency)
-        datetime.datetime(dt.year, dt.month, dt.day)
+        _ = datetime.datetime(dt.year, dt.month, dt.day)
     
         return dt
 
     except ValueError as e:
         # Include the original error reason in the re-thrown message
-        raise ValueError(
+        raise ValueError((
             f"Invalid ISO 8601 datetime format: '{datetime_str}'. "
             f"Expected format like 'YYYY-MM-DDTHH:MM:SS' (valid date/time only). "
             f"Error: {str(e)}"
-        ) from e
+        )) from e
 
 def _serialize_single_reminder(reminder: ReminderDataDict) -> ReminderJsonDict:
     """Serialize a single ReminderDataDict to ReminderJsonDict.
