@@ -115,7 +115,7 @@ class Todo(TypedDict):
 
 
 class RepeatCycleDlg(DialogCtrl):
-    def __init__(self, app: tkWin, dlg_cfg: et.Element):
+    def __init__(self, app: WinBasic, dlg_cfg: et.Element):
         super().__init__(app, dlg_cfg)
 
         # Weekday list
