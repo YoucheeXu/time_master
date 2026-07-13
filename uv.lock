@@ -455,6 +455,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyutilities-simple"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/f5/b2d7c9502fd6f879c1da35d433ae64e34004ccc6ec818fa156b4e40bb5dc/pyutilities_simple-0.1.1.tar.gz", hash = "sha256:35ef4c6c039762d45f19bc9ae377454880cf379307d97c9f549cd1f9098e0053", size = 49330, upload-time = "2026-07-04T13:12:43.61Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/5b/1116e8fa3b3587c66523260bbcd65cb32f64928770e87c493bc80a49ea16/pyutilities_simple-0.1.1-py3-none-any.whl", hash = "sha256:9dc0102f0346d092c8d1642ae254d2452db09afc8203aecbdfb650f58fd0de4b", size = 21999, upload-time = "2026-07-04T13:12:42.259Z" },
+]
+
+[[package]]
 name = "pywin32-ctypes"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -488,6 +497,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "matplotlib" },
     { name = "pygui-simple" },
+    { name = "pyutilities-simple" },
 ]
 
 [package.dev-dependencies]
@@ -502,6 +512,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "pygui-simple", specifier = "==0.5.2" },
+    { name = "pyutilities-simple", specifier = ">=0.1.1" },
 ]
 
 [package.metadata.requires-dev]

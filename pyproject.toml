@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.1",
     "pygui-simple==0.5.2",
+    "pyutilities-simple>=0.1.1",
 ]
 
 [dependency-groups]

@@ -13,7 +13,7 @@ from typing import TypeAlias, TypedDict, Callable, cast, override
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from pyutilities.logit import po, pv, pe
+from pyutilities_simple.logit import po, pv, pe
 from pygui_simple.winbasic import Widget, Container, Dialog, WinBasic
 from pygui_simple.tkcontrol import tkControl
 from pygui_simple.tkwin import T, LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl

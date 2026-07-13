@@ -15,7 +15,7 @@ from matplotlib.colors import to_hex
 from matplotlib.container import BarContainer
 from matplotlib.patches import Rectangle
 
-from pyutilities.logit import po, pv, pe
+from pyutilities_simple.logit import po, pv, pe
 from pygui_simple.winbasic import Widget, Container, Dialog
 from pygui_simple.tkwin import tkWin
 from pygui_simple.tkwin import LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl

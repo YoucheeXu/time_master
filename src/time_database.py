@@ -10,8 +10,8 @@ import uuid
 from typing import Unpack, cast
 from collections.abc import Generator
 
-from pyutilities.logit import pv, po, pe
-from pyutilities.sqlite import SQLite
+from pyutilities_simple.logit import pv, po, pe
+from pyutilities_simple.sqlite import SQLite
 
 from src.action_sys import ActTyp
 from src.time_database_type import generate_sqlite_fields
@@ -79,7 +79,7 @@ class TimeDatabase:
         """
         if not os.path.isfile(dbfile):
             ret, str = self._database.open(dbfile,
-                sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+                detect_types = sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
             ver = self._database.read_version()
             if ver != req_ver:
                 return -1, (f"Version don't match, require version is "
@@ -88,7 +88,7 @@ class TimeDatabase:
                 self._new(req_ver)
                 return 1, f"OK to open {dbfile} and creat table 'Plans' and 'Records'."
         else:
-            ret, str = self._database.open(dbfile, sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+            ret, str = self._database.open(dbfile, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         return ret, str
 
     def _new(self, ver: int):

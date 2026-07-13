@@ -11,7 +11,7 @@ import datetime
 from dataclasses import dataclass
 # from typing import Literal
 
-from pyutilities.logit import pv, po
+from pyutilities_simple.logit import pv, po
 
 from src.action_sys import ActTyp, ActionSys
 from src.time_database_type import TimeUnit, DayType

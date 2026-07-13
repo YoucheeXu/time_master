@@ -7,7 +7,7 @@ from threading import Thread
 import tkinter.filedialog as tkFileDialog
 from typing import override, cast
 
-from pyutilities.logit import pv, po, pe
+from pyutilities_simple.logit import pv, po, pe
 from pygui_simple.winbasic import Container
 from pygui_simple.tkwin import tkWin
 
