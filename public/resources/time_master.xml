@@ -136,7 +136,7 @@
 		<Frame id="frmClockEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
 			<ImagePanel id="imgClockEditHour" image="VaadinAlarm.png" options="{'width':20, 'height': 20,'bg':'white'}" layout="grid" grid="{'row':0,'column':0,'sticky':'w','padx':0}"/>
 			<Label id="lblClockEditHour" text="定时提醒" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':1,'sticky':'w','padx':0}"/>
-			<Label id="lblSelClockEditHour" text="选择定时提醒" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
+			<Label id="lblAddClockEditHour" text="点击添加" clickable="true" options="{'style':'BW.TLabel'}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
 			<SlideSwitch id="slsClockEditHour" text="" options="{'width':40,'height':20}" layout="grid" grid="{'row':0,'column':2,'sticky':'e'}"/>
 		</Frame>
 		<Frame id="frmScheduleEditHour" layout="pack" pack="{'padx':12,'pady':4,'fill':'x','expand':1,'anchor':'w'}" options="{'bg':'white','columnconfigure':'(0,0,1)'}">
