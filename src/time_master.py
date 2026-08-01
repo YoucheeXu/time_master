@@ -37,7 +37,6 @@ class TimeMasterApp(Container):
         self._app_path: str = curpath
 
         self._gui: tkWin = tkWin(self._app_path, xmlfile)
-        self._gui.filter_message(self._process_gui_message)
 
         bell_path = os.path.join(self._app_path, "resources", "bell.mp3")
         wather_mp3 = os.path.join(self._app_path, "resources", "water-drop-close-sonorous.mp3")
@@ -64,9 +63,6 @@ class TimeMasterApp(Container):
         else:
             self._tab_todo.open_todos(todo_db_path)
 
-        # self._schedule.add_event(1, "Stretch", datetime.time(0, 30), 1, TimeUnit.HOUR,
-            # DayType.EVERYDAY, None, ActTyp.DRIPPING_WATER)
-
         self._schedule.event_to_agenda()
 
     def open(self, cfg_file: str):
@@ -83,9 +79,6 @@ class TimeMasterApp(Container):
                     user_path = os.path.join(self._app_path, cast(str, usr_cfg["Data"]))
                     self.open_user(user_path)
                     break
-
-    def _process_gui_message(self, idmsg: str, **kwargs: object):
-        return self.process_message(idmsg, **kwargs)
 
     @override
     def process_message(self, idmsg: str, **kwargs: object):
