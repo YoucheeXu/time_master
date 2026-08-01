@@ -1508,7 +1508,6 @@ class TodayTodoPage(BaseTodoPage):
         if self._stats_label:
             _ = self._stats_label.config(text=self.get_stats_text())
 
-    # Protected Methods
     def _setup_entry_placeholder(self, entry: tk.Entry, placeholder: str) -> None:
         def on_focus_in(event: tk.Event) -> None:
             if entry.get() == placeholder:
@@ -1827,7 +1826,7 @@ class TodoTab(Container):
                 x, y = cast(tuple[int, int], kwargs['mousepos'])
                 self.open_todo_detail_dlg(x, y, **kwargs)
             case "NewTodo":
-                plandata: PlanDataDict = cast(PlanDataDict, kwargs["plandata"])
+                plandata = cast(PlanDataDict, kwargs["plandata"])
                 reminderdata: ReminderDataDict = cast(ReminderDataDict, kwargs["reminderdata"])
                 tid = self._todos_db.add_plan(**plandata)
                 _ = self._todos_db.add_reminder(tid, 0, **reminderdata)
@@ -1879,7 +1878,7 @@ class TodoTab(Container):
                 if self._active_page:
                     self._active_page.refresh_todos()
             case _:
-                print(f"TotoTab: undeal message {idmsg} with {kwargs}")
+                return None
         return True
 
     @override

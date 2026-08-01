@@ -63,11 +63,11 @@ class HourTuple(NamedTuple):
 
 
 class RecordHourDlg(DialogCtrl):
-    """_summary_
+    """ _summary_
 
     """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
-        """_summary_
+        """ _summary_
 
         Args:
             app (tkWin): _description_
@@ -76,7 +76,7 @@ class RecordHourDlg(DialogCtrl):
         super().__init__(app, dlg_cfg)
 
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
-        """_summary_
+        """ _summary_
 
         Args:P
             iid (int): _description_
@@ -116,28 +116,26 @@ class RecordHourDlg(DialogCtrl):
         lbl_lastime.set_text(schedule_val)
 
     def _select_day(self, **kwargs: object):
-        """_summary_
+        """ _summary_
         """
         x, y = cast(tuple[int, int], kwargs["mousepos"])
         scrollpicker = DateScrollPickerDialog((x, y+20), "选择日期")
         date = scrollpicker.get_datestr()
-        pv(date)
         lbl_day = cast(LabelCtrl, self.get_control("lblSelDayRecordHour"))
         lbl_day.set_text(date)
 
     def _select_strtime(self, **kwargs: object):
-        """_summary_
+        """ _summary_
         """
         lbl_strtime = cast(LabelCtrl, self.get_control("lblSelStrtRecordHour"))
         x, y = cast(tuple[int, int], kwargs["mousepos"])
         scrollpicker = TimeScrollPickerDialog((x, y+20), "选择时间", lbl_strtime.get_text())
         strt_time = scrollpicker.get_timestr()
-        pv(strt_time)
         lbl_strtime = cast(LabelCtrl, self.get_control("lblSelStrtRecordHour"))
         lbl_strtime.set_text(strt_time)
 
     def _schedule_txt2clk(self, txt: str):
-        """_summary_
+        """ _summary_
 
         Args:
             txt (str): _description_
@@ -153,7 +151,7 @@ class RecordHourDlg(DialogCtrl):
         return clk
 
     def _select_lastime(self, **kwargs: object):
-        """_summary_
+        """ _summary_
         """
         lbl_lastime = cast(LabelCtrl, self.get_control("lblSelLastRecordHour"))
         lastime = self._schedule_txt2clk(lbl_lastime.get_text())
@@ -180,18 +178,17 @@ class RecordHourDlg(DialogCtrl):
         strt_time = lbl_strtime.get_text()
 
         strt_dtime = datetime.datetime.strptime(f"{day} {strt_time}", "%Y-%m-%d %H:%M")
-        po(f"Start time: {strt_dtime}")
 
         lbl_lastime = cast(LabelCtrl, self.get_control("lblSelLastRecordHour"))
         last_time = self._schedule_txt2clk(lbl_lastime.get_text()).split(":")
         # pv(last_time)
         duration = int(last_time[0]) * 60 + int(last_time[1])
-        po(f"duration: {duration}")
+
         _ = owner.process_message("RecordHour", id=hid,
             strt_dtime=strt_dtime, duration=duration)
         detail = self._get_hourdetail(db, hid)
         sum_minutes = detail["sums"] + duration
-        pv(sum_minutes)
+
         _ = owner.process_message("ChangeSum", id=hid, sum=sum_minutes)
         return True, ""
 
@@ -223,11 +220,11 @@ class Reminder(TypedDict):
     status: ReminderStatusEnum
 
 class EditHourDlg(DialogCtrl):
-    """_summary_
+    """ _summary_
 
     """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
-        """_summary_
+        """ _summary_
 
         Args:
             app (tkWin): _description_
@@ -265,7 +262,7 @@ class EditHourDlg(DialogCtrl):
         lblclock_xml = self.create_xml("Label", {"id": f"lblClock{cid}EditHour",
             "text": clkstr, "clickable": "true",
             "options": "{'style':'BW.TLabel'}"})
-        # pv(lbl_item_xml)
+
         id_lblclock, lbl_clock = self.create_control(frm_clock, lblclock_xml, level)
         self._idctrl_dict[id_lblclock] = lbl_clock
         self.assemble_control(lbl_clock, {"layout":"grid",
@@ -349,7 +346,6 @@ class EditHourDlg(DialogCtrl):
 
         images_dict = cast(dict[int, dict[int, str]], owner.process_message("getImagesDict"))
         list_itemimage = cast(PicsListviewCtrl, self.get_control("lstImageEditHour"))
-        # list_itemimage.display_images(list(self._images_dict.values()))
         list_itemimage.add_imagegroup("一般", list(images_dict[0].values()))
         list_itemimage.add_imagegroup("课程", list(images_dict[1].values()))
         list_itemimage.add_imagegroup("锻炼", list(images_dict[2].values()))
@@ -405,7 +401,6 @@ class EditHourDlg(DialogCtrl):
                 _ = owner.process_message("changeItemImage",
                     id=hid, group=grp, index=idx)
         else:   # New item
-            # pv(name)
             if len(name) == 0:
                 return False, "Name should not be empty"
 
@@ -414,8 +409,6 @@ class EditHourDlg(DialogCtrl):
             iid = lst_itemimage.get_selected()
             icon = IconTuple(*iid)
             if fid == -1:
-                # reminder = str2reminder(clock_val, schedule_val)
-                # reminders = {0: reminder}
                 _ = owner.process_message("NewHour",
                     name=name, fid=fid, iid=icon,
                     reminders=reminders)
@@ -425,7 +418,7 @@ class EditHourDlg(DialogCtrl):
         return True, ""
 
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
-        """_summary_
+        """ _summary_
 
         Args:
             hid (int): _description_
@@ -479,7 +472,6 @@ class EditHourDlg(DialogCtrl):
                 return True
             match idmsg:
                 case "lblAddClockEditHour":
-                    pv(kwargs)
                     lbl_addclock = cast(LabelCtrl, self.get_control("lblAddClockEditHour"))
                     lbl_addclock.hide()
                     sls_clock = cast(SlideSwitchCtrl, self.get_control("slsClockEditHour"))
@@ -489,7 +481,6 @@ class EditHourDlg(DialogCtrl):
                     clkstr = "Everyday 14:00"
                     self._add_clockctrl(eid, clkstr, True)
                 case "lblSelScheduleEditHour":
-                    pv(kwargs)
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
                     old_schedulestr = lbl_selschedule.get_text()
@@ -516,7 +507,6 @@ class EditHourDlg(DialogCtrl):
                             self._schedule["status"] = ReminderStatusEnum.DELETE
                     return True
                 case "btnDelItemEditHour":
-                    pv(kwargs)
                     iid = cast(int, owner.process_message("getId"))
                     self.destroy()
                     return owner.process_message("deleteItem", id=iid)
@@ -527,14 +517,14 @@ class EditHourDlg(DialogCtrl):
 
 
 class HourDetailDlg(DialogCtrl):
-    """_summary_
+    """ _summary_
 
     Attributes:
         _last_cid (int): the previous old child index
         _children (_type_): _description_
     """
     def __init__(self, app: tkWin, dlg_cfg: et.Element):
-        """_summary_
+        """ _summary_
 
         Args:
             app (tkWin): _description_
@@ -550,7 +540,7 @@ class HourDetailDlg(DialogCtrl):
         self._firstday: datetime.date = datetime.date(2025,12,25)
 
     def _update_hourdetailctrl(self, attrib: str, val: str | float):
-        """_summary_
+        """ _summary_
 
         Args:
             attrib (str): _description_
@@ -592,7 +582,7 @@ class HourDetailDlg(DialogCtrl):
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
     def _get_hourdetail(self, db: TimeDatabase, hid: int):
-        """_summary_
+        """ _summary_
 
         Args:
             hid (int): _description_
@@ -633,8 +623,6 @@ class HourDetailDlg(DialogCtrl):
             if rmd["clk_time"] is None:
                 reminder = rmd
                 break
-
-        pv(reminder)
 
         unit = 1
         match reminder['unit']:
@@ -867,8 +855,6 @@ class HourDetailDlg(DialogCtrl):
         self._db = cast(TimeDatabase, kwargs["db"])
 
         self._detail = self._get_hourdetail(self._db, self._hid)
-        # po(f"{iid}: {detail}")
-        # owner = cast(Container, self._owner)
 
         lbl_father = cast(LabelCtrl, self.get_control("lblFatherItemDetail"))
         fid = self._detail["fid"]
@@ -905,7 +891,6 @@ class HourDetailDlg(DialogCtrl):
         self._update_hourdetailctrl("TotalDays", total_days)
 
         total_weeks = math.ceil(((end_date - strt_date).days + 1)/7)
-        pv(total_weeks)
         hours_everyweek = self._detail["sums"] / total_weeks /60
         self._update_hourdetailctrl("HoursEveryWeek", f"{hours_everyweek:.1f}")
         hours_last7days = self._get_hours_last7days(self._hid)
@@ -940,7 +925,6 @@ class HourDetailDlg(DialogCtrl):
             self._create_childctrl(parent, idx, child.data["name"],
                 icon, f"{child.data["sums"] / 60: .1f}")
             idx += 1
-        pv(self._children)
         self._last_cid = len(self._children) - 1
         lbl_totalsubitems = cast(LabelCtrl, self.get_control("lblTotalChildren"))
         lbl_totalsubitems["text"] = f"共{idx}个子项目"
@@ -972,6 +956,7 @@ class HourDetailDlg(DialogCtrl):
 
     @override
     def _confirm(self, **kwargs: object):
+        po(f"_hourdetaildlg_confirm: {kwargs}")
         owner = cast(Dialog, self.owner)
         for idx, child in self._children.items():
             if idx > self._last_cid:
@@ -986,7 +971,7 @@ class HourDetailDlg(DialogCtrl):
         return True, ""
 
     def _get_imagepath(self, group: int, index: int):
-        """_summary_
+        """ _summary_
 
         Args:
             group (int): _description_
@@ -1001,7 +986,7 @@ class HourDetailDlg(DialogCtrl):
 
     def show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1011,12 +996,11 @@ class HourDetailDlg(DialogCtrl):
         dlg_cfg = self._app.get_customctrlcfg(dlg_id)
         app = cast(tkWin, self._app)
         recordhour_dlg = RecordHourDlg(app, dlg_cfg)
-        # self._gui.register_customctrl(dlg_id, recordhour_dlg)
         recordhour_dlg.do_show(owner, x, y, **kwargs)
 
     def _show_edithourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1029,7 +1013,7 @@ class HourDetailDlg(DialogCtrl):
         dlg.do_show(owner, x, y, **kwargs)
 
     def _update_hour(self, uid: int, attrib: str, val: str | float):
-        """_summary_
+        """ _summary_
 
         Args:
             uid (int): _description_
@@ -1041,7 +1025,7 @@ class HourDetailDlg(DialogCtrl):
 
     def _create_childctrl(self, parent: Widget, uid: int, sub_item: str,
             iid: IconTuple, sums: str):
-        """_summary_
+        """ _summary_
 
         Args:
             parent (Widget): _description_
@@ -1081,7 +1065,7 @@ class HourDetailDlg(DialogCtrl):
             "grid": f"{{'row':{uid},'column':0,'pady':4}}"}, f"{'  '*(level-1)}")
 
     def _delete_childctrl(self, sid: int):
-        """_summary_
+        """ _summary_
 
         Args:
             sid (int): _description_
@@ -1110,7 +1094,6 @@ class HourDetailDlg(DialogCtrl):
                     idx = cast(int, kwargs["index"])
                     imagebutton = cast(ImageBtttonCtrl, self.get_control("btnImageHourDetail"))
                     imagepath = self._get_imagepath(grp, idx)
-                    # pv(imagepath)
                     imagebutton.change_image(imagepath)
                     _ = owner.process_message("changeItemImage",
                         id=hid, group=grp, index=idx)
@@ -1150,10 +1133,6 @@ class HourDetailDlg(DialogCtrl):
                     lbl_selschedule['text'] = schedule_str
                     _ = owner.process_message("NewClock", **kwargs)
                 case "DelClock": # come from `EditHourDlg`
-                    reminder = cast(ReminderDataDict, kwargs["reminder"])
-                    eid = cast(int, kwargs["eid"])
-                    pv(eid)
-                    clk_str, schedule_str = reminder2str(reminder)
                     lbl_selclock = cast(LabelCtrl,
                         self.get_control("lblSelClockItemDetail"))
                     lbl_selclock['text'] = ""
@@ -1208,7 +1187,7 @@ class HourDetailDlg(DialogCtrl):
 
 
 class HourTab(Container):
-    """_summary_
+    """ _summary_
 
     Attributes:
         _gui (_type_): _description_
@@ -1219,7 +1198,7 @@ class HourTab(Container):
         _hoursdb (_type_): _description_
     """
     def __init__(self, owner: Container, schedule: Schedule):
-        """_summary_
+        """ _summary_
 
         Args:
             owner (tkWin): _description_
@@ -1269,21 +1248,21 @@ class HourTab(Container):
         self._hoursdb: TimeDatabase = TimeDatabase()
 
     def _open(self, dbpath: str):
-        """_summary_
+        """ _summary_
         Args:
             dbpath (type): _description_
         """
         return self._hoursdb.open(dbpath)
 
     def new_hours(self, dbpath: str):
-        """_summary_
+        """ _summary_
         Args:
             dbpath (type): _description_
         """
         _ = self._open(dbpath)
 
     def open_hours(self, dbpath: str):
-        """_summary_
+        """ _summary_
         Args:
             dbpath (type): _description_
         """
@@ -1303,7 +1282,7 @@ class HourTab(Container):
                         ActTyp.LOCK_SCREEN)
 
     def update_hourctrl_attrib(self, uid: int, attrib: str, val: str | int, eid: int = 0):
-        """_summary_
+        """ _summary_
 
         Args:
             uid (int): _description_
@@ -1316,7 +1295,6 @@ class HourTab(Container):
         match attrib:
             case "name":
                 ctrl_item1 = cast(LabelCtrl, self.get_control(f"lblItem{uid}"))
-                # ctrl_item1['text'] = val
                 _ = ctrl_item1.configure(text=val, anchor='w')
             case "image":
                 ctrl_item2 = cast(ImageBtttonCtrl, self.get_control(f"btnItem{uid}"))
@@ -1333,7 +1311,7 @@ class HourTab(Container):
                 raise KeyError(f"Unkonw arrtrib: {attrib}")
 
     def get_hourctrl_attrib(self, uid: int, attrib: str, eid: int = 0) -> str:
-        """_summary_
+        """ _summary_
 
         Args:
             uid (int): _description_
@@ -1361,7 +1339,7 @@ class HourTab(Container):
         return val
 
     def delete_fatherctrl(self, father: int):
-        """_summary_
+        """ _summary_
 
         Args:
             father (int): _description_
@@ -1372,7 +1350,7 @@ class HourTab(Container):
         self.delete_hourctrl(-1, father)
 
     def delete_hourctrl(self, father: int, iid: int):
-        """_summary_
+        """ _summary_
 
         Args:
             father (int): _description_
@@ -1392,7 +1370,6 @@ class HourTab(Container):
 
     def add_clock_ctrl(self, hid: int, eid: int, reminder: ReminderDataDict):
         clk_str, _ = reminder2str(reminder)
-        pv(clk_str)
 
         level = 4
 
@@ -1410,14 +1387,12 @@ class HourTab(Container):
 
     def del_clock_ctrl(self, hid: int, eid: int):
         pnl_clock = cast(ImagePanelCtrl, self._gui.get_control(f"pnlClock{hid}"))
-
-        # lbl_clock = cast(LabelCtrl, self._gui.get_control(f"lblClock{hid}_{eid}"))
         self._gui.delete_control(f"lblClock{hid}_{eid}")
         pnl_clock.hide()
 
     def create_hourctrl(self, hid: int, item: str, iid: IconTuple,
             reminders: dict[int, ReminderDataDict], sums: int, fid: int = -1):
-        """_summary_
+        """ _summary_
 
         Args:
             hid (int): _description_
@@ -1459,7 +1434,6 @@ class HourTab(Container):
 
         lblitem_xml = self._gui.create_xml("Label", {"text": item,
             "id": f"lblItem{hid}", "options": "{'width':48}"}, frmitem_xml)
-        # pv(lbl_item_xml)
         _, lbl_item = self._gui.create_control(frm_item, lblitem_xml, level)
         self._gui.assemble_control(lbl_item, {"layout":"grid",
             "grid":"{'row':0,'column':1,'sticky':'w'}"},
@@ -1512,7 +1486,7 @@ class HourTab(Container):
                 "pack":f"{{'side':'top','pady':({pady1},5),'fill':'x'}}"}, f"{'  '*(2-1)}")
 
     def _get_imagepath(self, group: int, index: int):
-        """_summary_
+        """ _summary_
 
         Args:
             group (int): _description_
@@ -1524,7 +1498,7 @@ class HourTab(Container):
         return self._images_dict[group].get(index, "CircleFlagsUsBetsyRoss.png")
 
     def get_control(self, idctrl: str) -> object:
-        """_summary_
+        """ _summary_
 
         Args:
             idctrl (str): _description_
@@ -1536,7 +1510,7 @@ class HourTab(Container):
 
     def show_selclockdlg(self, owner: Container | None = None,
             x: int = 0, y: int = 0, **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1563,7 +1537,7 @@ class HourTab(Container):
         self._clkstr = self._old_clkstr
 
     def _selclockdlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
-        """_summary_
+        """ _summary_
         Args:
             kwargs (type): _description_
         """
@@ -1571,25 +1545,18 @@ class HourTab(Container):
         # owner = cast(Container, self._selclock_dlg.owner)
         cmb_selday = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelDay"))
         sel_day = cmb_selday.get_val()
-        pv(sel_day)
         cmb_selhour = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelHour"))
         sel_hour = cmb_selhour.get_val()
-        pv(sel_hour)
         cmb_selminute = cast(ComboboxCtrl, self._selclock_dlg.get_control("cmbSelMinute"))
         sel_minute = cmb_selminute.get_val()
-        pv(sel_minute)
         hour = int(sel_hour[:-1])
         minute = int(sel_minute[:-1])
-        # clk_time = str2time(f"{hour:02}:{minute:02}")
-        # day = str_to_intenum(DayType, sel_day)
         clk_str = f"{sel_day} {hour:02}:{minute:02}"
-        # _ = owner.process_message("changeClock", clk_time=clk_time,
-        #     custom=day, clk_str=clk_str, **kwargs)
         self._clkstr = clk_str
         return True, ""
 
     def show_selscheduledlg(self, owner: Container | None = None, x: int = 0, y: int = 0, **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1640,7 +1607,7 @@ class HourTab(Container):
         self._schedulestr = self._old_schedulestr
 
     def _selscheduledlg_confirm(self, **kwargs: object) -> tuple[bool, str]:
-        """_summary_
+        """ _summary_
         Args:
             kwargs (type): _description_
         """
@@ -1656,7 +1623,7 @@ class HourTab(Container):
 
     def show_recordhourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1670,7 +1637,7 @@ class HourTab(Container):
 
     def show_hourdetaildlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1684,7 +1651,7 @@ class HourTab(Container):
 
     def show_edithourdlg(self, owner: Container | None = None, x: int = 0, y: int = 0,
             **kwargs: object):
-        """_summary_
+        """ _summary_
         Args:
             owner (type): _description_
             x (type): _description_
@@ -1707,7 +1674,6 @@ class HourTab(Container):
             cycend_dtime=None,
         )
         clk_str, _ = reminder2str(reminder)
-        pv(clk_str)
         self.update_hourctrl_attrib(hid, "clock", clk_str, eid)
 
         self._schedule.modify_event(eid, clk_time, cycbgn_dtime, custom=reminder["custom"])
@@ -1718,21 +1684,15 @@ class HourTab(Container):
             hid = int(idmsg[7:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_hourdetaildlg(self, x+20, y+20, id=hid, db=self._hoursdb)
-            return True
         elif idmsg.startswith("lblSumHour"):
             hid = int(idmsg[10:])
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_recordhourdlg(self, x+20, y+20, id=hid, db=self._hoursdb)
-            return True
         elif idmsg.startswith("lblClock"):  # lblClock{hid}_{eid}
             msglist = idmsg.split("_")
-            # pv(idmsg)
             len_eid = len(msglist[1])
-            # pv(len_eid)
             hid = int(idmsg[8: -(len_eid + 1)])
-            # pv(hid)
             eid = int(idmsg[-len_eid: ])
-            # pv(eid)
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             lbl_clock = cast(LabelCtrl, self._gui.get_control(idmsg))
             oldclkstr = lbl_clock.get_text()
@@ -1743,11 +1703,9 @@ class HourTab(Container):
             assert clk_time is not None
             if clkstr != oldclkstr:
                 self.modify_clock(hid, eid, clk_time, cast(DayType, reminder["custom"]))
-            return True
         elif idmsg == "btnNewHour":
             x, y = cast(tuple[int, int], kwargs["mousepos"])
             self.show_edithourdlg(self, x+20, y+20, fid=-1, id=0, db=self._hoursdb)
-            return True
         else:
             match idmsg:
                 case "showSelClockDlg": # come from `EditHourDlg` or <-`HourDetailDlg`<-`EditHourDlg`
@@ -1764,7 +1722,6 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     strt_dtime = cast(datetime.datetime, kwargs["strt_dtime"])
                     duration = cast(int, kwargs["duration"])
-                    # po(kwargs)
                     name = self._hoursdb.get_plandata(hid)["name"]
                     _ = self._hoursdb.add_record(pid=hid, name=name,
                         bgn_dtime=strt_dtime, duration=duration)
@@ -1786,7 +1743,6 @@ class HourTab(Container):
                     eid = cast(int, kwargs["eid"])
                     clk_time = cast(datetime.time, kwargs["clk_time"])
                     custom = cast(DayType, kwargs["custom"])
-
                     self.modify_clock(hid, eid, clk_time, custom)
                 case "NewClock": # come from `HourDetailDlg`<-`EditHourDlg`
                     hid = cast(int, kwargs["hid"])
@@ -1873,7 +1829,7 @@ class HourTab(Container):
                     self.delete_fatherctrl(hid)
                 case _:
                     return None
-            return True
+        return True
 
     @override
     def destroy(self, **kwargs: object):
