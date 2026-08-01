@@ -450,7 +450,7 @@ class TimeDatabase:
                         newval_sql = str(tags)
                     case "iid":
                         assert isinstance(newval, IconTuple) or (newval is None)
-                        icon = cast(IconTuple | None, newval)
+                        icon = newval
                         plandata[attrib] = icon
                         newval_sql = self._icon2str(icon)
                     case "fid":
@@ -470,7 +470,7 @@ class TimeDatabase:
                         newval_sql = newval
                     case "location":
                         assert isinstance(newval, LocTuple) or (newval is None)
-                        location = cast(LocTuple | None, newval)
+                        location = newval
                         plandata[attrib] = location
                         newval_sql = self._loc2geo(location)
                     case "sums":
@@ -572,7 +572,7 @@ class TimeDatabase:
             )
         for key in ReminderAttr:
             if key in kwargs:
-                po(f"from '{reminder[key]}' to '{kwargs[key]}'")
+                po(f"{key} from '{reminder[key]}' to '{kwargs[key]}'")
                 reminder[key] = kwargs[key]
 
         attr_sql = "reminders"
@@ -659,8 +659,8 @@ class TimeDatabase:
             ValueError: If rid is a non-positive integer (invalid for AUTOINCREMENT)
         """
         # Step 1: Validate rid type (enforce int, even in dynamic Python)
-        if not isinstance(rid, int):
-            raise TypeError(f"rid must be an integer (got {type(rid).__name__}: {rid})")
+        if not isinstance(rid, int):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise TypeError(f"rid must be an integer (got {type(rid).__name__}: {rid})")  # pyright: ignore[reportUnreachable]
 
         # Step 2: Validate rid value (AUTOINCREMENT rid is always positive)
         if rid <= 0:
