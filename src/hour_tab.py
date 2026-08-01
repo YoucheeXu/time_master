@@ -99,21 +99,24 @@ class RecordHourDlg(DialogCtrl):
         lbl_day = cast(LabelCtrl, self.get_control("lblSelDayRecordHour"))
         lbl_day.set_text(str(today))
 
-        # TODO: get now's nearby reminder
+        clock_time = None
         reminders = detail["reminders"]
-        reminder = next(iter(reminders.values()))
+        if reminders:
+            # TODO: get now's nearby reminder
+            reminder = next(iter(reminders.values()))
+            clock_time  = reminder['clk_time']
+            schedule_val = reminder["duration"]
+        else:
+            schedule_val = 15
+        if clock_time is None:
+            clock_time = datetime.datetime.now().time()
 
         lbl_strtime = cast(LabelCtrl, self.get_control("lblSelStrtRecordHour"))
-        clock_val = time2str(reminder['clk_time'])
-        if not clock_val:
-            now = datetime.datetime.now()
-            clock_val = f"{now.hour}:{now.minute:02d}"
+        clock_val = time2str(clock_time)
         lbl_strtime.set_text(clock_val)
 
         lbl_lastime = cast(LabelCtrl, self.get_control("lblSelLastRecordHour"))
-        schedule = reminder["duration"]
-        schedule_val = f"{schedule}m"
-        lbl_lastime.set_text(schedule_val)
+        lbl_lastime.set_text(f"{schedule_val}m")
 
     def _select_day(self, **kwargs: object):
         """ _summary_
