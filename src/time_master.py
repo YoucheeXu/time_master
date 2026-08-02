@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 import os
 import json
-# import datetime
 from threading import Thread
 import tkinter.filedialog as tkFileDialog
 from typing import override, cast
@@ -11,15 +10,13 @@ from pyutilities_simple.logit import pv, po, pe
 from pygui_simple.winbasic import Container
 from pygui_simple.tkwin import tkWin
 
-# from src.action_sys import ActTyp
 from src.schedule import Schedule
-# from src.time_database_type import TimeUnit, DayType
 from src.hour_tab import HourTab
 from src.todo_tab import TodoTab
 
 
 class TimeMasterApp(Container):
-    """_summary_uv 
+    """ _summary_
 
     Attributes:
         _gui (_type_): _description_
@@ -27,7 +24,7 @@ class TimeMasterApp(Container):
         _tabhour (_type_): _description_
     """
     def __init__(self, curpath: str, xmlfile: str):
-        """_summary_
+        """ _summary_
 
         Args:
             curpath (str): _description_
@@ -37,6 +34,7 @@ class TimeMasterApp(Container):
         self._app_path: str = curpath
 
         self._gui: tkWin = tkWin(self._app_path, xmlfile)
+        self._gui.filter_message(self.process_message)
 
         bell_path = os.path.join(self._app_path, "resources", "bell.mp3")
         wather_mp3 = os.path.join(self._app_path, "resources", "water-drop-close-sonorous.mp3")
@@ -46,7 +44,7 @@ class TimeMasterApp(Container):
         self._tab_todo: TodoTab = TodoTab(self._gui, self._schedule)
 
     def open_user(self, usr_path: str):
-        """_summary_
+        """ _summary_
 
         Args:
             usrpath (str): _description_
@@ -66,7 +64,7 @@ class TimeMasterApp(Container):
         self._schedule.event_to_agenda()
 
     def open(self, cfg_file: str):
-        """_summary_
+        """ _summary_
 
         Args:
             cfg_file (str): _description_
@@ -89,7 +87,6 @@ class TimeMasterApp(Container):
                     initialdir=os.path.join(self._app_path, "data")
                 )
                 if usrpath:
-                    pv(usrpath)
                     self.open_user(usrpath)
             case "OpenUser":
                 usrpath = tkFileDialog.askdirectory(
@@ -97,14 +94,13 @@ class TimeMasterApp(Container):
                     initialdir=os.path.join(self._app_path, "data")
                 )
                 if usrpath:
-                    pv(usrpath)
                     self.open_user(usrpath)
             case _:
-                return super().process_message(idmsg, **kwargs)
+                return None
         return True
 
     def run(self):
-        """_summary_
+        """ _summary_
         """
         # asyncio.run(self._schedule.exec_schedule())
         # self._gui.go()
