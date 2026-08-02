@@ -4,10 +4,9 @@ import os
 import json
 from threading import Thread
 import tkinter.filedialog as tkFileDialog
-from typing import override, cast
+from typing import cast
 
 from pyutilities_simple.logit import pv, po, pe
-from pygui_simple.winbasic import Container
 from pygui_simple.tkwin import tkWin
 
 from src.schedule import Schedule
@@ -15,7 +14,7 @@ from src.hour_tab import HourTab
 from src.todo_tab import TodoTab
 
 
-class TimeMasterApp(Container):
+class TimeMasterApp:
     """ _summary_
 
     Attributes:
@@ -78,7 +77,6 @@ class TimeMasterApp(Container):
                     self.open_user(user_path)
                     break
 
-    @override
     def process_message(self, idmsg: str, **kwargs: object):
         match idmsg:
             case "NewUser":
@@ -114,7 +112,6 @@ class TimeMasterApp(Container):
         # r2.join()
         self._gui.go()
 
-    @override
     def destroy(self, **kwargs: object):
         """ _summary_
         """
