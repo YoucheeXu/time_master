@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-import os
 import json
-from threading import Thread
+import os
 import tkinter.filedialog as tkFileDialog
+from threading import Thread
 from typing import cast
 
-from pyutilities_simple.logit import pv, po, pe
 from pygui_simple.tkwin import tkWin
+from pyutilities_simple.logit import pe, po, pv
 
-from src.schedule import Schedule
 from src.hour_tab import HourTab
+from src.schedule import Schedule
 from src.todo_tab import TodoTab
 
 

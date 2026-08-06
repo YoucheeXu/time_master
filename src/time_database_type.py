@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-import re
 import datetime
-from enum import IntEnum, auto
-from typing import NamedTuple, TypedDict
-from typing import TypeVar
-from dataclasses import dataclass, field
+import re
 import warnings
+from dataclasses import dataclass, field
+from enum import IntEnum, auto
+from typing import NamedTuple, TypedDict, TypeVar
 
-from pyutilities_simple.logit import pv, po, pe
+from pyutilities_simple.logit import pe, po, pv
 
 from src.action_sys import ActTyp
 

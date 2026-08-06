@@ -4,17 +4,16 @@
     set PYTHONPATH=..\time_master
     uv run .\\src\\schedule.py
 """
+import datetime
+import math
 import os
 import time
-import math
-import datetime
 from dataclasses import dataclass
-# from typing import Literal
 
-from pyutilities_simple.logit import pv, po
+from pyutilities_simple.logit import po, pv
 
-from src.action_sys import ActTyp, ActionSys
-from src.time_database_type import TimeUnit, DayType
+from src.action_sys import ActionSys, ActTyp
+from src.time_database_type import DayType, TimeUnit
 
 
 @dataclass

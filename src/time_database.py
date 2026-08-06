@@ -1,34 +1,45 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 # import abc
-import os
-from ast import literal_eval
 import copy
-import sqlite3
 import datetime
+import os
+import sqlite3
 import uuid
-from typing import Unpack, cast
+from ast import literal_eval
 from collections.abc import Generator
+from typing import Unpack, cast
 
-from pyutilities_simple.logit import pv, po, pe
+from pyutilities_simple.logit import pe, po, pv
 from pyutilities_simple.sqlite import SQLite
 
 from src.action_sys import ActTyp
-from src.time_database_type import generate_sqlite_fields
-from src.time_database_type import TimeUnit, DayType
-from src.time_database_type import StatusEnum
-from src.time_database_type import GeoSqlTuple, PlanSqlTuple
-from src.time_database_type import ReminderAttr
-from src.time_database_type import ReminderDataDict, ReminderDataOptionalDict
-from src.time_database_type import default_reminder_data
-from src.time_database_reminder import serialize_reminder_collection
-from src.time_database_reminder import deserialize_reminder_collection
-from src.time_database_type import PlanAttr
-from src.time_database_type import PlanDataDict, default_plan_data
-from src.time_database_type import PlanDataOptionalDict
-from src.time_database_type import IconTuple, LocTuple, Plan
-from src.time_database_type import RecordSqlTuple, RecordDataDict
-from src.time_database_type import RecordAttr, default_record_data
+from src.time_database_reminder import (
+    deserialize_reminder_collection,
+    serialize_reminder_collection,
+)
+from src.time_database_type import (
+    DayType,
+    GeoSqlTuple,
+    IconTuple,
+    LocTuple,
+    Plan,
+    PlanAttr,
+    PlanDataDict,
+    PlanDataOptionalDict,
+    PlanSqlTuple,
+    RecordAttr,
+    RecordDataDict,
+    RecordSqlTuple,
+    ReminderAttr,
+    ReminderDataDict,
+    ReminderDataOptionalDict,
+    StatusEnum,
+    default_plan_data,
+    default_record_data,
+    default_reminder_data,
+    generate_sqlite_fields,
+)
 
 
 class TimeDatabase:

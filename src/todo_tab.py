@@ -1,36 +1,47 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 from __future__ import annotations
-from copy import deepcopy
-import datetime
-import uuid
-import abc
-from functools import partial
-import xml.etree.ElementTree as et
-# from functools import partial
-from typing import Literal
-from typing import TypeAlias, TypedDict, Callable, cast, override
-import tkinter as tk
-from tkinter import ttk, messagebox
 
-from pyutilities_simple.logit import po, pv, pe
-from pygui_simple.winbasic import Widget, Container, Dialog, WinBasic
-from pygui_simple.tkcontrol import tkControl
-from pygui_simple.tkwin import T, LabelCtrl, EntryCtrl, ButtonCtrl, ComboboxCtrl, ImageBtttonCtrl
-from pygui_simple.tkwin import FrameCtrl
-from pygui_simple.tkwin import DialogCtrl, tkWin
+import abc
+import datetime
+import tkinter as tk
+import uuid
+import xml.etree.ElementTree as et
+from collections.abc import Callable
+from copy import deepcopy
+from functools import partial
+from tkinter import messagebox, ttk
+from typing import Literal, TypedDict, cast, override
+
 from pygui_simple.tkcalendar import CalendarCtrl
+from pygui_simple.tkcontrol import tkControl
 from pygui_simple.tkscrollpicker import ScrollPickerCtrl, TimeScrollPickerCtrl
 from pygui_simple.tkslideswitch import SlideSwitchCtrl
+from pygui_simple.tkwin import (
+    DialogCtrl,
+    EntryCtrl,
+    FrameCtrl,
+    LabelCtrl,
+    tkWin,
+)
+from pygui_simple.winbasic import Container, WinBasic
+from pyutilities_simple.logit import pe, po, pv
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule
-from src.time_database_type import StatusEnum, str2reminder
-from src.time_database_type import TimeUnit, DayType, str_to_intenum
-from src.time_database_type import reminder2str, time2str, str2time, date2str
-from src.time_database_type import PlanDataDict, default_plan_data
-from src.time_database_type import ReminderDataDict, default_reminder_data
 from src.time_database import TimeDatabase
+from src.time_database_type import (
+    DayType,
+    PlanDataDict,
+    ReminderDataDict,
+    StatusEnum,
+    TimeUnit,
+    date2str,
+    default_plan_data,
+    reminder2str,
+    str2time,
+    time2str,
+)
 
 # --------------------------
 # Type Definitions & Config
@@ -865,8 +876,7 @@ class TodoItem:
                 return
 
             new_x: float = current_x + (step + 1) * step_x
-            if new_x > 0:
-                new_x = 0
+            new_x = min(new_x, 0)
 
             self._content_frame.place(x=new_x, y=0, width=400)
 

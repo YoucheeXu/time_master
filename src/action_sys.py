@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+import abc
 import os
 import sys
 import time
 from enum import IntEnum, auto
-import abc
 from typing import override
 
 import mp3play
