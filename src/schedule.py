@@ -6,7 +6,6 @@
 """
 import datetime
 import math
-import os
 import time
 from dataclasses import dataclass
 
@@ -268,7 +267,7 @@ class Schedule:
         now = datetime.datetime.now()
         today = datetime.date.today()
 
-        for _, event in self._event_dict.items():
+        for event in self._event_dict.values():
             if event.unit != TimeUnit.HOUR:
                 if self._event_on_date(event, today) and (event.clock > now.time()):
                     self._today_agenda_list.append(Agenda(event.name, event.clock, event.action))
@@ -388,8 +387,8 @@ class Schedule:
             event = agenda.name
             if clock != agenda.clock:
                 clock = agenda.clock
-                po((f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}"
-                    f" to do {event}"))
+                po(f"Next Clock: {clock.hour:0=2d}:{clock.minute:0=2d}:{clock.second:0=2d}" +
+                    f" to do {event}")
 
             time.sleep(self._tolerance_sec)
             now = datetime.datetime.now().time()
@@ -431,13 +430,14 @@ def main(alarm_mp3: str, dripping_water_mp3: str):
     schedule.add_agenda("Sleep", datetime.time(23, 00), ActTyp.LOCK_SCREEN)
     date = datetime.date.today()
     agenda_dict = schedule.agendas_on_date(date)
-    for _, agenda_list in agenda_dict.items():
+    for agenda_list in agenda_dict.values():
         agenda_list = schedule.sort_agenda(agenda_list)
         pv(agenda_list)
     schedule.exec()
 
 
 if __name__ == "__main__":
+    import os
     file_path = os.path.dirname(os.path.abspath(__file__))
     proj_path = os.path.abspath(os.path.join(file_path, "..", "public"))
     alarm_mp3 = os.path.join(proj_path, "resources", "bell.mp3")

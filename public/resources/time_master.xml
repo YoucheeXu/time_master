@@ -53,8 +53,9 @@
 	</Notebook>
 	<Dialog id="dlgSelClock" text="选择定时提醒" Width="400" Height="120">
 		<Combobox id="cmbSelDay" default="0" options="{'values':['Everyday','Workday','Holiday'],'state':'readonly','width':16}" layout="pack" pack="{'side':'left'}"/>
-		<Combobox id="cmbSelHour" default="0" options="{'values':['0点','1点','2点','3点','4点','5点','6点','7点','8点','9点','10点','11点','12点','13点','14点','15点','16点','17点','18点','19点','20点','21点','22点','23点'],'state':'readonly','width':17}" layout="pack" pack="{'side':'left'}"/>
-		<Combobox id="cmbSelMinute" text="SelMinute" default="0" options="{'values':['0分','5分','10分','15分','20分','25分','30分','35分','40分','45分','50分','55分'],'state':'readonly','width':17}" layout="pack" pack="{'side':'right'}"/>
+		<Combobox id="cmbSelHour" default="0" options="{'values':['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23'],'state':'readonly','width':17}" layout="pack" pack="{'side':'left'}"/>
+		<Label id="sep" text=":" layout="pack" pack="{'side':'left'}"/>
+		<Combobox id="cmbSelMinute" text="SelMinute" default="0" options="{'values':['0','5','10','15','20','25','30','35','40','45','50','55'],'state':'readonly','width':17}" layout="pack" pack="{'side':'right'}"/>
 	</Dialog>
 	<Dialog id="dlgSelSchedule" text="时间投入计划" Width="400" Height="120">
 		<Combobox id="cmbSelUnit" default="0" options="{'values':['Every day','Every week'],'state':'readonly','width':20}" layout="pack" pack="{'side':'left'}"/>

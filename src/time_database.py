@@ -249,7 +249,7 @@ class TimeDatabase:
             raise KeyError(f"no {despid} in self._plan_dict")
 
     def construct_plan_dict(self):
-        for _, plan in self._plan_dict.items():
+        for plan in self._plan_dict.values():
             plan.children.clear()
         self._plan_dict.clear()
         for pid, plandata in self._plandata_dict.items():
@@ -266,7 +266,7 @@ class TimeDatabase:
         """ _summary_
         """
         for pid, name, note, tags, iid, fid, reminders, action, status, \
-            location, sums in cast(Generator[PlanSqlTuple, None, None],
+            location, sums in cast(Generator[PlanSqlTuple],
                 self._database.each("SELECT * FROM PLANS")):
             fid = fid
             pid = pid
@@ -498,9 +498,9 @@ class TimeDatabase:
         pv(params)
         _ = self._database.execute1(sql, params)
 
-        po((f"Update {attrib_list} of #{pid} plan '{plandata["name"]}' "
+        po(f"Update {attrib_list} of #{pid} plan '{plandata["name"]}' " +
             f"from {oldval_list} to {newval_sql_list}"
-        ))
+        )
 
         return True
 
@@ -546,8 +546,8 @@ class TimeDatabase:
         sql = f"UPDATE PLANS SET {attr_sql} = ? WHERE pid = ?"
         _ = self._database.execute1(sql, (newval_sql, pid))
 
-        po((f"update '{attr_sql}' of #{pid} plan "
-            f"add #{eid} reminder"))
+        po(f"update '{attr_sql}' of #{pid} plan " +
+            f"add #{eid} reminder")
 
         return eid
 
@@ -579,8 +579,7 @@ class TimeDatabase:
         reminders = plandata["reminders"]
         reminder = reminders[eid]
 
-        po((f"Begin to update '{eid}' reminders of #{pid} plan '{plandata["name"]}':")
-            )
+        po(f"Begin to update '{eid}' reminders of #{pid} plan '{plandata["name"]}':")
         for key in ReminderAttr:
             if key in kwargs:
                 po(f"{key} from '{reminder[key]}' to '{kwargs[key]}'")
@@ -703,8 +702,8 @@ class TimeDatabase:
         # Convert dates to ISO format (YYYY-MM-DD) for SQL query
         start_date_iso = start_date.isoformat()
         end_date_iso = end_date.isoformat()
-        print((f"Query date range: {start_date_iso} to {end_date_iso}, "
-            f"pid filter: {pid if pid != -1 else 'all'}"))
+        print(f"Query date range: {start_date_iso} to {end_date_iso}, " +
+            f"pid filter: {pid if pid != -1 else 'all'}")
 
         # Step 1: Dynamically build SQL query and parameters based on pid
         query_parts = [
@@ -722,11 +721,11 @@ class TimeDatabase:
         query_sql = "\n    ".join(query_parts)
 
         # Step 2: Iterate over query results and build record dictionary
-        for rid, pid, name, bgn_dtime, duration in \
-                cast(Generator[RecordSqlTuple, None, None],
+        for rid, pid_, name, bgn_dtime, duration in \
+                cast(Generator[RecordSqlTuple],
                 self._database.each(query_sql, tuple(query_params))):
             record: RecordDataDict = {
-                "pid": pid,
+                "pid": pid_,
                 "name": name,
                 "bgn_dtime": self._timestamp2datetime(bgn_dtime),
                 "duration": duration
@@ -757,8 +756,8 @@ class TimeDatabase:
         query_sql = "\n    ".join(query_parts)
 
         # Step 2: Iterate over query results and build record dictionary
-        for rid, pid, name, bgn_dtime, duration in \
-                cast(Generator[RecordSqlTuple, None, None],
+        for rid, _, name, bgn_dtime, duration in \
+                cast(Generator[RecordSqlTuple],
                 self._database.each(query_sql, tuple(query_params))):
             record: RecordDataDict = {
                 "pid": pid,
