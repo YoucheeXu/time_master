@@ -1,13 +1,13 @@
 import random
-from ctypes import _NamedFuncPointer, create_unicode_buffer, windll
+from ctypes import create_unicode_buffer, windll
 
 
 class _mci:
 	def __init__(self):
 		# self.w32mci = windll.winmm.mciSendStringA
-		self._w32mci: _NamedFuncPointer = windll.winmm.mciSendStringW
+		self._w32mci = windll.winmm.mciSendStringW
 		# self.w32mcierror = windll.winmm.mciGetErrorStringA
-		self._w32mcierror: _NamedFuncPointer = windll.winmm.mciGetErrorStringW
+		self._w32mcierror = windll.winmm.mciGetErrorStringW
 
 	def send(self, command: str):
 		# buffer = c_buffer(255)

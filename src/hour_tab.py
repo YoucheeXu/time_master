@@ -48,6 +48,7 @@ from src.time_database_type import (
     default_plan_data,
     default_reminder_data,
     reminder2str,
+    schedulestr2reminder,
     str2reminder,
     time2str,
 )
@@ -521,18 +522,19 @@ class EditHourDlg(DialogCtrl):
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     lbl_selschedule = cast(LabelCtrl, self.get_control("lblSelScheduleEditHour"))
                     old_schedulestr = lbl_selschedule.get_text()
-                    schedulestr = old_schedulestr
+                    schedule_str = old_schedulestr
                     if old_schedulestr == "选择时间投入计划":
-                        schedulestr = "Workday 15m"
-                    kwargs.update({"schedulestr": schedulestr})
-                    schedule_str = cast(str, owner.process_message("showSelScheduleDlg", owner=self,
+                        schedule_str = "Workday 15m"
+                    kwargs.update({"schedulestr": schedule_str})
+                    schedule_str = cast(str, owner.process_message("ShowSelScheduleDlg", owner=self,
                         pos=(x+20,y+20), options=kwargs))
                     pv(schedule_str)
                     pv(old_schedulestr)
                     if schedule_str != old_schedulestr:
                         lbl_selschedule.set_text(schedule_str)
                         if schedule_str:
-                            reminder = str2reminder("", schedule_str)
+                            # reminder = str2reminder("", schedule_str)
+                            reminder = schedulestr2reminder(schedule_str)
                             pv(reminder)
                             self._schedule["data"] = reminder
                             if old_schedulestr == "选择时间投入计划":
@@ -1622,16 +1624,33 @@ class HourTab(Container):
 
     def _selscheduledlg_beforego(self, **kwargs: object):
         po(f"_selscheduledlg_beforego: {kwargs}")
-        schedulestr = cast(str, kwargs['schedulestr'])
-        self._old_schedulestr = schedulestr
+        schedule_str = cast(str, kwargs['schedulestr'])
+        self._old_schedulestr = schedule_str
 
         cmb_selunit = cast(ComboboxCtrl, self._selschedule_dlg.get_control("cmbSelUnit"))
         cmb_selval = cast(ComboboxCtrl, self._selschedule_dlg.get_control("cmbSelVal"))
 
-        schedule_list = schedulestr.split()
-        if len(schedule_list) == 3:
-            cmb_selunit.set_val(schedule_list[0] + " " + schedule_list[1])
-            cmb_selval.set_val(schedule_list[2])
+        schedule = schedulestr2reminder(schedule_str)
+        pv(schedule)
+
+        unit = schedule["unit"]
+        if unit == TimeUnit.DAY:
+            unit_str = "Everyday"
+        elif unit == TimeUnit.WEEK:
+            unit_str =  "Everyweek"
+        else:
+            raise ValueError(f"don't supoort schedule: {unit!s}")
+        pv(unit_str)
+        cmb_selunit.set_val(unit_str)
+
+        val = schedule["duration"]
+        h, m = divmod(int(val), 60)
+        pv(h, m)
+        h_str = f"{h}h" if h else ""
+        m_str = f"{m}m" if m else ""
+        val_str = f"{h_str}{m_str}"
+        pv(val_str)
+        cmb_selval.set_val(val_str)
 
     def _selscheduledlg_cancel(self, **_: object):
         self._schedulestr = self._old_schedulestr
@@ -1744,7 +1763,7 @@ class HourTab(Container):
                     x, y = cast(tuple[int, int], kwargs["pos"])
                     options = cast(dict[str, object], kwargs["options"])
                     return self.show_selclockdlg(owner, x, y, **options)
-                case "showSelScheduleDlg": # come from `EditHourDlg` or <-`HourDetailDlg`<-`EditHourDlg`
+                case "ShowSelScheduleDlg": # come from `EditHourDlg` or <-`HourDetailDlg`<-`EditHourDlg`
                     owner = cast(Dialog, kwargs["owner"])
                     x, y = cast(tuple[int, int], kwargs["pos"])
                     options = cast(dict[str, object], kwargs["options"])
