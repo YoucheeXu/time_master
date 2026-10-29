@@ -37,32 +37,18 @@ class Action(abc.ABC):
 
     @abc.abstractmethod
     def speech_text(self, text: str):
-        """_summary_
-
-        Args:
-            text (str): _description_
-        """
         pass
 
     @abc.abstractmethod
     def play_mp3(self, mp3file: str):
-        """_summary_
-
-        Args:
-            mp3file (str): _description_
-        """
         pass
 
     @abc.abstractmethod
     def lock_screen(self):
-        """_summary_
-        """
         pass
 
     @abc.abstractmethod
     def shutdown(self):
-        """_summary_
-        """
         pass
 
 

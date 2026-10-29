@@ -7,7 +7,6 @@ from threading import Thread
 from typing import cast
 
 from pygui_simple.tkwin import tkWin
-from pyutilities_simple.logit import pe, po, pv
 
 from src.hour_tab import HourTab
 from src.schedule import Schedule

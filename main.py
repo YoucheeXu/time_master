@@ -3,8 +3,6 @@
 import os
 import sys
 
-from pyutilities_simple.logit import pe, po, pv
-
 from src.time_master import TimeMasterApp
 
 

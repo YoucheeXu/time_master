@@ -34,7 +34,7 @@ from pygui_simple.tkwin import (
     tkWin,
 )
 from pygui_simple.winbasic import Container, Dialog, Widget
-from pyutilities_simple.logit import pe, po, pv
+from pyutilities_simple.logit import po, pv
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule
@@ -871,18 +871,18 @@ class HourDetailDlg(DialogCtrl):
                 right_text_x, bar_center_y, text=f"{ratio:.0%}", anchor="w", font=("Microsoft YaHei", 9)
             )
 
-    def _get_hours_last7days(self, hid: int):
+    def _get_hours_7days_ago(self, hid: int):
         assert self._db is not None
-        today = datetime.datetime.today()
-        last7day = today + datetime.timedelta(days=-7)
-        records = self._db.get_records(last7day, hid, today)
+        today = datetime.datetime.now().date()
+        seven_days_ago = today + datetime.timedelta(days=-7)
+        records = self._db.get_records(seven_days_ago, hid, today)
         total_minutes = 0
         for record in records.values():
             total_minutes += record["duration"]
         return total_minutes / 60.0
 
     # TODO:
-    def _get_hours_milestone(self, hid: int):
+    def _get_hours_milestone(self, _: int):
         return "∞"
 
     @override
@@ -911,7 +911,7 @@ class HourDetailDlg(DialogCtrl):
         # TODO: children?
         firstday = datetime.datetime.fromisoformat("2025-01-01T16:34:00")
         end_date = firstday.date()
-        today = datetime.datetime.today().date()
+        today = datetime.datetime.now().date()
         total_days = 0
         strt_date = today
         records = self._db.get_records(firstday, self._hid, today)
@@ -930,10 +930,10 @@ class HourDetailDlg(DialogCtrl):
         total_weeks = math.ceil(((end_date - strt_date).days + 1)/7)
         hours_everyweek = self._detail["sums"] / total_weeks /60
         self._update_hourdetailctrl("HoursEveryWeek", f"{hours_everyweek:.1f}")
-        hours_last7days = self._get_hours_last7days(self._hid)
-        self._update_hourdetailctrl("HoursLast7Days", f"{hours_last7days:.1f}")
-        hours_2milestone = self._get_hours_milestone(self._hid)
-        self._update_hourdetailctrl("RestHours2Milestone", hours_2milestone)
+        hours_7days_ago = self._get_hours_7days_ago(self._hid)
+        self._update_hourdetailctrl("HoursLast7Days", f"{hours_7days_ago:.1f}")
+        hours2milestone = self._get_hours_milestone(self._hid)
+        self._update_hourdetailctrl("RestHours2Milestone", hours2milestone)
 
         clk_str = ""
         schedule_str = ""

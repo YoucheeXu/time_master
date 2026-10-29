@@ -46,7 +46,7 @@ class Schedule:
     Attributes:
         _alarm_mp3 (str): _description_
         _tolerance_sec (int): _description_, default to 30
-        _today (datetime.datetime): _description_
+        _today (datetime.date): _description_
         _event_dict (dict[str, str]): _description_
         _agenda_list (list[Agenda]): _description_
         _actionsys (ActionSys): _description_
@@ -61,7 +61,7 @@ class Schedule:
         self._alarm_mp3: str = alarm_mp3
         self._dripping_water_mp3: str = dripping_water_mp3
         self._tolerance_sec: int = 30
-        self._today: datetime.datetime = datetime.datetime.today()
+        self._today: datetime.date = datetime.datetime.now().date()
         self._event_dict: dict[int, Event] = {}
         self._event_dirty: bool = False
         self._today_agenda_list: list[Agenda] = []
@@ -74,15 +74,15 @@ class Schedule:
         return self._event_dict
 
     # TODO: wait to finish
-    def _is_workday(self, dt: datetime.date):
+    def _is_workday(self, _: datetime.date):
         return True
 
     # TODO: wait to finish
-    def _is_weekend(self, dt: datetime.date):
+    def _is_weekend(self, _: datetime.date):
         return True
 
     # TODO: wait to finish
-    def _is_holiday(self, dt: datetime.date):
+    def _is_holiday(self, _: datetime.date):
         return False
 
     # def _judge_day(self, dt: datetime.date):
@@ -357,7 +357,7 @@ class Schedule:
             _type_: _description_
         """
         now = datetime.datetime.now()
-        if self._today.date() != now.date():     # next day
+        if self._today != now.date():     # next day
             self.event_to_agenda()
             _ = self._today.replace(
                 year=now.year,
