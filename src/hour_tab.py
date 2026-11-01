@@ -498,7 +498,8 @@ class EditHourDlg(DialogCtrl):
                     lbl_clk['text'] = clkstr
                     reminder = clockstr2reminder(clkstr)
                     self._reminders[cid]["data"] = reminder
-                    self._reminders[cid]["status"] = ReminderStatusEnum.MODIFY
+                    if self._reminders[cid]["status"] != ReminderStatusEnum.NEW:
+                        self._reminders[cid]["status"] = ReminderStatusEnum.MODIFY
                 return True
             match idmsg:
                 case "lblAddClockEditHour":
