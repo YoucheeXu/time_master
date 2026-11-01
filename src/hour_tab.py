@@ -45,11 +45,11 @@ from src.time_database_type import (
     PlanDataDict,
     ReminderDataDict,
     TimeUnit,
+    clockstr2reminder,
     default_plan_data,
     default_reminder_data,
     reminder2str,
     schedulestr2reminder,
-    str2reminder,
     time2str,
 )
 
@@ -281,7 +281,7 @@ class EditHourDlg(DialogCtrl):
         )
 
         if eid:
-            data = str2reminder(clkstr, "")
+            data = clockstr2reminder(clkstr)
             reminder: Reminder = {
                 "eid": eid,
                 "data": data,
@@ -496,9 +496,9 @@ class EditHourDlg(DialogCtrl):
                     pos=(x+20,y+20), options=kwargs))
                 if clkstr != oldclkstr:
                     lbl_clk['text'] = clkstr
-                    reminder1 = str2reminder(clkstr, "")
-                    reminder2 = self._reminders[cid]
-                    reminder2["data"]["clk_time"] = reminder1["clk_time"]
+                    reminder = clockstr2reminder(clkstr)
+                    self._reminders[cid]["data"] = reminder
+                    self._reminders[cid]["status"] = ReminderStatusEnum.MODIFY
                 return True
             match idmsg:
                 case "lblAddClockEditHour":
@@ -533,7 +533,6 @@ class EditHourDlg(DialogCtrl):
                     if schedule_str != old_schedulestr:
                         lbl_selschedule.set_text(schedule_str)
                         if schedule_str:
-                            # reminder = str2reminder("", schedule_str)
                             reminder = schedulestr2reminder(schedule_str)
                             pv(reminder)
                             self._schedule["data"] = reminder
@@ -1748,7 +1747,7 @@ class HourTab(Container):
             oldclkstr = lbl_clock.get_text()
             kwargs.update({"clkstr": oldclkstr})
             clkstr = self.show_selclockdlg(self, x+20, y+20, id=hid, eid=eid, **kwargs)
-            reminder = str2reminder(clkstr, "")
+            reminder = clockstr2reminder(clkstr)
             clk_time = reminder["clk_time"]
             assert clk_time is not None
             if clkstr != oldclkstr:
