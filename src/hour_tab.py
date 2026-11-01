@@ -1124,12 +1124,6 @@ class HourDetailDlg(DialogCtrl):
                     imagebutton.change_image(imagepath)
                     _ = owner.process_message("changeItemImage",
                         id=hid, group=grp, index=idx)
-                case "changeClock": # come from `EditHourDlg`
-                    clk_str = cast(str, kwargs["clk_str"])
-                    lbl_selclock = cast(LabelCtrl,
-                        self.get_control("lblSelClockItemDetail"))
-                    lbl_selclock['text'] = clk_str
-                    _ = owner.process_message("changeClock", **kwargs)
                 case "ModifySchedule":  # come from `EditHourDlg`
                     reminder = cast(ReminderDataDict, kwargs["reminder"])
                     _, schedule_str = reminder2str(reminder) 
@@ -1149,21 +1143,6 @@ class HourDetailDlg(DialogCtrl):
                         self.get_control("lblSelScheduleItemDetail"))
                     lbl_selschedule.set_text("")
                     _ = owner.process_message("DelSchedule", **kwargs)
-                case "NewClock": # come from `EditHourDlg`
-                    reminder = cast(ReminderDataDict, kwargs["reminder"])
-                    clk_str, schedule_str = reminder2str(reminder)
-                    lbl_selclock = cast(LabelCtrl,
-                        self.get_control("lblSelClockItemDetail"))
-                    lbl_selclock['text'] = clk_str
-                    lbl_selschedule = cast(LabelCtrl,
-                        self.get_control("lblSelScheduleItemDetail"))
-                    lbl_selschedule['text'] = schedule_str
-                    _ = owner.process_message("NewClock", **kwargs)
-                case "DelClock": # come from `EditHourDlg`
-                    lbl_selclock = cast(LabelCtrl,
-                        self.get_control("lblSelClockItemDetail"))
-                    lbl_selclock['text'] = ""
-                    _ = owner.process_message("DelClock", **kwargs)
                 case "deleteItem":  # come from `EditHourDlg`
                     _ = owner.process_message("deleteItem", id=hid)
                     self.destroy()
@@ -1787,13 +1766,13 @@ class HourTab(Container):
                     self.update_hourctrl_attrib(hid, "image", imagepath)
                     icon = IconTuple(grp, idx)
                     _ = self._hoursdb.modify_plan(hid, iid=icon)
-                case "changeClock": # come from <-`HourDetailDlg`<-`EditHourDlg`
+                case "changeClock": # come from `EditHourDlg`
                     hid = cast(int, kwargs["id"])
                     eid = cast(int, kwargs["eid"])
                     clk_time = cast(datetime.time, kwargs["clk_time"])
                     custom = cast(DayType, kwargs["custom"])
                     self.modify_clock(hid, eid, clk_time, custom)
-                case "NewClock": # come from `HourDetailDlg`<-`EditHourDlg`
+                case "NewClock": # come from `EditHourDlg`
                     hid = cast(int, kwargs["hid"])
                     name = cast(str, kwargs["name"])
                     reminder = cast(ReminderDataDict, kwargs["reminder"])
@@ -1804,7 +1783,7 @@ class HourTab(Container):
                             reminder['cycbgn_dtime'], reminder['cycend_dtime']
                         )
                         self.add_clock_ctrl(hid, eid, reminder)
-                case "DelClock": # come from `HourDetailDlg`<-`EditHourDlg`
+                case "DelClock": # come from `EditHourDlg`
                     hid = cast(int, kwargs["hid"])
                     eid = cast(int, kwargs["eid"])
                     reminder = cast(ReminderDataDict, kwargs["reminder"])
