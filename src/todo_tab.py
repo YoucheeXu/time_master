@@ -78,7 +78,7 @@ SWIPE_CONFIG: dict[str, int] = {
     "animation_duration": 100,    # Rebound animation duration (milliseconds)
     "show_btn_threshold": -20,    # Threshold to show delete button (pixels)
     "drag_threshold": 10,         # Minimum distance to trigger drag sorting (pixels)
-    "placeholder_height": 80      # Todo item height (pixels)
+    "placeholder_height": 80      # Tudu item height (pixels)
 }
 
 REPEAT_OPTIONS: list[str] = [
@@ -409,14 +409,14 @@ class EditTodoDialog(DialogCtrl):
         self._todo = cast(Todo, kwargs["todo"])
         self._todo_old = deepcopy(self._todo)
 
-        tododata = self._todo["data"]
+        tududata = self._todo["data"]
         entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
-        entry_name.set_val(tododata["name"])
+        entry_name.set_val(tududata["name"])
         entry_note = cast(EntryCtrl, self._app.get_control("txtNoteEditTodo"))
-        entry_note.set_val(tododata["note"])
+        entry_note.set_val(tududata["note"])
 
-        if tododata["reminder_id"] > 0:
-            reminder_info = tododata["reminder_infos"][self._todo["reminder_idx"]]
+        if tududata["reminder_id"] > 0:
+            reminder_info = tududata["reminder_infos"][self._todo["reminder_idx"]]
 
             reminder_date = self._todo["day"]
             lbl_date = cast(LabelCtrl, self.get_control("lblSelDateEditTodo"))
@@ -444,11 +444,11 @@ class EditTodoDialog(DialogCtrl):
         assert self._todo is not None
         assert self._todo_old is not None
 
-        tododata = self._todo["data"]
+        tududata = self._todo["data"]
         entry_name = cast(EntryCtrl, self._app.get_control("txtNameEditTodo"))
-        tododata["name"] = entry_name.get_val()
+        tududata["name"] = entry_name.get_val()
         entry_note = cast(EntryCtrl, self._app.get_control("txtNoteEditTodo"))
-        tododata["note"] = entry_note.get_val()
+        tududata["note"] = entry_note.get_val()
 
         # date: datetime.date | None = None
         # lbl_date = cast(LabelCtrl, self.get_control("lblSelDateEditTodo"))
@@ -481,8 +481,8 @@ class EditTodoDialog(DialogCtrl):
         # TODO: compare self._todo_dict with self._todo_old
 
 
-        if tododata["reminder"]["every"] !=0 and tododata["reminder_id"] == 0:
-            tododata["reminder_id"] = uuid.uuid4().int
+        if tududata["reminder"]["every"] !=0 and tududata["reminder_id"] == 0:
+            tududata["reminder_id"] = uuid.uuid4().int
 
         assert self._owner is not None
         _ = self._owner.process_message("ModifyTodo", todo=self._todo)
@@ -567,10 +567,6 @@ class EditTodoDialog(DialogCtrl):
             return True
         return super().process_message(idmsg, **kwargs)
 
-
-# --------------------------
-# Custom Round Checkbutton
-# --------------------------
 class RoundCheckbutton:
     def __init__(self, parent: tk.Frame, callback: Callable[[], None] | None = None, is_checked: bool = False) -> None:
         self._parent: tk.Frame = parent
@@ -594,7 +590,7 @@ class RoundCheckbutton:
         else:
             _ = self._canvas.create_oval(2, 2, 18, 18, fill="", outline=COLORS["secondary_text"], width=1)
 
-    def on_click(self, event: tk.Event) -> str:
+    def on_click(self, _: tk.Event) -> str:
         self.checked = not self.checked
         self.draw_checkbox()
         if self._callback:
@@ -605,9 +601,6 @@ class RoundCheckbutton:
         self.checked = checked
         self.draw_checkbox()
 
-# --------------------------
-# TodoItem Class
-# --------------------------
 class TodoItem:
     def __init__(
         self, parent: tk.Frame, todo: Todo, owner: Container,
@@ -964,11 +957,11 @@ class TodoItem:
         self._update_text_display()
 
     def _is_reminder_expired(self, todo: Todo) -> bool:
-        tododata = todo["data"]
-        if tododata["reminder_id"] <= 0:
+        tududata = todo["data"]
+        if tududata["reminder_id"] <= 0:
             return False
 
-        reminder_info = tododata["reminder_infos"][todo["reminder_idx"]]
+        reminder_info = tududata["reminder_infos"][todo["reminder_idx"]]
         reminder_time = reminder_info["clock_time"]
         reminder_dtime = datetime.datetime.combine(todo["day"], reminder_time)
 
@@ -988,7 +981,7 @@ class TodoItem:
         text_frame: tk.Frame = tk.Frame(self._text_container, bg=COLORS["background"])
         text_frame.pack(side="left", fill="both", expand=True, padx=5, pady=2)
 
-        # Todo title
+        # title
         name_label: tk.Label = tk.Label(
             text_frame, text=self._todo["data"]["name"],
             font=(FONT_CONFIG["body"][0], FONT_CONFIG["body"][1], "bold", strike),
@@ -1037,8 +1030,8 @@ class TodoItem:
         #     self.cancel_edit()
 
         reminder_idx = self._todo["reminder_idx"]
-        tododata = self._todo["data"]
-        tododata["reminder_infos"][reminder_idx]["completed"] = True
+        tududata = self._todo["data"]
+        tududata["reminder_infos"][reminder_idx]["completed"] = True
 
         self._update_text_display(self._reminder_str, self._expired, True)
 
@@ -1270,13 +1263,13 @@ class TodayTodoPage(BaseTodoPage):
                         group_key = self.get_todo_time_group(reminder_info["clock_time"])
                         break
             reminder_idx = self._find_next_reminder(tododata)
-            todo: Todo = {
+            tudu: Todo = {
                 "tid": tid,
                 "data": tododata,
                 "day": today,
                 "reminder_idx": reminder_idx
             }
-            grouped_todos[group_key].append(todo)
+            grouped_todos[group_key].append(tudu)
 
         return grouped_todos
 
@@ -1396,18 +1389,18 @@ class TodayTodoPage(BaseTodoPage):
 
         # Render groups
         for group_key in group_order:
-            todos_in_group = grouped_todos[group_key]
-            if not todos_in_group:
+            tudus_in_group = grouped_todos[group_key]
+            if not tudus_in_group:
                 continue
 
             # Group title
             _ = self.create_group_title(group_key)
 
             # Todo items
-            for idx, todo in enumerate(todos_in_group):
-                show_divider = (idx < len(todos_in_group) - 1)
-                todo_item = TodoItem(self._todo_container, todo, self, show_divider)
-                self._todo_items.append(todo_item)
+            for idx, todo in enumerate(tudus_in_group):
+                show_divider = (idx < len(tudus_in_group) - 1)
+                tudu_item = TodoItem(self._todo_container, todo, self, show_divider)
+                self._todo_items.append(tudu_item)
 
         # Update scroll region
         self._todo_container.update_idletasks()
@@ -1483,8 +1476,8 @@ class TodayTodoPage(BaseTodoPage):
     # TODO:
     def tick(self) -> None:
         # Update todo in list
-        for todo_item in self._todo_items:
-            todo_item.tick()
+        for tudu_item in self._todo_items:
+            tudu_item.tick()
 
     def cancel_edit(self) -> None:
         self._editing_todo_id = None
@@ -1539,37 +1532,40 @@ class TodayTodoPage(BaseTodoPage):
         if self._drag_placeholder:
             self._drag_placeholder.destroy()
 
-        todo_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
-        ref_index: int = todo_items.index(reference_item) if reference_item in todo_items else 0
+        # tudu_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        tudu_items = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        ref_index: int = tudu_items.index(reference_item) if reference_item in tudu_items else 0
 
         self._drag_placeholder = tk.Frame(
             self._todo_container, bg=COLORS["drag_placeholder"],
             height=SWIPE_CONFIG["placeholder_height"], width=400
         )
-        if ref_index < len(todo_items):
-            self._drag_placeholder.pack(fill="x", pady=0, before=todo_items[ref_index])
+        if ref_index < len(tudu_items):
+            self._drag_placeholder.pack(fill="x", pady=0, before=tudu_items[ref_index])
 
     def _move_drag_placeholder(self, target_index: int) -> None:
         if not self._drag_placeholder:
             return
 
-        todo_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
-        if 0 <= target_index < len(todo_items):
+        # tudu_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        tudu_items = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        if 0 <= target_index < len(tudu_items):
             self._drag_placeholder.pack_forget()
-            self._drag_placeholder.pack(fill="x", pady=0, before=todo_items[target_index])
+            self._drag_placeholder.pack(fill="x", pady=0, before=tudu_items[target_index])
 
     def _handle_drag_sort(self, dy: int) -> None:
         self._current_offset_y = dy
         self._wrapper.place(y=self._wrapper.winfo_y() + dy)
 
         # Find nearest todo item
-        todo_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        # todo_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        tudu_items = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
         current_y: int = self._wrapper.winfo_y() + SWIPE_CONFIG["placeholder_height"] // 2
 
         nearest_index: int = -1
         min_distance: float = float("inf")
 
-        for idx, item in enumerate(todo_items):
+        for idx, item in enumerate(tudu_items):
             if item == self._wrapper:
                 continue
             item_y: int = item.winfo_y() + SWIPE_CONFIG["placeholder_height"] // 2
@@ -1589,8 +1585,9 @@ class TodayTodoPage(BaseTodoPage):
             return
 
         # Get current order of todo items
-        todo_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
-        placeholder_index: int = todo_items.index(self._drag_placeholder) if self._drag_placeholder in todo_items else -1
+        # tudu_items: list[tk.Frame] = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        tudu_items = [w for w in self._todo_container.winfo_children() if hasattr(w, "todo_id")]
+        placeholder_index: int = tudu_items.index(self._drag_placeholder) if self._drag_placeholder in tudu_items else -1
 
         if placeholder_index == -1:
             return
@@ -1744,7 +1741,7 @@ class TodoTab(Container):
                         reminderdata["unit"], reminderdata["custom"],
                         reminderdata["cycbgn_dtime"], reminderdata["cycend_dtime"],
                         ActTyp.DRIPPING_WATER)
-                todo: TodoData = {
+                tudu: TodoData = {
                     "name": plandata["name"],
                     "note": plandata["note"],
                     "tags": plandata["tags"],
@@ -1754,12 +1751,12 @@ class TodoTab(Container):
                     "reminder": reminderdata,
                     "reminder_infos": []
                 }
-                self._todos[tid] = todo
+                self._todos[tid] = tudu
 
         self._show_page("TodayTodo")
 
     def _get_todos_by_day(self, day: datetime.date):
-        todos: TodosDict = {}
+        tudus: TodosDict = {}
 
         for tid, todo in self._todos.items():
             eid = todo["reminder_id"] 
@@ -1769,20 +1766,20 @@ class TodoTab(Container):
                 cycbgn_dtime = reminderdata["cycbgn_dtime"]
                 assert cycbgn_dtime is not None
                 if cycbgn_dtime.date() == day:
-                    todos[tid] = todo
+                    tudus[tid] = todo
             else:
                 day_agenda = self._schedule.agendas_on_date(day)
                 if eid in day_agenda:
-                    todos[tid] = todo
+                    tudus[tid] = todo
                     agendas = day_agenda[eid]
                     for agenda in agendas:
                         reminderinfo: ReminderInfo = {
                             "clock_time": agenda.clock,
                             "completed": False
                         }
-                        todos[tid]["reminder_infos"].append(reminderinfo)
+                        tudus[tid]["reminder_infos"].append(reminderinfo)
 
-        return todos
+        return tudus
 
     def open_todo_detail_dlg(self, x: int, y: int, **kwargs: object) -> None:
         dlg_id = "dlgEditTodo"
@@ -1814,8 +1811,8 @@ class TodoTab(Container):
                     if cycend_dtime is None or cycend_dtime >= today:
                         today_todos[tid] = tododata
 
-            todos = self._get_todos_by_day(today.date())
-            today_todos |= todos
+            tudus = self._get_todos_by_day(today.date())
+            today_todos |= tudus
             self._active_page.todos = today_todos
 
     @override
@@ -1832,7 +1829,7 @@ class TodoTab(Container):
             case "lblNumberToday":
                 self._show_page("TodayTodo")
             case "OpenEditTodoDlg":
-                # todo_dict = cast(TodoDict, kwargs['todo_dict'])
+                # tudu_dict = cast(TodoDict, kwargs['todo_dict'])
                 x, y = cast(tuple[int, int], kwargs['mousepos'])
                 self.open_todo_detail_dlg(x, y, **kwargs)
             case "NewTodo":
@@ -1840,30 +1837,30 @@ class TodoTab(Container):
                 reminderdata: ReminderDataDict = cast(ReminderDataDict, kwargs["reminderdata"])
                 tid = self._todos_db.add_plan(**plandata)
                 _ = self._todos_db.add_reminder(tid, 0, **reminderdata)
-                todo = cast(TodoData, kwargs['tododata'])
-                self._todos[tid] = todo
+                tudu = cast(TodoData, kwargs['tododata'])
+                self._todos[tid] = tudu
                 return tid
             case "ModifyTodo":
-                todo = cast(Todo, kwargs["todo"])
+                tudu = cast(Todo, kwargs["todo"])
                 
-                tododata = todo["data"]
+                tududata = tudu["data"]
                 plandata: PlanDataDict = {
-                    "name": tododata["name"],
-                    "note": tododata["note"],
-                    "tags": tododata["tags"],
+                    "name": tududata["name"],
+                    "note": tududata["note"],
+                    "tags": tududata["tags"],
                     "iid": None,
-                    "fid": tododata["fid"],
+                    "fid": tududata["fid"],
                     "reminders": {},
                     "action": ActTyp.NOACTION,
-                    "status": tododata["status"],
+                    "status": tududata["status"],
                     "location": None,
                     "sums": 0
                 }
 
-                tid = todo["tid"]
+                tid = tudu["tid"]
                 # _ = self._todos_db.modify_plan(tid, **plandata)
-                if eid := tododata["reminder_id"]:
-                    reminderdata = tododata["reminder"]
+                if eid := tududata["reminder_id"]:
+                    reminderdata = tududata["reminder"]
                     if self._todos[tid]["reminder_id"]:
                         _ = self._todos_db.del_reminder(tid, 0)
                         _ = self._todos_db.add_reminder(tid, eid, **reminderdata)
@@ -1874,15 +1871,15 @@ class TodoTab(Container):
                     cycbgn_dtime = reminderdata["cycbgn_dtime"]
                     assert cycbgn_dtime is not None
                     if eid in self._schedule.events:
-                        _ = self._schedule.modify_event(eid, clock_time, cycbgn_dtime, tododata["name"], 
+                        _ = self._schedule.modify_event(eid, clock_time, cycbgn_dtime, tududata["name"], 
                             reminderdata["every"], reminderdata["unit"], reminderdata["custom"], reminderdata["cycend_dtime"])
                     else:
-                        self._schedule.add_event(eid, tododata["name"], clock_time, reminderdata["every"],
+                        self._schedule.add_event(eid, tududata["name"], clock_time, reminderdata["every"],
                         reminderdata["unit"], reminderdata["custom"],
                         cycbgn_dtime, reminderdata["cycend_dtime"],
                         ActTyp.DRIPPING_WATER)
 
-                self._todos[tid] = todo["data"]
+                self._todos[tid] = tudu["data"]
                 self._update_page()
 
                 if self._active_page:
