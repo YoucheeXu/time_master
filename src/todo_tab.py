@@ -11,7 +11,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from functools import partial
 from tkinter import messagebox, ttk
-from typing import Literal, TypedDict, cast, override
+from typing import TypedDict, cast, override
 
 from pygui_simple.tkcalendar import CalendarCtrl
 from pygui_simple.tkcontrol import tkControl
@@ -25,7 +25,7 @@ from pygui_simple.tkwin import (
     tkWin,
 )
 from pygui_simple.winbasic import Container, WinBasic
-from pyutilities_simple.logit import pe, po, pv
+from pyutilities_simple.logit import po, pv
 
 from src.action_sys import ActTyp
 from src.schedule import Schedule
@@ -1101,7 +1101,7 @@ class TodayTodoPage(BaseTodoPage):
         )
         add_btn.pack(side="right", padx=5, pady=5)
 
-    def on_window_resize(self, event: tk.Event) -> None:
+    def on_window_resize(self, _: tk.Event) -> None:
         # if event.widget == self._parent:
         # if event.widget == self._gui.win:
             # self.render_todo_list()
@@ -1158,7 +1158,8 @@ class TodayTodoPage(BaseTodoPage):
 
     def get_stats_text(self) -> str:
         total = len(self._todos_data)
-        completed = sum(1 for todo in self._todos_data if todo["status"] == StatusEnum.COMPLETED)
+        completed = sum(1 for todo in self._todos_data.values() if todo["status"] == StatusEnum.COMPLETED)
+
         return f"Completed {completed} / Total {total}"
 
     def create_group_title(self, group_key: str) -> tk.Frame:
@@ -1379,7 +1380,7 @@ class TodayTodoPage(BaseTodoPage):
 
         if nearest_index != -1 and nearest_index != self._last_nearest_index:
             self._move_drag_placeholder(nearest_index)
-            self._last_nearest_index = nearest_index
+            self._last_nearest_index: int = nearest_index
 
     def _finalize_drag_sort(self) -> None:
         """ Complete drag sorting and update todo order"""
@@ -1615,16 +1616,16 @@ class TodoTab(Container):
 
         if page_name == "TodayTodo":
             today_todos: TodosDict = {}
-            today = datetime.datetime.today()
+            now = datetime.datetime.now()
             for tid, tododata in self._todos.items():
                 cycbgn_dtime = tododata["reminder"]["cycbgn_dtime"]
                 cycend_dtime = tododata["reminder"]["cycend_dtime"]
                 assert cycbgn_dtime is not None
-                if tododata["status"] == StatusEnum.ONGOING and cycbgn_dtime <= today:
-                    if cycend_dtime is None or cycend_dtime >= today:
+                if tododata["status"] == StatusEnum.ONGOING and cycbgn_dtime <= now:
+                    if cycend_dtime is None or cycend_dtime >= now:
                         today_todos[tid] = tododata
 
-            tudus = self._get_todos_by_day(today.date())
+            tudus = self._get_todos_by_day(now.date())
             today_todos |= tudus
             self._active_page.todos = today_todos
 
