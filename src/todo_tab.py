@@ -640,8 +640,6 @@ class TodoItem:
         self._last_nearest_index: int = -1
 
         self._edit_mode: bool = False
-        self._editing_todo_id: int | None = None
-        self._current_edit_entry: tk.Entry | None = None
         self._edit_entry: tk.Entry | None = None
         self._editing: bool = False
 
@@ -820,8 +818,8 @@ class TodoItem:
             if self._drag_type == "delete" and self._current_offset_x > SWIPE_CONFIG["delete_threshold"]:
                 self._animate_swipe_back()
 
-    def _on_text_click(self, event: tk.Event) -> str:
-        if self._edit_mode or self._editing_todo_id:
+    def _on_text_click(self, _: tk.Event) -> str:
+        if self._editing:
             return "break"
 
         self._reset_drag_state()
@@ -898,18 +896,14 @@ class TodoItem:
             self._is_delete_btn_visible = False
 
     def _switch_to_edit_mode(self) -> None:
-        # Cancel other edits
-        if self._editing_todo_id and self._editing_todo_id != self._todo["iid"]:
-            self.cancel_edit()
-
-        if self._editing_todo_id == self._todo["iid"]:
+        if self._editing:
             return
 
         # Clear text container
         for widget in self._text_container.winfo_children():
             widget.destroy()
 
-        self._editing_todo_id = self._todo["tid"]
+        self._editing = True
 
         # Create edit entry
         original_width: int = int((400 - 100) / 8)
@@ -921,10 +915,9 @@ class TodoItem:
             highlightthickness=1, highlightcolor=COLORS["accent"], width=new_width
         )
         self._edit_entry.pack(side="left", fill="x", expand=False, padx=5, pady=10)
-        self._edit_entry.insert(0, self._todo["name"])
+        self._edit_entry.insert(0, self._todo["data"]["name"])
         self._edit_entry.select_range(0, tk.END)
         self._edit_entry.focus_force()
-        self._current_edit_entry = self._edit_entry
 
         # Bind save/cancel
         _ = self._edit_entry.bind("<Return>", lambda e: self.save_edit())
@@ -935,26 +928,26 @@ class TodoItem:
         if not self._edit_entry:
             return
 
+        self._editing = False
+
         new_text: str = self._edit_entry.get().strip()
         if not new_text:
             new_text = "Unnamed todo"
 
         # Update data
-        self._todo["name"] = new_text
+        self._todo["data"]["name"] = new_text
         # self._app.save_todos()
 
-        # Exit edit mode
-        # self._owner._editing_todo_id = None
-        # self._owner._current_edit_entry = None
-
         # Refresh display
-        self._update_text_display()
+        # self._update_text_display()
+        self._update_text_display(self._reminder_str, self._expired)
         # self._owner.update_stats()
 
     def cancel_edit(self) -> None:
-        # self._owner._editing_todo_id = None
-        # self._owner._current_edit_entry = None
-        self._update_text_display()
+        self._editing = False
+
+        # self._update_text_display()
+        self._update_text_display(self._reminder_str, self._expired)
 
     def _is_reminder_expired(self, todo: Todo) -> bool:
         tududata = todo["data"]
@@ -1028,6 +1021,7 @@ class TodoItem:
     def _on_toggle_completed(self) -> None:
         # if self._owner._editing_todo_id == self._todo_dict["tid"]:
         #     self.cancel_edit()
+        self.cancel_edit()
 
         reminder_idx = self._todo["reminder_idx"]
         tududata = self._todo["data"]
@@ -1047,10 +1041,6 @@ class TodoItem:
         #     self._update_text_display(self._reminder_str, self._expired)
 
     def delete(self) -> None:
-        if self._editing_todo_id == self._todo["tid"]:
-            self._editing_todo_id = None
-            self._current_edit_entry = None
-
         # Confirm deletion in edit mode
         if self._edit_mode and not messagebox.askyesno("Confirmation", "Are you sure to delete this todo?"):
             return
@@ -1059,7 +1049,7 @@ class TodoItem:
         # self._owner.delete_todo_by_id(self._todo_dict["tid"])
 
     def _on_open_detail(self, x: int, y: int) -> None:
-        if self._editing_todo_id:
+        if self._editing:
             self.cancel_edit()
         _ = self._owner.process_message("OpenEditTodoDlg", mousepos=[x,y], todo=self._todo)
         # pv(self._todo_dict)
