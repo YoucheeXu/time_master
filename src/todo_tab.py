@@ -1191,20 +1191,13 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
     def refresh_todos(self):
         pass
 
-    def _toggle_edit_mode(self):
-        pass
-
-
+# TODO: use ScrollableFrameCtrl instead
 class TodayTodoPage(BaseTodoPage):
     def __init__(self, parent: tk.Frame, owner: Container, name: str, page_title: str):
         super().__init__(parent, owner, name, page_title)
 
         self._editing_todo_id: int | None = None
 
-        self._stats_label: tk.Label | None = None
-        self._canvas: tk.Canvas | None = None
-        self._todo_container: tk.Frame | None = None
-        self._todo_entry: tk.Entry | None = None
         self._placeholder_text: str = "Add new todo..."
 
         # Load data
@@ -1214,8 +1207,34 @@ class TodayTodoPage(BaseTodoPage):
         self._current_offset_y: int = 0
         self._drag_placeholder: tk.Frame | None = None
 
-        # Setup UI
-        self.setup_ui()
+        self._wrapper: tk.Frame # TODO
+
+        # setup_todo_list
+        # List container
+        list_frame = tk.Frame(self._content_frame, bg=COLORS["background"])
+        list_frame.pack(fill="both", expand=True, padx=0, pady=0)
+
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        # Canvas for scrollable content
+        self._canvas: tk.Canvas = tk.Canvas(
+            list_frame, bg=COLORS["background"], width=400,
+            yscrollcommand=scrollbar.set, highlightthickness=0
+        )
+        self._canvas.pack(side="left", fill="both", expand=True)
+        _ = scrollbar.config(command=self._canvas.yview)
+
+        # container (inside canvas)
+        self._todo_container: tk.Frame = tk.Frame(self._canvas, bg=COLORS["background"], width=400)
+        _ = self._canvas.create_window((0, 0), window=self._todo_container, anchor="nw", width=400)
+
+        # Update scroll region when content changes
+        def update_scrollregion(event: tk.Event[tk.Frame] | None) -> None:
+            if self._canvas:
+                _ = self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        _ = self._todo_container.bind("<Configure>", update_scrollregion)
 
         # Render todo list (delayed)
         # _ = self._gui.win.after(100, self.render_todo_list)
@@ -1224,6 +1243,37 @@ class TodayTodoPage(BaseTodoPage):
         # _ = self._gui.win.bind("<Configure>", self.on_window_resize)
         # _ = self._gui.win.bind("<Button-1>", self.on_global_click)
         _ = self._canvas.bind("<Button-1>", self.on_global_click)
+
+        # setup_stats_bar:
+        # stats_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=40)
+        # stats_frame.pack(fill="x", padx=20, pady=10)
+
+        # self._stats_label: tk.Label = tk.Label(
+        #     stats_frame, text=self.get_stats_text(), font=FONT_CONFIG["small"],
+        #     bg=COLORS["background"], fg=COLORS["secondary_text"]
+        # )
+        # self._stats_label.pack(anchor="w")
+
+        # setup_add_todo
+        add_frame = tk.Frame(self._content_frame, bg=COLORS["background"], height=60)
+        add_frame.pack(fill="x", padx=15, pady=10)
+
+        # Input field
+        self._todo_entry: tk.Entry = tk.Entry(
+            add_frame, font=FONT_CONFIG["body"], bg=COLORS["card"], fg=COLORS["primary_text"],
+            insertbackground=COLORS["accent"], relief="flat", bd=0, highlightthickness=0
+        )
+        self._todo_entry.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+        self._setup_entry_placeholder(self._todo_entry, self._placeholder_text)
+        _ = self._todo_entry.bind("<Return>", self._on_add_todo)
+
+        # Add button
+        add_btn = tk.Button(
+            add_frame, text="Add", font=FONT_CONFIG["small"],
+            bg=COLORS["accent"], fg="white", borderwidth=0, relief="flat",
+            command=self._on_add_todo, width=8
+        )
+        add_btn.pack(side="right", padx=5, pady=5)
 
     def on_window_resize(self, event: tk.Event) -> None:
         # if event.widget == self._parent:
@@ -1280,52 +1330,10 @@ class TodayTodoPage(BaseTodoPage):
 
         return grouped_todos
 
-    def setup_ui(self) -> None:
-        # self.setup_stats_bar()
-        self.setup_todo_list()
-        self.setup_add_todo()
-
-    def setup_stats_bar(self) -> None:
-        stats_frame = tk.Frame(self._content_frame, bg=COLORS["background"], height=40)
-        stats_frame.pack(fill="x", padx=20, pady=10)
-
-        self._stats_label = tk.Label(
-            stats_frame, text=self.get_stats_text(), font=FONT_CONFIG["small"],
-            bg=COLORS["background"], fg=COLORS["secondary_text"]
-        )
-        self._stats_label.pack(anchor="w")
-
     def get_stats_text(self) -> str:
         total = len(self._todos_data)
         completed = sum(1 for todo in self._todos_data if todo["status"] == StatusEnum.COMPLETED)
         return f"Completed {completed} / Total {total}"
-
-    def setup_todo_list(self) -> None:
-        # List container
-        list_frame = tk.Frame(self._content_frame, bg=COLORS["background"])
-        list_frame.pack(fill="both", expand=True, padx=0, pady=0)
-
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
-        scrollbar.pack(side="right", fill="y")
-
-        # Canvas for scrollable content
-        self._canvas = tk.Canvas(
-            list_frame, bg=COLORS["background"], width=400,
-            yscrollcommand=scrollbar.set, highlightthickness=0
-        )
-        self._canvas.pack(side="left", fill="both", expand=True)
-        _ = scrollbar.config(command=self._canvas.yview)
-
-        # Todo container (inside canvas)
-        self._todo_container = tk.Frame(self._canvas, bg=COLORS["background"], width=400)
-        _ = self._canvas.create_window((0, 0), window=self._todo_container, anchor="nw", width=400)
-
-        # Update scroll region when content changes
-        def update_scrollregion(event: tk.Event) -> None:
-            if self._canvas:
-                _ = self._canvas.configure(scrollregion=self._canvas.bbox("all"))
-        _ = self._todo_container.bind("<Configure>", update_scrollregion)
 
     def create_group_title(self, group_key: str) -> tk.Frame:
         # group_info = TIME_GROUPS.get(group_key,
@@ -1344,27 +1352,6 @@ class TodayTodoPage(BaseTodoPage):
         ).pack(anchor="w", padx=5)
 
         return title_frame
-
-    def setup_add_todo(self) -> None:
-        add_frame = tk.Frame(self._content_frame, bg=COLORS["background"], height=60)
-        add_frame.pack(fill="x", padx=15, pady=10)
-
-        # Input field
-        self._todo_entry = tk.Entry(
-            add_frame, font=FONT_CONFIG["body"], bg=COLORS["card"], fg=COLORS["primary_text"],
-            insertbackground=COLORS["accent"], relief="flat", bd=0, highlightthickness=0
-        )
-        self._todo_entry.pack(side="left", fill="both", expand=True, padx=5, pady=5)
-        self._setup_entry_placeholder(self._todo_entry, self._placeholder_text)
-        _ = self._todo_entry.bind("<Return>", self._on_add_todo)
-
-        # Add button
-        add_btn = tk.Button(
-            add_frame, text="Add", font=FONT_CONFIG["small"],
-            bg=COLORS["accent"], fg="white", borderwidth=0, relief="flat",
-            command=self._on_add_todo, width=8
-        )
-        add_btn.pack(side="right", padx=5, pady=5)
 
     def render_todo_list(self) -> None:
         if not self._todo_container:
@@ -1417,7 +1404,7 @@ class TodayTodoPage(BaseTodoPage):
     def refresh_todos(self):
         self._todo_items.clear()
         self.render_todo_list()
-        self.update_stats()
+        # self.update_stats()
 
     def _on_add_todo(self, event: tk.Event | None = None) -> None:
         if not self._todo_entry:
@@ -1463,7 +1450,7 @@ class TodayTodoPage(BaseTodoPage):
         self._todos_data[tid] = new_todo
 
         self.render_todo_list()
-        self.update_stats()
+        # self.update_stats()
 
         # Reset input
         self._todo_entry.delete(0, tk.END)
@@ -1477,7 +1464,7 @@ class TodayTodoPage(BaseTodoPage):
         # Save and refresh
         # self.save_todos()
         self.render_todo_list()
-        self.update_stats()
+        # self.update_stats()
 
     # TODO:
     def tick(self) -> None:
@@ -1496,9 +1483,9 @@ class TodayTodoPage(BaseTodoPage):
 
         self._todo_items[self._editing_todo_id].save_edit()
 
-    def update_stats(self) -> None:
-        if self._stats_label:
-            _ = self._stats_label.config(text=self.get_stats_text())
+    # def update_stats(self) -> None:
+    #     if self._stats_label:
+    #         _ = self._stats_label.config(text=self.get_stats_text())
 
     def _setup_entry_placeholder(self, entry: tk.Entry, placeholder: str) -> None:
         def on_focus_in(event: tk.Event) -> None:
