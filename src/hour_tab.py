@@ -386,6 +386,7 @@ class EditHourDlg(DialogCtrl):
         name = ent_name.get_val()
 
         if hid != 0:    # edit item
+            sum_clock_str = ""
             for reminder in self._reminders:
                 eid = reminder["eid"]
                 data = reminder["data"]
@@ -396,13 +397,17 @@ class EditHourDlg(DialogCtrl):
 
                 if status == ReminderStatusEnum.NEW:
                     _ = owner.process_message("NewClock", hid=hid, name=name, reminder=data)
+                    sum_clock_str += " " + clk_str
                 elif status == ReminderStatusEnum.MODIFY:
-                    _ = owner.process_message("changeClock", id=hid, eid=eid,
+                    _ = owner.process_message("ModifyClock", id=hid, eid=eid,
                     clk_time=clk_time, custom=custom, clk_str=clk_str)
+                    sum_clock_str += " " + clk_str
                 elif status == ReminderStatusEnum.DELETE:
                     _ = owner.process_message("DelClock", hid=hid, eid=eid, reminder=data)
                 else:
-                    pass
+                    sum_clock_str += " " + clk_str
+
+            _ = owner.process_message("SumClock", clock_str=sum_clock_str)
 
             if self._schedule["status"] == ReminderStatusEnum.MODIFY:
                 _ = owner.process_message("ModifySchedule", hid=hid, eid=self._schedule["eid"], reminder=self._schedule["data"])
@@ -1125,13 +1130,11 @@ class HourDetailDlg(DialogCtrl):
                     imagebutton.change_image(imagepath)
                     _ = owner.process_message("changeItemImage",
                         id=hid, group=grp, index=idx)
-                case "ModifySchedule":  # come from `EditHourDlg`
-                    reminder = cast(ReminderDataDict, kwargs["reminder"])
-                    _, schedule_str = reminder2str(reminder) 
-                    lbl_selschedule = cast(LabelCtrl,
-                        self.get_control("lblSelScheduleItemDetail"))
-                    lbl_selschedule.set_text(schedule_str)
-                    _ = owner.process_message("ModifySchedule", **kwargs)
+                case "SumClock": # come from `EditHourDlg`
+                    lbl_selclock = cast(LabelCtrl,
+                        self.get_control("lblSelClockItemDetail"))
+                    clock_str = cast(str, kwargs["clock_str"])
+                    lbl_selclock.set_text(clock_str)
                 case "NewSchedule": # come from `EditHourDlg`
                     reminder = cast(ReminderDataDict, kwargs["reminder"])
                     _, schedule_str = reminder2str(reminder) 
@@ -1139,14 +1142,18 @@ class HourDetailDlg(DialogCtrl):
                         self.get_control("lblSelScheduleItemDetail"))
                     lbl_selschedule.set_text(schedule_str)
                     _ = owner.process_message("NewSchedule", **kwargs)
+                case "ModifySchedule":  # come from `EditHourDlg`
+                    reminder = cast(ReminderDataDict, kwargs["reminder"])
+                    _, schedule_str = reminder2str(reminder) 
+                    lbl_selschedule = cast(LabelCtrl,
+                        self.get_control("lblSelScheduleItemDetail"))
+                    lbl_selschedule.set_text(schedule_str)
+                    _ = owner.process_message("ModifySchedule", **kwargs)
                 case "DelSchedule": # come from `EditHourDlg`
                     lbl_selschedule = cast(LabelCtrl,
                         self.get_control("lblSelScheduleItemDetail"))
                     lbl_selschedule.set_text("")
                     _ = owner.process_message("DelSchedule", **kwargs)
-                case "deleteItem":  # come from `EditHourDlg`
-                    _ = owner.process_message("deleteItem", id=hid)
-                    self.destroy()
                 case "btnAddChild":
                     x, y = cast(tuple[int, int], kwargs["mousepos"])
                     self._show_edithourdlg(self, x+20, y+20,
@@ -1190,6 +1197,9 @@ class HourDetailDlg(DialogCtrl):
                 case "btnNextWeekHour":
                     self._firstday += datetime.timedelta(days=7)
                     self._plot_weekview(self._hid, self._detail, db, self._firstday)
+                case "deleteItem":  # come from `EditHourDlg`
+                    _ = owner.process_message("deleteItem", id=hid)
+                    self.destroy()
                 case _:
                     return super().process_message(idmsg, **kwargs)
             return True 
@@ -1384,7 +1394,8 @@ class HourTab(Container):
         level = 4
 
         pnl_clock = cast(ImagePanelCtrl, self._gui.get_control(f"pnlClock{hid}"))
-        pnl_clock.show()
+        if not pnl_clock.visible:
+            pnl_clock.show()
 
         frm_clock = cast(FrameCtrl, self._gui.get_control(f"frmClock{hid}"))
 
