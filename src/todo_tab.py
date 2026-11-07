@@ -629,14 +629,6 @@ class TodoItem:
         # State variables
         self._is_delete_btn_visible: bool = False
 
-        self._dragging: bool = False
-        self._drag_type: Literal["delete", "sort"] | None = None
-        self._drag_start_x: int = 0
-        self._drag_start_y: int = 0
-
-        self._current_dragged_item: tk.Frame | None = None
-        self._current_offset_x: int = 0
-
         self._last_nearest_index: int = -1
 
         self._edit_mode: bool = False
@@ -720,181 +712,15 @@ class TodoItem:
             self._divider.place(x=30, y=SWIPE_CONFIG["placeholder_height"]-1)
 
     def _bind_events(self) -> None:
-        # Drag/swipe events
-        for widget in [self._wrapper, self._content_frame]:
-            _ = widget.bind("<ButtonPress-1>", self._on_press)
-            _ = widget.bind("<B1-Motion>", self._on_drag)
-            _ = widget.bind("<ButtonRelease-1>", self._on_release)
-            _ = widget.bind("<Leave>", self._on_leave)
-
         # Text edit event
         _ = self._text_container.bind("<Button-1>", self._on_text_click)
-
-    def _on_press(self, event: tk.Event) -> None:
-        if self._edit_mode or self._editing_todo_id:
-            return
-        if event.widget in [self._text_container, self._more_btn] or isinstance(event.widget, tk.Canvas):
-            return
-
-        self._dragging = True
-        self._drag_start_x = event.x_root
-        self._drag_start_y = event.y_root
-        self._current_dragged_item = self._wrapper
-        # self._owner._original_todo_id = self._todo_dict["tid"]
-        self._current_offset_x = 0
-        # self._current_offset_y = 0
-        self._wrapper.lift()
-        self._drag_type = None
-
-    def _reset_drag_state(self) -> None:
-        """Reset all drag-related state variables"""
-        self._dragging = False
-        self._drag_type = None
-        self._current_dragged_item = None
-        self._current_offset_x = 0
-        # self._current_offset_y = 0
-        # self._original_todo_id = None
-        self._last_nearest_index = -1
-
-        # Destroy drag placeholder
-        # if self._drag_placeholder:
-        #     self._drag_placeholder.destroy()
-        #     self._drag_placeholder = None
-
-    def _on_drag(self, event: tk.Event) -> None:
-        if not self._dragging or self._current_dragged_item != self._wrapper:
-            return
-
-        dx: int = event.x_root - self._drag_start_x
-        dy: int = event.y_root - self._drag_start_y
-
-        # Determine drag type (delete/sort)
-        if self._drag_type is None:
-            if abs(dx) > SWIPE_CONFIG["drag_threshold"]:
-                self._drag_type = "delete"
-                _ = self._wrapper.config(bg=COLORS["danger_bg"])
-            elif abs(dy) > SWIPE_CONFIG["drag_threshold"]:
-                # self._drag_type = "sort"
-                # _ = self._content_frame.config(
-                #     bg=COLORS["drag_active"], relief="solid", bd=1,
-                #     highlightbackground=COLORS["drag_border"], highlightthickness=1
-                # )
-                # self._owner._create_drag_placeholder(self._wrapper)
-                pass
-
-        # Handle swipe delete
-        if self._drag_type == "delete":
-            self._handle_swipe_delete(dx)
-        # Handle drag sort
-        elif self._drag_type == "sort":
-            # self._owner._handle_drag_sort(dy)
-            pass
-
-    def _on_release(self, event: tk.Event) -> None:
-        if not self._dragging or self._current_dragged_item != self._wrapper:
-            self._reset_drag_state()
-            return
-
-        if self._drag_type == "delete":
-            if self._current_offset_x <= SWIPE_CONFIG["delete_threshold"]:
-                self.delete()
-            else:
-                self._animate_swipe_back()
-        elif self._drag_type == "sort":
-            # _ = self._content_frame.config(
-            #     bg=COLORS["background"], relief="flat", bd=0, highlightthickness=0
-            # )
-            # self._owner._finalize_drag_sort()
-            pass
-
-        self._reset_drag_state()
-
-    def _on_leave(self, event: tk.Event) -> None:
-        if self._dragging and self._current_dragged_item == self._wrapper:
-            if self._drag_type == "sort":
-                _ = self._content_frame.config(
-                    bg=COLORS["background"], relief="flat", bd=0, highlightthickness=0
-                )
-            self._reset_drag_state()
-            if self._drag_type == "delete" and self._current_offset_x > SWIPE_CONFIG["delete_threshold"]:
-                self._animate_swipe_back()
 
     def _on_text_click(self, _: tk.Event) -> str:
         if self._editing:
             return "break"
 
-        self._reset_drag_state()
         self._switch_to_edit_mode()
         return "break"
-
-    def _handle_swipe_delete(self, dx: int) -> None:
-        offset_x: int = dx
-        if offset_x > 0:
-            offset_x = 0
-        elif offset_x < SWIPE_CONFIG["max_swipe_distance"]:
-            self.delete()
-            self._reset_drag_state()
-            return
-
-        self._current_offset_x = offset_x
-        self._content_frame.place(x=offset_x, y=0, width=400)
-
-        # Show/hide delete button
-        if offset_x <= SWIPE_CONFIG["show_btn_threshold"] and not self._is_delete_btn_visible:
-            _ = self._delete_btn.config(state="normal")
-            delete_btn_x: int = 400 + offset_x
-            self._delete_btn.place(
-                x=delete_btn_x, y=0, width=SWIPE_CONFIG["delete_btn_width"],
-                height=SWIPE_CONFIG["placeholder_height"]
-            )
-            self._is_delete_btn_visible = True
-        elif offset_x > SWIPE_CONFIG["show_btn_threshold"] and self._is_delete_btn_visible:
-            _ = self._delete_btn.config(state="disabled")
-            self._delete_btn.place(x=400, y=0)
-            self._is_delete_btn_visible = False
-
-    def _animate_swipe_back(self) -> None:
-        current_x: int = int(float(self._content_frame.place_info()["x"]))
-        if current_x >= 0:
-            self._reset_state()
-            return
-
-        steps: int = 10
-        step_x: float = abs(current_x) / steps
-
-        def animate_step(step: int) -> None:
-            if step >= steps:
-                self._reset_state()
-                return
-
-            new_x: float = current_x + (step + 1) * step_x
-            new_x = min(new_x, 0)
-
-            self._content_frame.place(x=new_x, y=0, width=400)
-
-            if self._is_delete_btn_visible:
-                delete_btn_x: float = 400 + new_x
-                self._delete_btn.place(
-                    x=delete_btn_x, y=0, width=SWIPE_CONFIG["delete_btn_width"],
-                    height=SWIPE_CONFIG["placeholder_height"]
-                )
-
-            _ = self._wrapper.after(int(SWIPE_CONFIG["animation_duration"] / steps),
-                animate_step, step + 1)
-
-        animate_step(0)
-
-    def _reset_state(self) -> None:
-        self._content_frame.place(x=0, y=0, width=400)
-        _ = self._wrapper.config(bg=COLORS["background"])
-        _ = self._content_frame.config(
-            bg=COLORS["background"], relief="flat", bd=0, highlightthickness=0
-        )
-
-        if self._is_delete_btn_visible:
-            _ = self._delete_btn.config(state="disabled")
-            self._delete_btn.place(x=400, y=0)
-            self._is_delete_btn_visible = False
 
     def _switch_to_edit_mode(self) -> None:
         if self._editing:
