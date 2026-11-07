@@ -1068,7 +1068,7 @@ class TodoItem:
         # self._update_text_display()
 
 class BaseTodoPage(Container, metaclass=abc.ABCMeta):
-    """Base class for all Todo pages (shared UI structure).
+    """ Base class for all Todo pages (shared UI structure).
 
     This class provides a reusable UI template for all four todo pages, including
     a title bar with a back button to TodoTab and a content frame for page-specific
@@ -1086,55 +1086,54 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self._main_frame: tk.Frame = tk.Frame(parent)
 
         # -------------------------- Grid Layout (Key to Fill Remaining Space) -------------------------
-        # Row 0: Fixed nav bar (weight=0)
-        # Row 0: Fixed title bar (weight=0)
+        # Row 0: Fixed nav/title bar (weight=0)
         # Row 1: Content frame fills ALL remaining space (weight=1)
         # Column 0: Full width fill (weight=1)
         _ = self._main_frame.grid_rowconfigure(0, weight=0)
-        _ = self._main_frame.grid_rowconfigure(1, weight=0)
-        _ = self._main_frame.grid_rowconfigure(2, weight=1)
+        _ = self._main_frame.grid_rowconfigure(1, weight=1)
         _ = self._main_frame.grid_columnconfigure(0, weight=1)
 
         # -------------------------- Title Bar (Consistent for All Pages, Fixed Height) -------------------------
         # Create title bar frame with background color
-        nav_bar = tk.Frame(self._main_frame, bg="#2c3e50", height=50)
+        nav_bar = tk.Frame(self._main_frame, 
+            # bg="#2c3e50",
+            height=50)
         # Place title bar in row 0, full width
         nav_bar.grid(row=0, column=0, sticky="nsew", padx=2)
         _ = nav_bar.pack_propagate(False)  # Fix height
 
         # Back Button (returns to TodoTab)
-        back_btn = ttk.Button(
+        back_btn = ttk.Label(
             nav_bar,
-            text="< List",
-            command=self._back_to_todo_tab
+            text="<<"
         )
         back_btn.pack(side=tk.LEFT, padx=10, pady=8)
-
-        title_bar = tk.Frame(self._main_frame, bg="white", height=50)
-        title_bar.grid(row=1, column=0, sticky="nsew", padx=2)
-        _ = title_bar.pack_propagate(False)  # Fix height
+        _ = back_btn.bind("<Button-1>", self._go_back)
 
         # Page Title Label
-        title_label: tk.Label = tk.Label(
-            title_bar,
+        title_label = ttk.Label(
+            nav_bar,
             text=self._page_title,
-            fg=COLORS["accent"],
-            bg="white",
+            # fg=COLORS["accent"],
+            # bg="white",
             font=("Arial", 14, "bold")
         )
-        title_label.pack(side=tk.LEFT, padx=20)
+        title_label.pack(side=tk.LEFT, padx=120)
 
         # Edit button
-        self._edit_btn: tk.Button = tk.Button(
-            title_bar, text="Edit", font=FONT_CONFIG["small"],
-            bg="white", fg=COLORS["accent"], borderwidth=0,
-            command=self._toggle_edit_mode
-        )
-        self._edit_btn.place(relx=0.9, rely=0.5, anchor="center")
+        # self._edit_btn: ttk.Label = ttk.Label(
+        #     nav_bar, text="Edit", font=FONT_CONFIG["small"],
+        #     # bg="white",
+        #     # fg=COLORS["accent"],
+        #     borderwidth=0,
+        #     # command=self._toggle_edit_mode
+        # )
+        # self._edit_btn.place(relx=0.9, rely=0.5, anchor="center")
+        # _ = self._edit_btn.bind("<Button-1>", self._toggle_edit_mode)
 
         # -------------------------- Page Content Frame (FILLS ALL REMAINING SPACE) -----------
-        self.content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
-        self.content_frame.grid(row=2, column=0, sticky="nsew", padx=2, pady=2)
+        self._content_frame: tk.Frame = tk.Frame(self._main_frame, bg="#ecf0f1")
+        self._content_frame.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
 
         self._name: str = name
 
@@ -1144,8 +1143,8 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
     def frame(self):
         return self._main_frame
 
-    def _back_to_todo_tab(self) -> None:
-        """Navigate back to the main TodoTab frame.
+    def _go_back(self, _: object) -> None:
+        """ Navigate back to the main TodoTab frame.
 
         Triggers the main app's frame switching method to display TodoTab.
         """
@@ -1269,7 +1268,7 @@ class TodayTodoPage(BaseTodoPage):
         self.setup_add_todo()
 
     def setup_stats_bar(self) -> None:
-        stats_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=40)
+        stats_frame = tk.Frame(self._content_frame, bg=COLORS["background"], height=40)
         stats_frame.pack(fill="x", padx=20, pady=10)
 
         self._stats_label = tk.Label(
@@ -1285,7 +1284,7 @@ class TodayTodoPage(BaseTodoPage):
 
     def setup_todo_list(self) -> None:
         # List container
-        list_frame = tk.Frame(self.content_frame, bg=COLORS["background"])
+        list_frame = tk.Frame(self._content_frame, bg=COLORS["background"])
         list_frame.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Scrollbar
@@ -1329,7 +1328,7 @@ class TodayTodoPage(BaseTodoPage):
         return title_frame
 
     def setup_add_todo(self) -> None:
-        add_frame = tk.Frame(self.content_frame, bg=COLORS["background"], height=60)
+        add_frame = tk.Frame(self._content_frame, bg=COLORS["background"], height=60)
         add_frame.pack(fill="x", padx=15, pady=10)
 
         # Input field
