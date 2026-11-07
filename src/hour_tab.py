@@ -1658,12 +1658,15 @@ class HourTab(Container):
             kwargs (type): _description_
         """
         po(f"_selscheduledlg_confirm: {kwargs}")
-        cmb_selunit = cast(ComboboxCtrl, self._selschedule_dlg.get_control("cmbSelUnit"))
-        unit_str = cmb_selunit.get_val()
         cmb_selval = cast(ComboboxCtrl, self._selschedule_dlg.get_control("cmbSelVal"))
         duration_str = cmb_selval.get_val()
+        if duration_str == "不计划":
+            self._schedulestr = ""
+        else:
+            cmb_selunit = cast(ComboboxCtrl, self._selschedule_dlg.get_control("cmbSelUnit"))
+            unit_str = cmb_selunit.get_val()
 
-        self._schedulestr = f"{unit_str} {duration_str}"
+            self._schedulestr = f"{unit_str} {duration_str}"
 
         return True, ""
 
@@ -1813,10 +1816,6 @@ class HourTab(Container):
                     hid = cast(int, kwargs["id"])
                     reminder = cast(ReminderDataDict, kwargs["reminder"])
                     eid = self._hoursdb.add_reminder(hid, **reminder)
-                case "DelSchedule":  # come from <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
-                    hid = cast(int, kwargs["id"])
-                    eid = cast(int, kwargs["eid"])
-                    self._hoursdb.del_reminder(hid, eid)
                 case "ModifySchedule":  # come from <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
                     hid: int = cast(int, kwargs["id"])
                     eid = cast(int, kwargs["eid"])
@@ -1828,6 +1827,10 @@ class HourTab(Container):
                         duration=reminder["duration"],
                         cycbgn_dtime=datetime.datetime.now(),
                     )
+                case "DelSchedule":  # come from <-`HourDetailDlg`<-`EditHourDlg`<-`SelScheduleDlg`
+                    hid = cast(int, kwargs["id"])
+                    eid = cast(int, kwargs["eid"])
+                    self._hoursdb.del_reminder(hid, eid)
                 case "deleteItem":  # come from <-`HourDetailDlg`<-`EditHourDlg`
                     hid = cast(int, kwargs["id"])
                     detail = self._hoursdb.get_plandata(hid)
