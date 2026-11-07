@@ -1149,6 +1149,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
         self._content_frame.grid(row=1, column=0, sticky="nsew", padx=2, pady=2)
 
         self._name: str = name
+        self._alive: bool = False
 
         self._todo_items: dict[int, TodoItem] = {}
         self._todos_data: TodosDict = {}
@@ -1181,6 +1182,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
     def show_page(self):
         self._alive = True
         self.refresh_todos()
+        self._main_frame.tkraise()
 
     def hide_page(self):
         self._alive = False
