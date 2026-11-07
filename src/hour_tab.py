@@ -1409,7 +1409,14 @@ class HourTab(Container):
     def del_clock_ctrl(self, hid: int, eid: int):
         pnl_clock = cast(ImagePanelCtrl, self._gui.get_control(f"pnlClock{hid}"))
         self._gui.delete_control(f"lblClock{hid}_{eid}")
-        pnl_clock.hide()
+
+        hour_detail = self._hoursdb.get_plandata(hid)
+        num_clock = 0
+        for reminder in hour_detail["reminders"].values():
+            if reminder["clk_time"]:
+                num_clock += 1
+        if num_clock == 0:
+            pnl_clock.hide()
 
     def create_hourctrl(self, hid: int, item: str, iid: IconTuple,
             reminders: dict[int, ReminderDataDict], sums: int, fid: int = -1):
@@ -1778,12 +1785,6 @@ class HourTab(Container):
                     self.update_hourctrl_attrib(hid, "image", imagepath)
                     icon = IconTuple(grp, idx)
                     _ = self._hoursdb.modify_plan(hid, iid=icon)
-                case "changeClock": # come from `EditHourDlg`
-                    hid = cast(int, kwargs["id"])
-                    eid = cast(int, kwargs["eid"])
-                    clk_time = cast(datetime.time, kwargs["clk_time"])
-                    custom = cast(DayType, kwargs["custom"])
-                    self.modify_clock(hid, eid, clk_time, custom)
                 case "NewClock": # come from `EditHourDlg`
                     hid = cast(int, kwargs["hid"])
                     name = cast(str, kwargs["name"])
@@ -1795,6 +1796,12 @@ class HourTab(Container):
                             reminder['cycbgn_dtime'], reminder['cycend_dtime']
                         )
                         self.add_clock_ctrl(hid, eid, reminder)
+                case "ModifyClock": # come from `EditHourDlg`
+                    hid = cast(int, kwargs["id"])
+                    eid = cast(int, kwargs["eid"])
+                    clk_time = cast(datetime.time, kwargs["clk_time"])
+                    custom = cast(DayType, kwargs["custom"])
+                    self.modify_clock(hid, eid, clk_time, custom)
                 case "DelClock": # come from `EditHourDlg`
                     hid = cast(int, kwargs["hid"])
                     eid = cast(int, kwargs["eid"])
