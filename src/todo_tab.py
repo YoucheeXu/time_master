@@ -690,7 +690,8 @@ class TodoItem:
             fg=COLORS["accent"], borderwidth=0, relief="flat", width=2, height=2)
         _ = self._more_btn.configure(command=lambda: self._on_open_detail(self._more_btn.winfo_rootx(),
             self._more_btn.winfo_rooty()))
-        self._more_btn.pack(side="top", padx=2, pady=5)
+        # self._more_btn.pack(side="top", padx=2, pady=5)
+        self._more_btn.pack_forget()
 
         # Edit-mode delete button
         self._edit_delete_btn: tk.Button = tk.Button(
@@ -921,6 +922,8 @@ class TodoItem:
         self._edit_entry.select_range(0, tk.END)
         self._edit_entry.focus_force()
 
+        self._more_btn.pack(side="top", padx=2, pady=5)
+
         # Bind save/cancel
         _ = self._edit_entry.bind("<Return>", lambda e: self.save_edit())
         _ = self._edit_entry.bind("<FocusOut>", lambda e: self.save_edit())
@@ -931,6 +934,8 @@ class TodoItem:
             return
 
         self._editing = False
+
+        self._more_btn.pack_forget()
 
         new_text: str = self._edit_entry.get().strip()
         if not new_text:
@@ -949,6 +954,8 @@ class TodoItem:
 
     def cancel_edit(self) -> None:
         self._editing = False
+
+        self._more_btn.pack_forget()
 
         # self._update_text_display()
         self._update_text_display(self._reminder_str, self._expired)
