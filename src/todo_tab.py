@@ -905,6 +905,8 @@ class TodoItem:
 
         self._editing = True
 
+        _ = self._owner.process_message("StartEdit", tid=self._todo["tid"])
+
         # Create edit entry
         original_width: int = int((400 - 100) / 8)
         new_width: int = int(original_width * (2/3))
@@ -943,11 +945,15 @@ class TodoItem:
         self._update_text_display(self._reminder_str, self._expired)
         # self._owner.update_stats()
 
+        _ = self._owner.process_message("SaveEdit", tid=self._todo["tid"])
+
     def cancel_edit(self) -> None:
         self._editing = False
 
         # self._update_text_display()
         self._update_text_display(self._reminder_str, self._expired)
+
+        _ = self._owner.process_message("CancelEdit", tid=self._todo["tid"])
 
     def _is_reminder_expired(self, todo: Todo) -> bool:
         tududata = todo["data"]
@@ -1137,6 +1143,7 @@ class BaseTodoPage(Container, metaclass=abc.ABCMeta):
 
         self._name: str = name
 
+        self._todo_items: dict[int, TodoItem] = {}
         self._todos_data: TodosDict = {}
 
     @property
@@ -1183,12 +1190,13 @@ class TodayTodoPage(BaseTodoPage):
     def __init__(self, parent: tk.Frame, owner: Container, name: str, page_title: str):
         super().__init__(parent, owner, name, page_title)
 
+        self._editing_todo_id: int | None = None
+
         self._stats_label: tk.Label | None = None
         self._canvas: tk.Canvas | None = None
         self._todo_container: tk.Frame | None = None
         self._todo_entry: tk.Entry | None = None
         self._placeholder_text: str = "Add new todo..."
-        self._todo_items: list[TodoItem] = []
 
         # Load data
         # self._todos = self.load_todos()
@@ -1206,6 +1214,7 @@ class TodayTodoPage(BaseTodoPage):
         # Bind global events
         # _ = self._gui.win.bind("<Configure>", self.on_window_resize)
         # _ = self._gui.win.bind("<Button-1>", self.on_global_click)
+        _ = self._canvas.bind("<Button-1>", self.on_global_click)
 
     def on_window_resize(self, event: tk.Event) -> None:
         # if event.widget == self._parent:
@@ -1385,11 +1394,10 @@ class TodayTodoPage(BaseTodoPage):
             # Group title
             _ = self.create_group_title(group_key)
 
-            # Todo items
             for idx, todo in enumerate(tudus_in_group):
                 show_divider = (idx < len(tudus_in_group) - 1)
                 tudu_item = TodoItem(self._todo_container, todo, self, show_divider)
-                self._todo_items.append(tudu_item)
+                self._todo_items[todo["tid"]] = tudu_item
 
         # Update scroll region
         self._todo_container.update_idletasks()
@@ -1465,36 +1473,19 @@ class TodayTodoPage(BaseTodoPage):
     # TODO:
     def tick(self) -> None:
         # Update todo in list
-        for tudu_item in self._todo_items:
+        for tudu_item in self._todo_items.values():
             tudu_item.tick()
 
-    def cancel_edit(self) -> None:
-        self._editing_todo_id = None
-        self._current_edit_entry = None
-        for todo_item in self._todo_items:
-            todo_item.cancel_edit()
-
-    def on_global_click(self, event: tk.Event) -> None:
-        if not self._editing_todo_id or not self._current_edit_entry:
+    def on_global_click(self, _: tk.Event):
+        if not self._editing_todo_id:
             return
 
         # Check if click is outside edit field
-        widget = event.widget
-        if widget == self._current_edit_entry or widget in self._current_edit_entry.winfo_children():
-            return
+        # widget = event.widget
+        # if widget == self._current_edit_entry or widget in self._current_edit_entry.winfo_children():
+        #     return
 
-        # Save edit
-        todo_id: int | None = self._editing_todo_id
-        if not todo_id:
-            return
-
-        for todo_item in self._todo_items:
-            if todo_item.todo["tid"] == todo_id:
-                todo_item.save_edit()
-                break
-
-        self._editing_todo_id = None
-        self._current_edit_entry = None
+        self._todo_items[self._editing_todo_id].save_edit()
 
     def update_stats(self) -> None:
         if self._stats_label:
@@ -1635,6 +1626,17 @@ class TodayTodoPage(BaseTodoPage):
     def process_message(self, idmsg: str, **kwargs: object):
         assert self._owner is not None
         match idmsg:
+            case "StartEdit":
+                self._editing_todo_id = cast(int, kwargs["tid"])
+                po(f"start edit tid = {self._editing_todo_id}")
+            case "SaveEdit":
+                tid = cast(int, kwargs["tid"])
+                self._editing_todo_id = None
+                po(f"save edit tid = {tid}")
+            case "CancelEdit":
+                tid = cast(int, kwargs["tid"])
+                self._editing_todo_id = None
+                po(f"cancel edit tid = {tid}")
             # case "ModifyTodo":
             #     todo = cast(TodoDict, kwargs["todo_dict"])
             #     self.modify_todo(todo["tid"], todo)
